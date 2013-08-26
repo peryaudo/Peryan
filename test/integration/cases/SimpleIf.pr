@@ -1,0 +1,4 @@
+if 123 = 123 {
+	printNum 123
+}
+printNum 456

@@ -1,0 +1,9 @@
+var myCounter = 0
+repeat
+	if (!(myCounter < 5)) { 
+		break
+	}
+	mes "hi"
+	myCounter++
+loop
+

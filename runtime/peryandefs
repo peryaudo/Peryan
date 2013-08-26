@@ -1,0 +1,3 @@
+extern mes :: String -> Void
+// in case of debugging
+extern printNum :: Int -> Void

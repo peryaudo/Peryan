@@ -1,0 +1,18 @@
+CXX = clang++
+
+CXXFLAGS = -Wall -O3
+CPPFLAGS = 
+LDFLAGS = `llvm-config --ldflags`
+LIBS = `llvm-config --libs`
+
+all : $(TARGET)
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+$(TARGET): $(OBJS)
+	$(CXX) -o $(TARGET) $(OBJS) $(LIBS) $(LDFLAGS) $(CXXFLAGS) $(CPPFLAGS)
+
+clean:
+	$(RM) $(TARGET) $(OBJS)
+

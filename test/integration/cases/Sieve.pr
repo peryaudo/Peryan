@@ -1,0 +1,24 @@
+var length = 1000
+
+var table = [Bool](length, true)
+
+table[0] = false
+table[1] = false
+
+repeat length
+	if table[cnt] == false : continue
+
+	var cnt_ = cnt
+	var cur = cnt_ + cnt_
+
+	repeat
+		cur += cnt_
+		if !(cur < length) : break
+
+		table[cur] = false
+	loop
+loop
+
+repeat length
+	if table[cnt] : mes String(cnt)
+loop

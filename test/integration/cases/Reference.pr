@@ -1,0 +1,11 @@
+func changerFunc(x :: ref Int, y :: Int) :: Void {
+	x = 114
+	y = 810
+}
+
+var x = 1818
+var y = 514
+
+changerFunc x, y
+
+mes String(x) + String(y)

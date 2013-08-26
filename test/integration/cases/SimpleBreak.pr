@@ -1,0 +1,6 @@
+repeat 5
+	printNum 1
+	break
+	break
+loop
+printNum 5

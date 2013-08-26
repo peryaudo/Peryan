@@ -1,0 +1,15 @@
+var usagi = 2
+var unagi = 5
+var kitsune = 7
+
+if usagi - unagi = kitsune {
+	printNum 0
+} else if usagi + unagi == kitsune {
+	printNum 1
+} else if false {
+	printNum 2
+} else {
+	printNum 3
+}
+
+

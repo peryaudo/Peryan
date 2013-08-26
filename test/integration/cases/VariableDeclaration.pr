@@ -1,0 +1,3 @@
+var foo :: Int = 114514810
+
+printNum foo

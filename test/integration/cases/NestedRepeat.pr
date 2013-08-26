@@ -1,0 +1,6 @@
+repeat 2
+	repeat 5
+		mes "hiji"
+	loop
+	mes "hiza"
+loop

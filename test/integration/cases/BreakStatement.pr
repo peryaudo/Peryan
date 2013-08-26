@@ -1,0 +1,8 @@
+repeat 20
+	printNum cnt
+	if cnt == 11 {
+
+		break
+
+	}
+loop

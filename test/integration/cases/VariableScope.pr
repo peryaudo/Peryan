@@ -1,0 +1,7 @@
+var foo :: Int = 810931
+
+func bar () :: Int {
+	printNum foo
+}
+
+bar

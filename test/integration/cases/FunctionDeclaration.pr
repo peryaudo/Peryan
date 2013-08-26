@@ -1,0 +1,10 @@
+extern testfunc1 :: Int -> Int
+
+func addNums(foo :: Int, bar :: Int) :: Int {
+	{
+		var baz = 3
+	}
+	return foo + bar
+}
+
+printNum addNums(114, 514)
