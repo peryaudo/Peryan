@@ -1,3 +1,36 @@
 extern mes :: String -> Void
 // in case of debugging
 extern printNum :: Int -> Void
+
+// func printNum(x :: Int) :: Void {
+//	mes String(x)
+// }
+
+extern strlen__ :: String -> Int // will be rewritten natively
+
+func strlen(str :: String) :: Int {
+	return strlen__(str)
+}
+
+func str(x :: Int) :: String {
+	return String(x)
+}
+
+// TODO: implement Int(x)
+//func int(x:: String) :: Int {
+//	// return Int(x)
+//	return 0
+//}
+
+extern strmid :: String -> Int -> Int -> String
+
+extern instr :: String -> Int -> String -> Int
+
+extern rnd :: Int -> Int
+
+//func sdim(str :: ref String,  length :: String) :: Void {
+//	return
+//}
+
+
+

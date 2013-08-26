@@ -92,6 +92,7 @@ private:
 			}
 
 			Token token = lexer_.getNextToken();
+			//std::cout<<token.toString()<<std::endl;
 			tokens_.push_back(token);
 		}
 		return tokens_[n];

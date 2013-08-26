@@ -773,6 +773,7 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 	for (std::vector<Expr *>::iterator it = fce->params.begin();
 			it != fce->params.end(); ++it) {
 		Type *argType = visit(*it);
+
 		if (!canPromote(argType, curFuncType->getCar())) {
 			throw SemanticsError((*it)->token.getPosition(),
 					std::string("error: argument type (")
@@ -782,7 +783,7 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 					+ std::string(")"));
 		}
 
-		*it = insertPromoter(*it, argType);
+		*it = insertPromoter(*it, curFuncType->getCar());
 
 		if ((it + 1) != fce->params.end()) {
 			if (curFuncType->getCdr()->getTypeType() != Type::FUNC_TYPE) {
