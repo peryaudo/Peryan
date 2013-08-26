@@ -93,7 +93,7 @@ Peryanではオブジェクト指向など多くの機能が未だ実装され�
 
 ## ライセンス
 
-Peryanの処理系はMITライセンスの下に提供されます。詳しくはLISENCEを御覧ください。
+Peryanの処理系はMITライセンスの下に提供されます。詳しくはLICENSEを御覧ください。
 また、test/unit/gtest/下のGoogle Testは新BSDライセンスの下に提供されます。詳しくはtest/unit/gtest/COPYINGを御覧ください。
 
 ## 参考文献
