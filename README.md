@@ -43,8 +43,8 @@ Peryanは、これらの目標を達成することにより、高い実用性�
 ただし、Peryanによって実行ファイルを出力する場合にはClangも必要です。
 また、統合テストを実行するにはRubyも必要です。
 
-   make
-   make test
+    make
+    make test
 
 ## PeryanによるPeryanプログラムのコンパイル
 
@@ -59,12 +59,12 @@ Peryanは、これらの目標を達成することにより、高い実用性�
 
     func thisIsFunction (arg1 :: Int, arg2 :: Double, arg3 :: String) :: Int {
     	thisIsStatement
-	return 0
+    	return 0
     }
 
 ### 変数定義
 
-   var thisIsVariable :: Int = 123
+    var thisIsVariable :: Int = 123
 
 ただし型推論の有効な範囲内で型名を省略することができます。
 
