@@ -1,0 +1,77 @@
+mes "Peran Integration Tester"
+mes "\e[32m[==========]\e[0m Running testcases under test/integration/cases/"
+
+
+var dirs :: String
+dirlist dirs, "cases/*.pr", 0
+notesel dirs
+
+var total = noteinfo(0)
+var totalFailed = 0
+
+repeat total
+	var fileName :: String
+	noteget fileName, cnt 
+
+	var baseName = strmid(fileName, strlen("cases/"), strlen(fileName) - 3 - strlen("cases/"))
+
+
+	mes "\e[32m[----------]\e[0m"
+	mes "\e[32m[ RUN      ]\e[0m " + baseName
+
+	var succeeded = true
+
+	var ret = 0
+
+	var cur = ""
+
+	cur = "PERYAN_RUNTIME_PATH=../../runtime ../../src/peryan " + fileName + " compiled/" + baseName
+	ret = exec(cur)
+	if ret != 0 {
+		mes "\e[31m[          ]\e[0m Error while executing: " + cur
+		succeeded = false
+	}
+
+	if succeeded {
+		cur = "compiled/" + baseName + " > " + "actual/" + baseName + ".txt"
+		ret = exec(cur)
+		if ret != 0 {
+			mes "\e[31m[          ]\e[0m Error while executing: " + cur
+			succeeded = false
+		}
+	}
+
+	if succeeded {
+		var actual :: String
+		notesel actual
+		noteload "actual/" + baseName + ".txt"
+
+		var expected :: String
+		notesel expected
+		noteload "expected/" + baseName + ".txt"
+
+		if expected != actual {
+			mes "Error: assertion failed:"
+			mes "Actual: " + actual
+			mes "Expected: " + expected
+			succeeded = false
+		}
+
+		notesel dirs
+	}
+
+	if succeeded == true {
+		mes "\e[32m[       OK ]\e[0m " + baseName
+		mes "\e[32m[----------]\e[0m"
+	} else {
+		mes "\e[31m[   FAILED ]\e[0m " + baseName
+		mes "\e[31m[----------]\e[0m"
+		totalFailed++
+	}
+loop
+
+if totalFailed = 0 {
+	mes "\e[32m[==========]\e[0m All " + String(total) + " integration tests succeeded."
+} else {
+	mes "\e[31m[==========]\e[0m " + String(totalFailed) + " / " + String(total) + " integration test(s) failed"
+}

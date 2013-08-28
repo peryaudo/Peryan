@@ -211,6 +211,7 @@ std::string Lexer::readCharOrStringLiteral(char terminator) throw (LexerError) {
 			case 't': str += '\t'; break;
 			case 'n': str += '\n'; break;
 			case 'r': str += '\r'; break;
+			case 'e': str += '\x1b'; break;
 			case '\\': str += '\\'; break;
 			case '\"': str += '\"'; break;
 			default : str += lookahead(1); break;

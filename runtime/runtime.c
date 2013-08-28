@@ -1,97 +1,52 @@
 /* peryan runtime */
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+//#define DBG_PRINT(TYPE, FUNC_NAME) printf("%s%s\n", #TYPE, #FUNC_NAME)
+#define DBG_PRINT(TYPE, FUNC_NAME)
+
+#include "common.h"
 
 extern void PeryanMain();
 
 /* Main function (will be separated to each platform) */
 int main(int argc, char *argv[])
 {
+	DBG_PRINT(+, main);
 	PeryanMain();
+	DBG_PRINT(-, main);
 	return 0;
 }
 
 /* In case of debugging */
  void printNum(int num) {
+	DBG_PRINT(+, printNum);
 	printf("%d\n", num);
+	DBG_PRINT(-, printNum);
 	return;
 }
 
-/* Begin implementation of built-in String */
-
-struct String {
-	int length;
-	int capacity;
-	char *str;
-};
-
 void *PRMalloc(unsigned int size)
 {
+	DBG_PRINT(+-, PRMalloc);
 	return malloc(size);
 }
 
-void *PRFree(void *ptr)
+void PRFree(void *ptr)
 {
-	return PRFree(ptr);
+	DBG_PRINT(+, PRMalloc);
+	free(ptr);
+	DBG_PRINT(-, PRMalloc);
+	return;
 }
 
 void *PRRealloc(void *ptr, int size)
 {
+	DBG_PRINT(+-, PRRealloc);
 	return realloc(ptr, size);
 }
-
-struct String *PRStringConstructorCStr(char *cStr)
-{
-	struct String *res = NULL;
-
-	res = PRMalloc(sizeof(struct String));
-
-	res->length = strlen(cStr);
-
-	res->capacity = res->length + 1;
-
-	res->str = PRMalloc(res->capacity);
-	strcpy(res->str, cStr);
-
-	return res;
-}
-
-struct String *PRStringConstructorInt(int num)
-{
-	char *str[20];
-	sprintf((char *)str, "%d", num);
-	return PRStringConstructorCStr((char *)str);
-}
-
-struct String *PRStringConcatenate(struct String *lhs, struct String *rhs)
-{
-	struct String *res = NULL;
-
-	res = PRMalloc(sizeof(struct String));
-
-	res->length = lhs->length + rhs->length;
-	res->capacity = res->length + 1;
-
-	res->str = PRMalloc(res->capacity);
-	strcpy(res->str, lhs->str);
-	strcpy(res->str + lhs->length, rhs->str);
-
-	return res;
-}
-
-void PRStringDestructor(struct String *str)
-{
-	PRFree(str->str);
-	PRFree(str);
-}
-
-int strlen__(struct String *str)
-{
-	return str->length;
-}
-
-/* End implementation of built-in String */
 
 /*
  * Array is Peryan's sole polymorphic type so that far closer to type system itself,
@@ -101,72 +56,95 @@ int strlen__(struct String *str)
 
 void mes(struct String *str)
 {
+	DBG_PRINT(+, mes);
 	printf("%s\n", str->str);
+	DBG_PRINT(-, mes);
 	return;
 }
 
-struct String *strmid(struct String *str, int start, int length)
+int PRStringCompare(struct String *lhs, struct String *rhs)
 {
-	int i = 0;
-	struct String *res = NULL;
-
-	res = PRMalloc(sizeof(struct String));
-
-	res->length = length;
-	res->capacity = res->length + 1;
-
-	res->str = PRMalloc(res->capacity);
-	for (i = 0; i < length; ++i) {
-		res->str[i] = str->str[start + i];
-	}
-	res->str[length] = 0;
-
-	return res;
-}
-
-/* extern instr :: String -> Int -> String -> Int */
-int instr(struct String *haystack, int start, struct String *needle)
-{
-	/* TODO: there's famous faster algorithm called KMP */
-
-	int i = 0, j = 0, res = -1;
-	for (i = start; i < haystack->length; ++i) {
-		res = i;
-
-		for (j = 0; j < needle->length; ++j) {
-			if (i + j >= haystack->length)
-				break;
-
-			if (haystack->str[i + j] != needle->str[j]) {
-				res = -1;
-				break;
-			}
-		}
-
-		if (res != -1) {
-			return res;
-		}
-	}
-
-	return -1;
-}
-
-int rnd(int maxRange) {
-	static unsigned int x = 123456789;
-	static unsigned int y = 362436069;
-	static unsigned int z = 521288629;
-	static unsigned int w = 88675123;
-	unsigned int t;
-
-	t = x ^ (x << 11);
-	x = y; y = z; z = w;
-	w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
-	return w % maxRange;
+	return strcmp(lhs->str, rhs->str);
 }
 
 int PRIntConstructor(struct String *str)
 {
 	int res;
+	DBG_PRINT(+, PRIntConstructor);
 	sscanf(str->str, "%d", &res);
+	DBG_PRINT(-, PRIntConstructor);
 	return res;
 }
+
+int exec(struct String *str)
+{
+	DBG_PRINT(+-, exec);
+	return system(str->str);
+}
+
+void dirlist(struct String **res, struct String *mask, int mode)
+{
+	// TODO: support mode option
+	// TODO: support current directory
+
+	struct String *cmd = NULL;
+	FILE *fp = NULL;
+	char tmp[512];
+
+	DBG_PRINT(+, dirlist);
+
+	cmd = PRStringConstructorCStr("find ");
+	PRStringAppend(cmd, mask);
+	PRStringAppendCStr(cmd, " -maxdepth 0");
+
+	fp = popen(cmd->str, "r");
+
+	if (fp == NULL) {
+		fprintf(stderr, "runtime error: cannot open the directory list of %s\n", mask->str);
+		exit(-1);
+	}
+
+	PRStringDestructor(cmd);
+
+	PRStringDestructor(*res);
+	*res = PRStringConstructorVoid();
+
+	while (1) {
+		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)
+			break;
+
+		PRStringAppendCStr(*res, tmp);
+	}
+
+	pclose(fp);
+
+	DBG_PRINT(-, dirlist);
+	return;
+}
+
+void noteload(struct String *fileName)
+{
+	FILE *fp = NULL;
+	char tmp[512];
+
+	if (noteTarget_ == NULL) {
+		fprintf(stderr, "runtime error: no buffer selected\n");
+		exit(-1);
+	}
+
+	PRStringDestructor(*noteTarget_);
+	*noteTarget_ = PRStringConstructorVoid();
+
+	fp = fopen(fileName->str, "r");
+
+	while (1) {
+		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)
+			break;
+
+		PRStringAppendCStr(*noteTarget_, tmp);
+	}
+
+	fclose(fp);
+	return;
+}
+

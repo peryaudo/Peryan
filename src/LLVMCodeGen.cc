@@ -173,7 +173,7 @@ LLVMCodeGen::~LLVMCodeGen() { delete impl_; impl_ = NULL; }
 // Implementation class
 
 void LLVMCodeGen::Impl::registerRuntimeFunctions() {
-	// longer declarations uses char* in its definition
+	// the longer declarations use char* in its definition
 
 	{
 		std::vector<llvm::Type *> paramTypes;
@@ -222,7 +222,7 @@ void LLVMCodeGen::Impl::registerRuntimeFunctions() {
 	generateFuncDecl("PRStringConstructorVoid", new FuncType(Void_, String_));
 	generateFuncDecl("PRStringConcatenate", new FuncType(String_, new FuncType(String_, String_)));
 	generateFuncDecl("PRStringDestructor", new FuncType(String_, Void_));
-
+	generateFuncDecl("PRStringCompare", new FuncType(String_, new FuncType(String_, Int_)));
 	
 	return;
 }
@@ -278,9 +278,11 @@ void LLVMCodeGen::Impl::generateGlobalDecl(BaseScope *bs) {
 			break;
 
 		case Symbol::CLASS_SYMBOL:
-			assert(false); //class not implemented
+			assert(false && "class not implemented");
+			break;
 
 		default: ;
+			assert(false && "unknown symbol");
 		}
 	}
 
@@ -352,7 +354,7 @@ bool LLVMCodeGen::Impl::isFunctionalGlobal() {
 			return true;
 	}
 
-	assert(false);
+	assert(false && "no global block found");
 	return true;
 }
 
@@ -363,7 +365,7 @@ LLVMCodeGen::Impl::Block& LLVMCodeGen::Impl::getEnclosingFuncBlock() {
 		if ((*it).type == Block::FUNC_BLOCK || (*it).type == Block::GLOBAL_BLOCK)
 			return *it;
 	}
-	assert(false);
+	assert(false && "no function or global block found");
 	return blocks.front();
 }
 
@@ -373,7 +375,7 @@ LLVMCodeGen::Impl::Block& LLVMCodeGen::Impl::getEnclosingLoopBlock() {
 		if ((*it).type == Block::LOOP_BLOCK)
 			return *it;
 	}
-	assert(false);
+	assert(false && "no loop block found");
 	return blocks.front();
 
 }
@@ -432,7 +434,7 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 		// all extern declaration is on the global scope,
 		// so that we don't need any extra operation.
 		break;
-	default: assert(false);
+	default: assert(false && "unknown statement");
 	}
 	DBG_PRINT(-, generateStmt);
 	return;
@@ -470,10 +472,10 @@ llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
 		else if (type->is(Bool_))	return llvm::Type::getInt1Ty(context_);
 		else if (type->is(Label_))	return llvm::Type::getLabelTy(context_);
 		else if (type->is(Void_))	return llvm::Type::getVoidTy(context_);
-		else				assert(false);
+		else				assert(false && "unknown builtin type");
 
 	} else {
-		assert(false); //unsupported
+		assert(false && "unknown type"); //unsupported
 		return NULL;
 	}
 }
@@ -517,6 +519,9 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 				|| type->unmodify()->is(Bool_)) {
 			// they will be initialized again, it is just to avoid LLVM IR syntax error
 			init = llvm::ConstantInt::get(getLLVMType(type), 0);
+		} else if (type->unmodify()->is(String_)) {
+			init = llvm::ConstantPointerNull::get(
+				static_cast<llvm::PointerType *>(getLLVMType(String_)));
 		} else if (type->unmodify()->getTypeType() == Type::ARRAY_TYPE) {
 			// int length
 			// int capacity
@@ -534,7 +539,8 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 			init = llvm::ConstantStruct::get(
 					static_cast<llvm::StructType *>(getLLVMType(type)), params);
 		} else {
-			assert(false);
+			std::cerr<<type->unmodify()->getTypeName()<<std::endl;
+			assert(false && "unknown type");
 		}
 	}
 
@@ -717,11 +723,11 @@ llvm::Value *LLVMCodeGen::Impl::generateExpr(Expr *expr) {
 	case AST::FUNC_CALL_EXPR	: return generateFuncCallExpr(static_cast<FuncCallExpr *>(expr));
 	case AST::CONSTRUCTOR_EXPR	: return generateConstructorExpr(static_cast<ConstructorExpr *>(expr));
 	case AST::SUBSCR_EXPR		: return generateSubscrExpr(static_cast<SubscrExpr *>(expr));
-	case AST::MEMBER_EXPR		: /*return generateMemberExpr(static_cast<MemberExpr *>(expr));*/ assert(false);
+	case AST::MEMBER_EXPR		: /*return generateMemberExpr(static_cast<MemberExpr *>(expr));*/ assert(false && "member expression not supported yet");
 	case AST::REF_EXPR		: assert(false && "cannnot generate ref expr!");
 	case AST::DEREF_EXPR		: return generateDerefExpr(static_cast<DerefExpr *>(expr));
 
-	default: assert(false);
+	default: assert(false && "unknown expression");
 	}
 	return NULL;
 }
@@ -795,7 +801,30 @@ llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
 			return builder_.CreateFCmpONE(lhs, rhs);
 		default: ;
 		}
+	}
+	if (be->lhs->type->is(String_)) {
+		switch (be->token.getType()) {
+		case Token::EQL:
+		case Token::EQEQ:
+		case Token::EXCLEQ:
+		case Token::EXCL:
+			{
+				std::vector<llvm::Value *> params;
+				params.push_back(lhs);
+				params.push_back(rhs);
 
+				llvm::Function *func = module_.getFunction("PRStringCompare");
+				assert(func != NULL);
+
+				llvm::Value *ret = builder_.CreateCall(func, params);
+				if (be->token.getType() == Token::EQL || be->token.getType() == Token::EQEQ) {
+					return builder_.CreateICmpEQ(ret, llvm::ConstantInt::get(getLLVMType(Int_), 0));
+				} else {
+					return builder_.CreateICmpNE(ret, llvm::ConstantInt::get(getLLVMType(Int_), 0));
+				}
+			}
+		default: ;
+		}
 	}
 
 	// < <= > >=
@@ -861,6 +890,8 @@ llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
 		builder_.SetInsertPoint(blocks.back().body);
 		return builder_.CreateCall(func, params);
 	}
+
+	assert(false && "no matching binary expression operator");
 	return NULL;
 }
 
@@ -874,16 +905,16 @@ llvm::Value *LLVMCodeGen::Impl::generateUnaryExpr(UnaryExpr *ue) {
 
 		return generateExpr(ue->rhs);
 	} else if (ue->token.getType() == Token::MINUS) {
-		assert(ue->rhs->type->is(Int_) || ue->rhs->type->is(Char_)
-				|| ue->rhs->type->is(Float_) || ue->rhs->type->is(Double_));
+		assert(ue->rhs->type->unmodify()->is(Int_) || ue->rhs->type->unmodify()->is(Char_)
+				|| ue->rhs->type->unmodify()->is(Float_) || ue->rhs->type->unmodify()->is(Double_));
 
 		builder_.SetInsertPoint(blocks.back().body);
-		if (ue->rhs->type->is(Int_) || ue->rhs->type->is(Char_)) {
+		if (ue->rhs->type->unmodify()->is(Int_) || ue->rhs->type->unmodify()->is(Char_)) {
 			return builder_.CreateNeg(rhs);
-		} else if (ue->rhs->type->is(Float_) || ue->rhs->type->is(Double_)) {
+		} else if (ue->rhs->type->unmodify()->is(Float_) || ue->rhs->type->unmodify()->is(Double_)) {
 			return builder_.CreateFNeg(rhs);
 		} else {
-			assert(false);
+			assert(false && "unknown type");
 		}
 	} else  if (ue->token.getType() == Token::EXCL) {
 		assert(ue->rhs->type->unmodify()->is(Bool_));
@@ -891,7 +922,7 @@ llvm::Value *LLVMCodeGen::Impl::generateUnaryExpr(UnaryExpr *ue) {
 		builder_.SetInsertPoint(blocks.back().body);
 		return builder_.CreateNot(rhs);
 	} else {
-		assert(false);
+		assert(false && "unknown binary operand");
 	}
 	return NULL;
 }
@@ -1263,7 +1294,7 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 				builder_.CreateStore(capValCE, capacity);
 			}
 		} else {
-			assert(false);
+			assert(false && "unknown array constructing expression");
 		}
 		builder_.SetInsertPoint(blocks.back().body);
 
@@ -1354,7 +1385,7 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 				} else if (ce->params.size() == 2) {
 					generateConstructor(initialized, at->getElemType(), ce->params[1]);
 				} else {
-					assert(false);
+					assert(false && "unknown constructor");
 				}
 
 				// counter += 1
@@ -1368,14 +1399,14 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 				blocks.back().body = loopAfter;
 			}
 		} else if (init != NULL) {
-			assert(false);
+			assert(false && "unkown initializer");
 		}
 
 		DBG_PRINT(-, generateConstructor);
 		return;
 	} else {
 		// [class] TODO: you have to support class there
-		assert(false);
+		assert(false && "class not supported yet");
 	}
 }
 
@@ -1457,7 +1488,7 @@ void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 			builder_.SetInsertPoint(blocks.back().body);
 			after = builder_.CreateCall(func, params);
 		} else {
-			assert(false);
+			assert(false && "unknown type");
 		}
 		break;
 	case Token::MINUSEQ:
@@ -1467,7 +1498,7 @@ void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 		} else if (as->lhs->type->unmodify()->is(Float_) || as->lhs->type->unmodify()->is(Double_)) {
 			after = builder_.CreateFSub(before, rhs);
 		} else {
-			assert(false);
+			assert(false && "unknown type");
 		}
 		break;
 	case Token::STAREQ:
@@ -1477,7 +1508,7 @@ void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 		} else if (as->lhs->type->unmodify()->is(Float_) || as->lhs->type->unmodify()->is(Double_)) {
 			after = builder_.CreateFMul(before, rhs);
 		} else {
-			assert(false);
+			assert(false && "unknown type");
 		}
 		break;
 	case Token::SLASHEQ:
@@ -1487,10 +1518,10 @@ void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 		} else if (as->lhs->type->unmodify()->is(Float_) || as->lhs->type->unmodify()->is(Double_)) {
 			after = builder_.CreateFDiv(before, rhs);
 		} else {
-			assert(false);
+			assert(false && "unknown type");
 		}
 		break;
-	default: assert(false);
+	default: assert(false && "unknown assign operand");
 	}
 
 	assert(after != NULL);
@@ -1734,20 +1765,20 @@ void LLVMCodeGen::Impl::generateBreakStmt(BreakStmt *bs) {
 //
 //
 void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
-	assert(false);
+	assert(false && "goto statement not supported yet");
 }
 
 void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
-	assert(false);
+	assert(false && "label statement not supported yet");
 }
 
 void LLVMCodeGen::Impl::generateGosubStmt(GosubStmt *gs) {
 	DBG_PRINT(+-, generateGosubStmt);
-	assert(false);
+	assert(false && "gosub statement not supported yet");
 }
 void LLVMCodeGen::Impl::generateGlobalReturnStmt(ReturnStmt *rs) {
 	DBG_PRINT(+-, generateGlobalReturnStmt);
-	assert(false);
+	assert(false && "global return statement not supported yet");
 }
 
 void LLVMCodeGen::Impl::generateFuncReturnStmt(ReturnStmt *rs) {

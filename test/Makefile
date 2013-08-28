@@ -1,6 +1,7 @@
 all:
 	cd ../src/; make
 	cd unit; make
+	cd integration; make
 
 test:
 	cd unit; make test

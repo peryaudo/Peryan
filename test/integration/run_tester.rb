@@ -3,7 +3,6 @@
 puts "Peran Integration Tester"
 puts "\e[32m[==========]\e[0m Running testcases under test/integration/cases/"
 
-
 total = 0
 Dir.glob('./cases/*') do |fileName|
   succeeded = true

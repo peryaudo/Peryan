@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt.dumpAST) {
-		Peryan::ASTPrinter printer;
+		Peryan::ASTPrinter printer(true);
 		std::cerr<<printer.toString(parser.getTransUnit())<<std::endl;
 	}
 

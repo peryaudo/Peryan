@@ -9,8 +9,24 @@ class ASTPrinter {
 private:
 	ASTPrinter(const ASTPrinter&);
 	ASTPrinter& operator=(const ASTPrinter&);
+	bool pretty_;
+	int depth_;
+	// indent
+	std::string ind() {
+		if (pretty_) {
+			return std::string("\n") + std::string(depth_, ' ');
+		} else {
+			return " ";
+		}
+	}
+	void inc() {
+		depth_++;
+	}
+	void dec() {
+		depth_--;
+	}
 public:
-	ASTPrinter() {}
+	ASTPrinter(bool pretty = false) : pretty_(pretty) {}
 
 	std::string toString(AST *ast) {
 		switch (ast->getASTType()) {
@@ -64,16 +80,19 @@ public:
 	}
 
 	std::string toString(TransUnit *tu) {
+		inc();
 		std::stringstream ss;
 		ss<<"(TransUnit";
 		for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		}
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(TypeSpec *ts) {
+		inc();
 		std::stringstream ss;
 
 		switch (ts->getASTType()) {
@@ -90,14 +109,15 @@ public:
 
 		switch (ts->getASTType()) {
 		case AST::TYPE_SPEC		: ss<<" \""<<ts->token.getString()<<"\""; break;
-		case AST::ARRAY_TYPE_SPEC	: ss<<" "<<toString(static_cast<ArrayTypeSpec *>(ts)->typeSpec); break;
-		case AST::FUNC_TYPE_SPEC	: ss<<" "<<toString(static_cast<FuncTypeSpec *>(ts)->lhs)
-						    <<" "<<toString(static_cast<FuncTypeSpec *>(ts)->rhs); break;
+		case AST::ARRAY_TYPE_SPEC	: ss<<ind()<<toString(static_cast<ArrayTypeSpec *>(ts)->typeSpec); break;
+		case AST::FUNC_TYPE_SPEC	: ss<<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->lhs)
+						    <<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->rhs); break;
 		default				: ;
 		}
 
 		ss<<")";
 
+		dec();
 		return ss.str();
 	}
 
@@ -122,79 +142,93 @@ public:
 	}
 
 	std::string toString(FuncDefStmt *fds) {
+		inc();
 		std::stringstream ss;
 		ss<<"(FuncDefStmt "<<toString(fds->name);
 		for (std::vector<Identifier *>::iterator it = fds->params.begin(); it != fds->params.end(); ++it)
-			ss<<" "<<toString(*it);
-		ss<<" "<<toString(fds->body);
+			ss<<ind()<<toString(*it);
+		ss<<ind()<<toString(fds->body);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(VarDefStmt *vds) {
+		inc();
 		std::stringstream ss;
 		if (vds->init != NULL)
-			ss<<"(VarDefStmt "<<toString(vds->id)<<" "<<toString(vds->init)<<")";
+			ss<<"(VarDefStmt "<<toString(vds->id)<<ind()<<toString(vds->init)<<")";
 		else
 			ss<<"(VarDefStmt "<<toString(vds->id)<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(InstStmt *is) {
+		inc();
 		std::stringstream ss;
 		ss<<"(InstStmt "<<toString(is->inst);
 		for (std::vector<Expr *>::iterator it = is->params.begin(); it != is->params.end(); ++it)
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(AssignStmt *as) {
+		inc();
 		std::stringstream ss;
-		ss<<"(AssignStmt "<<as->token.toString()<<" "<<toString(as->lhs);
+		ss<<"(AssignStmt "<<as->token.toString()<<ind()<<toString(as->lhs);
 		if (as->rhs != NULL) {
-			ss<<" "<<toString(as->rhs);
+			ss<<ind()<<toString(as->rhs);
 		}
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(CompStmt *cs) {
+		inc();
 		std::stringstream ss;
 		ss<<"(CompStmt";
 		for (std::vector<Stmt *>::iterator it = cs->stmts.begin(); it != cs->stmts.end(); ++it)
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(IfStmt *is) {
+		inc();
 		std::stringstream ss;
-		ss<<"(IfStmt "<<toString(is->ifCond)<<" "<<toString(is->ifThen);
+		ss<<"(IfStmt "<<toString(is->ifCond)<<ind()<<toString(is->ifThen);
 
 		for (int i = 0; i < is->elseIfCond.size(); ++i)
-			ss<<" "<<toString(is->elseIfCond[i])<<" "<<toString(is->elseIfThen[i]);
+			ss<<ind()<<toString(is->elseIfCond[i])<<ind()<<toString(is->elseIfThen[i]);
 
 		if (is->elseThen != NULL)
-			ss<<" "<<toString(is->elseThen);
+			ss<<ind()<<toString(is->elseThen);
 
 		ss<<")";
 
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(RepeatStmt *rs) {
+		inc();
 		std::stringstream ss;
 		ss<<"(RepeatStmt";
 		if (rs->count != NULL) {
-			ss<<" "<<toString(rs->count);
+			ss<<ind()<<toString(rs->count);
 		} else {
-			ss<<" ()";
+			ss<<ind()<<"()";
 		}
 
 		for (std::vector<Stmt *>::iterator it = rs->stmts.begin(); it != rs->stmts.end(); ++it)
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
@@ -283,14 +317,18 @@ public:
 	}
 
 	std::string toString(BinaryExpr *be) {
+		inc();
 		std::stringstream ss;
-		ss<<"(BinaryExpr "<<be->token.toString()<<" "<<toString(be->lhs)<<" "<<toString(be->rhs)<<")";
+		ss<<"(BinaryExpr "<<be->token.toString()<<ind()<<toString(be->lhs)<<ind()<<toString(be->rhs)<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(UnaryExpr *ue) {
+		inc();
 		std::stringstream ss;
-		ss<<"(UnaryExpr "<<ue->token.toString()<<" "<<toString(ue->rhs)<<")";
+		ss<<"(UnaryExpr "<<ue->token.toString()<<ind()<<toString(ue->rhs)<<")";
+		dec();
 		return ss.str();
 	}
 
@@ -327,42 +365,52 @@ public:
 	}
 
 	std::string toString(ArrayLiteralExpr *ale) {
+		inc();
 		std::stringstream ss;
 		ss<<"(ArrayLiteralExpr";
 		for (std::vector<Expr *>::iterator it = ale->elements.begin(); it != ale->elements.end(); ++it) {
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		}
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(FuncCallExpr *fce) {
+		inc();
 		std::stringstream ss;
 		ss<<"(FuncCallExpr "<<toString(fce->func);
 		for (std::vector<Expr *>::iterator it = fce->params.begin(); it != fce->params.end(); ++it)
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(ConstructorExpr *ce) {
+		inc();
 		std::stringstream ss;
 		ss<<"(ConstructorExpr "<<toString(ce->constructor);
 		for (std::vector<Expr *>::iterator it = ce->params.begin(); it != ce->params.end(); ++it)
-			ss<<" "<<toString(*it);
+			ss<<ind()<<toString(*it);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(SubscrExpr *se) {
 		std::stringstream ss;
-		ss<<"(SubscrExpr "<<toString(se->array)<<" "<<toString(se->subscript)<<")";
+		inc();
+		ss<<"(SubscrExpr"<<ind()<<toString(se->array)<<ind()<<toString(se->subscript)<<")";
+		dec();
 		return ss.str();
 	}
 
 	std::string toString(MemberExpr *me) {
 		std::stringstream ss;
-		ss<<"(MemberExpr "<<toString(me->receiver)<<" "<<toString(me->member)<<")";
+		inc();
+		ss<<"(MemberExpr"<<ind()<<toString(me->receiver)<<ind()<<toString(me->member)<<")";
+		dec();
 		return ss.str();
 	}
 
@@ -379,12 +427,14 @@ public:
 	}
 
 	std::string toString(FuncExpr *fe) {
+		inc();
 		std::stringstream ss;
 		ss<<"(FuncExpr";
 		for (std::vector<Identifier *>::iterator it = fe->params.begin(); it != fe->params.end(); ++it)
-			ss<<" "<<toString(*it);
-		ss<<" "<<toString(fe->body);
+			ss<<ind()<<toString(*it);
+		ss<<ind()<<toString(fe->body);
 		ss<<")";
+		dec();
 		return ss.str();
 	}
 };
