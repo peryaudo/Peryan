@@ -40,9 +40,7 @@ public:
 
 		case AST::EXPR			: 
 		case AST::IDENTIFIER		:
-		//case AST::KEYWORD		:
 		case AST::LABEL			:
-
 		case AST::BINARY_EXPR		:
 		case AST::UNARY_EXPR		:
 		case AST::STR_LITERAL_EXPR	:
@@ -58,6 +56,7 @@ public:
 		case AST::REF_EXPR		:
 		case AST::DEREF_EXPR		:
 		case AST::FUNC_EXPR		:
+		case AST::STATIC_MEMBER_EXPR	:
 			return toString(static_cast<Expr *>(ast));
 
 		case AST::STMT			:
@@ -75,6 +74,7 @@ public:
 		case AST::BREAK_STMT		:
 		case AST::RETURN_STMT		:
 		case AST::EXTERN_STMT		:
+		case AST::NAMESPACE_STMT	:
 			return toString(static_cast<Stmt *>(ast));
 		}
 	}
@@ -137,6 +137,7 @@ public:
 		case AST::BREAK_STMT		: return toString(static_cast<BreakStmt *>(stmt));
 		case AST::RETURN_STMT		: return toString(static_cast<ReturnStmt *>(stmt));
 		case AST::EXTERN_STMT		: return toString(static_cast<ExternStmt *>(stmt));
+		case AST::NAMESPACE_STMT	: return toString(static_cast<NamespaceStmt *>(stmt));
 		default				: return "(Stmt)";
 		}
 	}
@@ -277,9 +278,7 @@ public:
 	std::string toString(Expr *expr) {
 		switch (expr->getASTType()) {
 		case AST::IDENTIFIER		: return toString(static_cast<Identifier *>(expr));
-		//case AST::KEYWORD		:
 		case AST::LABEL			: return toString(static_cast<Label *>(expr));
-
 		case AST::BINARY_EXPR		: return toString(static_cast<BinaryExpr *>(expr));
 		case AST::UNARY_EXPR		: return toString(static_cast<UnaryExpr *>(expr));
 		case AST::STR_LITERAL_EXPR	: return toString(static_cast<StrLiteralExpr *>(expr));
@@ -295,6 +294,7 @@ public:
 		case AST::REF_EXPR		: return toString(static_cast<RefExpr *>(expr));
 		case AST::DEREF_EXPR		: return toString(static_cast<DerefExpr *>(expr));
 		case AST::FUNC_EXPR		: return toString(static_cast<FuncExpr *>(expr));
+		case AST::STATIC_MEMBER_EXPR	: return toString(static_cast<StaticMemberExpr *>(expr));
 		default				: return "(Expr)";
 		}
 	}
@@ -414,6 +414,14 @@ public:
 		return ss.str();
 	}
 
+	std::string toString(StaticMemberExpr *sme) {
+		std::stringstream ss;
+		inc();
+		ss<<"(StaticMemberExpr"<<ind()<<toString(sme->receiver)<<ind()<<toString(sme->member)<<")";
+		dec();
+		return ss.str();
+	}
+
 	std::string toString(RefExpr *re) {
 		std::stringstream ss;
 		ss<<"(RefExpr "<<toString(re->refered)<<")";
@@ -433,6 +441,18 @@ public:
 		for (std::vector<Identifier *>::iterator it = fe->params.begin(); it != fe->params.end(); ++it)
 			ss<<ind()<<toString(*it);
 		ss<<ind()<<toString(fe->body);
+		ss<<")";
+		dec();
+		return ss.str();
+	}
+
+	std::string toString(NamespaceStmt *ns) {
+		inc();
+		std::stringstream ss;
+		ss<<"(NamespaceStmt";
+		for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it) {
+			ss<<ind()<<toString(*it);
+		}
 		ss<<")";
 		dec();
 		return ss.str();

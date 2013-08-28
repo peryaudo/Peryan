@@ -26,6 +26,7 @@ public:
 	void visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError);
 	void visit(LabelStmt *ls, Scope *scope) throw (SemanticsError);
 	void visit(ExternStmt *ls, Scope *scope) throw (SemanticsError);
+	void visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsError);
 };
 
 };

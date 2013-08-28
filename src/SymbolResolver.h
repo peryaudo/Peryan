@@ -29,6 +29,7 @@ public:
 	void visit(GosubStmt *gs, Scope *scope) throw (SemanticsError);
 	void visit(ReturnStmt *rs, Scope *scope) throw (SemanticsError);
 	void visit(ExternStmt *es, Scope *scope) throw (SemanticsError);
+	void visit(NamespaceStmt *ns, Scope *Scope) throw (SemanticsError);
 	void visit(Expr *expr, Scope *scope) throw (SemanticsError);
 	void visit(Identifier *id, Scope *scope) throw (SemanticsError);
 	void visit(Label *label, Scope *scope) throw (SemanticsError);
@@ -43,6 +44,7 @@ public:
 	void visit(ConstructorExpr *fce, Scope *scope) throw (SemanticsError);
 	void visit(SubscrExpr *se, Scope *scope) throw (SemanticsError);
 	void visit(MemberExpr *me, Scope *scope) throw (SemanticsError);
+	void visit(StaticMemberExpr *sme, Scope *scope) throw (SemanticsError);
 	Type *visit(TypeSpec *ts, Scope *scope) throw (SemanticsError);
 	ArrayType *visit(ArrayTypeSpec *ts, Scope *scope) throw (SemanticsError);
 	FuncType *visit(FuncTypeSpec *fs, Scope *scope) throw (SemanticsError);

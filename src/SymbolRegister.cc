@@ -60,6 +60,7 @@ void SymbolRegister::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
 	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt), scope); break;
 	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt), scope); break;
 	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt), scope); break;
+	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt), scope); break;
 	default				: ;
 	}
 	return;
@@ -105,6 +106,29 @@ void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 
 
 	visit(fds->body, funcSymbol);
+
+	return;
+}
+
+void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsError) {
+	const std::string name = ns->name->token.getString();
+	if (isDisallowedIdentifier(name)) {
+		throw SemanticsError(ns->name->token.getPosition(),
+				std::string("error: you can't use ") + name + "as an identifier");
+	}
+
+	NamespaceSymbol *namespaceSymbol =
+		new NamespaceSymbol(name, scope, ns->name->token.getPosition());
+
+	if (scope->define(namespaceSymbol)) {
+		throw SemanticsError(ns->name->token.getPosition(),
+				std::string("error: ") + name + " defined twice");
+	}
+
+	ns->symbol = namespaceSymbol;
+
+	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
+		visit(*it, namespaceSymbol);
 
 	return;
 }

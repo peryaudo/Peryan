@@ -1,4 +1,4 @@
-// This is a recursive descent implementation of LL(k) parser which parses Peryan grammar.
+// This is a recursive descent implementation of LL(*) parser which parses Peryan grammar.
 // Complete EBNF for the grammar is not available now.
 #include <cassert>
 
@@ -108,8 +108,8 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 			return std::vector<Stmt *>(1, parseFuncDefStmt());
 		} else if (la(0) == Token::KW_EXTERN) {
 			return std::vector<Stmt *>(1, parseExternStmt());
-		} else if (la(0) == Token::KW_MODULE) {
-			assert(false && "module statement!");
+		} else if (la(0) == Token::KW_NAMESPACE) {
+			return std::vector<Stmt *>(1, parseNamespaceStmt());
 		}
 	}
 
@@ -259,7 +259,7 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 }
 
 // ExternStmt : "extern" ID "::" TypeSpec (":" | TERM)
-Stmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
+ExternStmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
 	DBG_PRINT(+, parseExternStmt);
 	assert(la() == Token::KW_EXTERN);
 
@@ -362,6 +362,8 @@ CompStmt *Parser::parseCompStmt() throw (LexerError, ParserError) {
 	while (la() != Token::RBRACE) {
 		if (la() == Token::END)
 			throw ParserError(getPosition(), "error: no closing '}'");
+		while (la() == Token::TERM)
+			consume();
 		std::vector<Stmt *> curStmts = parseStmt(false);
 		assert(curStmts.size() != 0);
 
@@ -669,6 +671,8 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) throw (LexerError, ParserE
 		if (la() == Token::END)
 			throw ParserError(getPosition(), "error: no closing 'loop'");
 
+		while (la() == Token::TERM)
+			consume();
 		std::vector<Stmt *> stmts = parseStmt(false);
 		if (stmts.size() == 0)
 			throw ParserError(getPosition(), "error: no closing 'loop'");
@@ -955,37 +959,6 @@ Expr *Parser::parseUnaryExpr(bool allowTopEql) throw (LexerError, ParserError) {
 Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError) {
 	DBG_PRINT(+, parsePostfixExpr);
 
-	// speculate it will be correct TypeSpec
-	if (speculateTypeSpec()) {
-		TypeSpec *ts = parseTypeSpec();
-		if (la() != Token::LPAREN)
-			throw ParserError(getPosition(), "error: '(' expected");
-		Token token = lt();
-		consume();
-
-		std::vector<Expr *> params;
-
-		bool first = true;
-		while (la() != Token::RPAREN) {
-			if (la() == Token::END || la() == Token::TERM)
-				throw ParserError(getPosition(), "error: no closing ')'");
-
-			if (!first && la() == Token::COMMA)
-				consume();
-			first = false;
-
-			params.push_back(parseExpr(true));
-		}
-
-		consume();
-
-		ConstructorExpr *ce = new ConstructorExpr(token, ts);
-		ce->params = params;
-
-		DBG_PRINT(+, parsePostfixExpr);
-		return ce;
-	}
-
 	Expr *expr = NULL;
 
 	bool partial = false;
@@ -997,15 +970,53 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError)
 		consume();
 	}
 
-	if (la() == Token::KW_FUNC) {
-		expr = parseFuncExpr();
-	} else {
-		expr = parsePrimaryExpr(allowTopEql);
-	}
+	// speculate it will be correct TypeSpec (LL(*) parsing!)
+	if (speculateTypeSpec()) {
+		TypeSpec *ts = parseTypeSpec();
+		if (la() == Token::LPAREN) {
+			Token token = lt();
+			consume();
 
-	Identifier *lastId = NULL;
-	if (expr->getASTType() == AST::IDENTIFIER)
-		lastId = static_cast<Identifier *>(expr);
+			std::vector<Expr *> params;
+
+			bool first = true;
+			while (la() != Token::RPAREN) {
+				if (la() == Token::END || la() == Token::TERM)
+					throw ParserError(getPosition(), "error: no closing ')'");
+
+				if (!first && la() == Token::COMMA)
+					consume();
+				first = false;
+
+				params.push_back(parseExpr(true));
+			}
+
+			consume();
+
+			ConstructorExpr *ce = new ConstructorExpr(token, ts);
+			ce->params = params;
+
+			DBG_PRINT(+, parsePostfixExpr);
+			return ce;
+		} else if (la() == Token::DOT) {
+			Token token = lt();
+			consume();
+
+			if (la() != Token::ID)
+				throw ParserError(getPosition(), "error: identifier expected");
+			Identifier *id = parseIdentifier();
+
+			expr = new StaticMemberExpr(ts, token, id);
+		} else {
+			throw ParserError(getPosition(), "error: '(' or '.' expected");
+		}
+	} else {
+		if (la() == Token::KW_FUNC) {
+			expr = parseFuncExpr();
+		} else {
+			expr = parsePrimaryExpr(allowTopEql);
+		}
+	}
 
 	Token token = lt();
 
@@ -1039,43 +1050,12 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError)
 
 			consume();
 
-			// TODO: actually we want a LL(*) parser so that we can parse it as an type specifier
-			// and if it failed we change it to Constructor
+			FuncCallExpr *fce = new FuncCallExpr(token, expr);
+			fce->params = params;
+			fce->partial = partial;
 
-			// TODO: it's kinda dirty hack
-			// TODO: we'll delete initial and firstId
-			/*char initial = 0;
-			if (lastId == NULL) {
-				if (expr->getASTType() == AST::ARRAY_LITERAL_EXPR) {
-					ArrayLiteralExpr *ale = static_cast<ArrayLiteralExpr *>(expr);
-					assert(ale->elements[0]->getASTType() == AST::IDENTIFIER);
-					initial = static_cast<Identifier *>(ale->elements[0])->getString()[0];
-				}
-			} else {
-				initial = lastId->getString()[0];
-			}
-			if ('A' <= initial && initial <= 'Z') {
-				ConstructorExpr *ce = NULL;
-				if (expr->getASTType() == AST::IDENTIFIER) {
-					ce = new ConstructorExpr(token, new TypeSpec(expr->token));
-				} else if(expr->getASTType() == AST::ARRAY_LITERAL_EXPR) {
-					ArrayLiteralExpr *ale = static_cast<ArrayLiteralExpr *>(expr);
-					assert(ale->elements[0]->getASTType() == AST::IDENTIFIER);
-					ce = new ConstructorExpr(token, 
-							new ArrayTypeSpec(false, false,
-								new TypeSpec(ale->elements[0]->token)));
-				}
-				assert(ce != NULL);
-				ce->params = params;
-				expr = ce;
-			} else {*/
-				FuncCallExpr *fce = new FuncCallExpr(token, expr);
-				fce->params = params;
-				fce->partial = partial;
-
-				expr = fce;
-				partial = false;
-			//}
+			expr = fce;
+			partial = false;
 		} else if (la() == Token::DOT) {
 			consume();
 
@@ -1084,8 +1064,6 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError)
 			Identifier *id = parseIdentifier();
 
 			expr = new MemberExpr(expr, token, id);
-
-			lastId = id;
 		} else {
 			break;
 		}
@@ -1243,6 +1221,45 @@ Expr *Parser::parseArrayLiteralExpr() throw (LexerError, ParserError) {
 	DBG_PRINT(-, parseArrayLiteralExpr);
 	return ale;
 }
+
+NamespaceStmt *Parser::parseNamespaceStmt() throw (LexerError, ParserError) {
+	DBG_PRINT(+, parseNamespaceStmt);
+
+	assert(la() == Token::KW_NAMESPACE);
+	Token token = lt();
+	consume();
+
+	TypeSpec *name = parseTypeSpec();
+	if (name->getASTType() != AST::TYPE_SPEC) {
+		throw ParserError(name->token.getPosition(), "error: you can't use this name as a namespace");
+	}
+
+	NamespaceStmt *ns = new NamespaceStmt(token, name);
+
+	if (la() != Token::LBRACE)
+		throw ParserError(getPosition(), "error: '{' expected");
+	consume();
+
+	while (la() != Token::RBRACE) {
+		if (la() == Token::END)
+			throw ParserError(getPosition(), "error: no closing '}'");
+
+		while (la() == Token::TERM)
+			consume();
+		std::vector<Stmt *> curStmts = parseStmt(true);
+		assert(curStmts.size() != 0);
+
+		ns->stmts.insert(ns->stmts.end(), curStmts.begin(), curStmts.end());
+	}
+
+	// la() == Token::RBRACE
+	consume();
+
+	DBG_PRINT(-, parseNamespaceStmt);
+
+	return ns;
+}
+
 
 };
 

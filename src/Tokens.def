@@ -67,7 +67,7 @@ KEYWORD(TRUE, "true")
 KEYWORD(FALSE, "false")
 
 KEYWORD(FUNC, "func")
-KEYWORD(MODULE, "module")
+KEYWORD(NAMESPACE, "namespace")
 KEYWORD(PUBLIC, "public")
 KEYWORD(PRIVATE, "private")
 KEYWORD(VAR, "var")

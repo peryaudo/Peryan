@@ -90,7 +90,7 @@ private:
 	llvm::Type *getLLVMType(Type *type);
 
 	void generateTransUnit(TransUnit *tu);
-	void generateGlobalDecl(BaseScope *bs);
+	void generateGlobalDecl(Scope *scope);
 	void generateStmt(Stmt *stmt);
 	void generateCompStmt(CompStmt *cs, bool isSimple) {
 		Block tmp(Block::UNKNOWN_BLOCK);
@@ -112,6 +112,8 @@ private:
 	void generateGotoStmt(GotoStmt *gs);
 	void generateGosubStmt(GosubStmt *gs);
 	void generateLabelStmt(LabelStmt *ls);
+
+	void generateNamespaceStmt(NamespaceStmt *ns);
 
 	llvm::Value *generateExpr(Expr *expr);
 	llvm::Value *generateVarRefExpr(Identifier *id);
@@ -241,7 +243,6 @@ void LLVMCodeGen::Impl::generate() {
 	llvm::raw_fd_ostream rawStream(fileName_.c_str(), error);
 
 	pm.add(createPrintModulePass(&rawStream));
-	//module_.dump();
 	pm.run(module_);
 
 	rawStream.close();
@@ -250,11 +251,11 @@ void LLVMCodeGen::Impl::generate() {
 	return;
 }
 
-void LLVMCodeGen::Impl::generateGlobalDecl(BaseScope *bs) {
+void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 	DBG_PRINT(+, generateGlobalDecl);
-	assert(bs != NULL);
+	assert(scope != NULL);
 	// generate declaration of global functions and global variables
-	for (BaseScope::iterator it = bs->begin(); it != bs->end(); ++it) {
+	for (Scope::iterator it = scope->begin(); it != scope->end(); ++it) {
 		assert((*it) != NULL);
 		switch ((*it)->getSymbolType()) {
 		case Symbol::EXTERN_SYMBOL:
@@ -281,6 +282,10 @@ void LLVMCodeGen::Impl::generateGlobalDecl(BaseScope *bs) {
 			assert(false && "class not implemented");
 			break;
 
+		case Symbol::NAMESPACE_SYMBOL:
+			generateGlobalDecl(static_cast<NamespaceSymbol *>(*it));
+			break;
+
 		default: ;
 			assert(false && "unknown symbol");
 		}
@@ -292,6 +297,7 @@ void LLVMCodeGen::Impl::generateGlobalDecl(BaseScope *bs) {
 
 void LLVMCodeGen::Impl::generateTransUnit(TransUnit *tu) {
 	DBG_PRINT(+, generateTransUnit);
+
 	// generate declaration of global functions and global variables
 	generateGlobalDecl(tu->scope);
 
@@ -433,6 +439,9 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 	case AST::EXTERN_STMT	:
 		// all extern declaration is on the global scope,
 		// so that we don't need any extra operation.
+		break;
+	case AST::NAMESPACE_STMT:
+		generateNamespaceStmt(static_cast<NamespaceStmt *>(stmt));
 		break;
 	default: assert(false && "unknown statement");
 	}
@@ -622,6 +631,14 @@ void LLVMCodeGen::Impl::generateCompStmt(CompStmt *cs, bool isSimple, bool autoC
 	return;
 }
 
+void LLVMCodeGen::Impl::generateNamespaceStmt(NamespaceStmt *ns) {
+	DBG_PRINT(+, generateNamespaceStmt);
+	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it) {
+		generateStmt(*it);
+	}
+	DBG_PRINT(-, generateNamespaceStmt);
+}
+
 void LLVMCodeGen::Impl::generateFuncDefStmt(FuncDefStmt *fds) {
 	DBG_PRINT(+, generateFuncDefStmt);
 
@@ -754,9 +771,8 @@ llvm::Value *LLVMCodeGen::Impl::generateVarRefExpr(Identifier *id) {
 	llvm::Value *from = lookup(id->symbol->getMangledSymbolName());
 	assert(from != NULL);
 
-	//builder_.SetInsertPoint(blocks.back().body);
 	DBG_PRINT(-, generateVarRefExpr);
-	return from; /*builder_.CreateLoad(from);*/
+	return from;
 }
 
 
@@ -1413,10 +1429,20 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 	DBG_PRINT(+, generateInstStmt);
 
-	assert(is->inst->getASTType() == AST::IDENTIFIER);
-	Identifier *id = static_cast<Identifier *>(is->inst);
+	Symbol *symbol = NULL;
 
-	FuncType *ft = static_cast<FuncType *>(id->symbol->getType());
+	if (is->inst->getASTType() == AST::IDENTIFIER) {
+		Identifier *id = static_cast<Identifier *>(is->inst);
+		symbol = id->symbol;
+	} else if (is->inst->getASTType() == AST::STATIC_MEMBER_EXPR) {
+		StaticMemberExpr *sme = static_cast<StaticMemberExpr *>(is->inst);
+		symbol = sme->member->symbol;
+	} else {
+		assert(false && "member instruction not supported yet!");
+	}
+	assert(symbol != NULL);
+
+	FuncType *ft = static_cast<FuncType *>(symbol->getType());
 
 	std::vector<llvm::Value *> params;
 	for (std::vector<Expr *>::iterator it = is->params.begin(); it != is->params.end(); ++it) {
@@ -1426,10 +1452,10 @@ void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 	}
 
 	std::string funcName;
-	if (id->symbol->getSymbolType() == Symbol::EXTERN_SYMBOL) {
-		funcName = id->symbol->getSymbolName();
+	if (symbol->getSymbolType() == Symbol::EXTERN_SYMBOL) {
+		funcName = symbol->getSymbolName();
 	} else {
-		funcName = id->symbol->getMangledSymbolName();
+		funcName = symbol->getMangledSymbolName();
 	}
 
 	llvm::Function *func = module_.getFunction(funcName);

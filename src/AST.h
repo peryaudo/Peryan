@@ -34,6 +34,7 @@ public:
 		REF_EXPR,
 		DEREF_EXPR,
 		FUNC_EXPR,
+		STATIC_MEMBER_EXPR,
 		COMP_STMT,
 		FUNC_DEF_STMT,
 		VAR_DEF_STMT,
@@ -48,7 +49,8 @@ public:
 		CONTINUE_STMT,
 		BREAK_STMT,
 		RETURN_STMT,
-		EXTERN_STMT
+		EXTERN_STMT,
+		NAMESPACE_STMT
 	} ASTType;
 
 	virtual AST::ASTType getASTType() = 0;
@@ -265,6 +267,16 @@ public:
 		: Expr(token), receiver(receiver), member(member) {}
 };
 
+class StaticMemberExpr : public Expr {
+public:
+	virtual AST::ASTType getASTType() { return STATIC_MEMBER_EXPR; }
+
+	TypeSpec *receiver;
+	Identifier *member;
+	StaticMemberExpr(TypeSpec *receiver, const Token& token, Identifier *member)
+		: Expr(token), receiver(receiver), member(member) {}
+};
+
 class CompStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return COMP_STMT; }
@@ -423,6 +435,20 @@ public:
 		: Stmt(token), id(id) {}
 
 	ExternSymbol *symbol;
+};
+
+class NamespaceStmt : public Stmt {
+public:
+	virtual AST::ASTType getASTType() { return NAMESPACE_STMT; }
+
+	TypeSpec *name;
+
+	NamespaceStmt(const Token& token, TypeSpec *name)
+		: Stmt(token), name(name) {}
+
+	std::vector<Stmt *> stmts;
+
+	NamespaceSymbol *symbol;
 };
 
 };

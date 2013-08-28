@@ -38,7 +38,9 @@ public:
 		MODIFIER_TYPE,
 		ARRAY_TYPE,
 		BUILTIN_TYPE,
-		FUNC_TYPE
+		FUNC_TYPE,
+		NAMESPACE_TYPE,
+		CLASS_TYPE
 	} TypeType;
 
 	virtual TypeType getTypeType() { return TYPE; }
@@ -148,6 +150,21 @@ class Scope {
 private:
 	Scope *enclosing_;
 public:
+	class iterator : public std::iterator<std::bidirectional_iterator_tag, Symbol *> {
+	private:
+		std::map<std::string, Symbol *>::iterator it_;
+	public:
+		iterator(std::map<std::string, Symbol *>::iterator it) : it_(it) {}
+		Symbol* operator*() const { return (*it_).second; }
+		iterator& operator++() { ++it_; return *this; }
+		iterator& operator--() { --it_; return *this; }
+		bool operator!=(const iterator& to) const { return it_ != to.it_; }
+		bool operator==(const iterator& to) const { return it_ == to.it_; }
+	};
+
+	virtual iterator begin() = 0;
+	virtual iterator end() = 0;
+
 	typedef enum {
 		SCOPE,
 		BASE_SCOPE,
@@ -194,6 +211,7 @@ public:
 		SCOPED_SYMBOL,
 		FUNC_SYMBOL,
 		CLASS_SYMBOL,
+		NAMESPACE_SYMBOL,
 		LABEL_SYMBOL
 	} SymbolType;
 
@@ -295,6 +313,9 @@ class FuncSymbol : public ScopedSymbol {
 private:
 	std::map<std::string, Symbol *> args_;
 public:
+	virtual iterator begin() { return iterator(args_.begin()); }
+	virtual iterator end() { return iterator(args_.end()); }
+
 	FuncSymbol(const std::string& name, Scope *parent, Position position)
 		: ScopedSymbol(name, parent, position) {}
 
@@ -324,24 +345,53 @@ public:
 	virtual SymbolType getSymbolType() { return CLASS_SYMBOL; }
 }; // STUB!!!
 
+class NamespaceSymbol : public ScopedSymbol, public Type {
+private:
+	std::map<std::string, Symbol *> members_;
+public:
+	NamespaceSymbol(const std::string& name, Scope *parent, Position position)
+		: ScopedSymbol(name, parent, position), Type(name) {}
+
+	virtual SymbolType getSymbolType() { return NAMESPACE_SYMBOL; }
+	virtual TypeType getTypeType() { return NAMESPACE_TYPE; }
+
+	virtual iterator begin() { return iterator(members_.begin()); }
+	virtual iterator end() { return iterator(members_.end()); }
+
+	virtual Symbol *getMember(const std::string& name) {
+		if (members_.count(name)) {
+			return members_[name];
+		} else {
+			return NULL;
+		}
+	}
+
+	virtual bool setMember(const std::string& name, Symbol *symbol) {
+		if (members_.count(name))
+			return true;
+		members_[name] = symbol;
+
+		return false;
+	}
+
+	virtual std::string getScopeName() { return getSymbolName(); }
+
+	virtual Symbol *resolveMember(const std::string& name, Position curPos = 0) {
+		if (members_.count(name) && members_[name]->getPosition() <= curPos) {
+			return members_[name];
+		} else {
+			// don't unwind to the parent scope because it is member
+			return NULL;
+		}
+	}
+};
+
 class BaseScope : public Scope {
 private:
 	std::map<std::string, Symbol *> symbols_;
 public:
-	class iterator : public std::iterator<std::bidirectional_iterator_tag, Symbol *> {
-	private:
-		std::map<std::string, Symbol *>::iterator it_;
-	public:
-		iterator(std::map<std::string, Symbol *>::iterator it) : it_(it) {}
-		Symbol* operator*() const { return (*it_).second; }
-		iterator& operator++() { ++it_; return *this; }
-		iterator& operator--() { --it_; return *this; }
-		bool operator!=(const iterator& to) const { return it_ != to.it_; }
-		bool operator==(const iterator& to) const { return it_ == to.it_; }
-	};
-
-	iterator begin() { return iterator(symbols_.begin()); }
-	iterator end() { return iterator(symbols_.end()); }
+	virtual iterator begin() { return iterator(symbols_.begin()); }
+	virtual iterator end() { return iterator(symbols_.end()); }
 
 	BaseScope(Scope *parent) : Scope(parent) {}
 

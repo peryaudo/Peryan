@@ -81,6 +81,7 @@ public:
 	void visit(GotoStmt *gs) throw (SemanticsError);
 	void visit(GosubStmt *gs) throw (SemanticsError);
 	void visit(ReturnStmt *rs) throw (SemanticsError);
+	void visit(NamespaceStmt *ns) throw (SemanticsError);
 	Type *visit(Expr *expr) throw (SemanticsError);
 	Type *visit(Identifier *id) throw (SemanticsError);
 	Type *visit(Label *label) throw (SemanticsError);
@@ -96,6 +97,7 @@ public:
 	Type *visit(ConstructorExpr *ce) throw (SemanticsError);
 	Type *visit(SubscrExpr *se) throw (SemanticsError);
 	Type *visit(MemberExpr *me) throw (SemanticsError);
+	Type *visit(StaticMemberExpr *sme) throw (SemanticsError);
 };
 
 };

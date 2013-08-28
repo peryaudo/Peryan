@@ -136,6 +136,10 @@ void noteload(struct String *fileName)
 	*noteTarget_ = PRStringConstructorVoid();
 
 	fp = fopen(fileName->str, "r");
+	if (fp == NULL) {
+		fprintf(stderr, "runtime error: cannot open the file %s\n", fileName->str);
+		exit(-1);
+	}
 
 	while (1) {
 		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)

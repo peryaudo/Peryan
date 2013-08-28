@@ -1,0 +1,8 @@
+namespace Foo {
+	func bar (message :: String) :: Int {
+		mes message
+		return 0
+	}
+}
+
+Foo.bar "simple namespace"

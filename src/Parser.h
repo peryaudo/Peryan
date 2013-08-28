@@ -136,7 +136,8 @@ private:
 	LabelStmt *parseLabelStmt(bool withoutTerm = false) throw (LexerError, ParserError);
 	Stmt *parseGotoGosubStmt(bool withoutTerm = false) throw (LexerError, ParserError);
 	Stmt *parseInstOrAssignStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	Stmt *parseExternStmt() throw (LexerError, ParserError);
+	ExternStmt *parseExternStmt() throw (LexerError, ParserError);
+	NamespaceStmt *parseNamespaceStmt() throw (LexerError, ParserError);
 
 public:
 	Parser(Lexer& lexer, Options& options, WarningPrinter& wp)

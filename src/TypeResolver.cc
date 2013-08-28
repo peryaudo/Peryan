@@ -1,3 +1,5 @@
+// For detail, see the top of the SymbolResolver
+
 #include <iostream>
 
 #include "SymbolTable.h"
@@ -244,6 +246,7 @@ void TypeResolver::visit(Stmt *stmt) throw (SemanticsError) {
 	case AST::GOTO_STMT		: visit(static_cast<GotoStmt *>(stmt)); break;
 	case AST::GOSUB_STMT		: visit(static_cast<GosubStmt*>(stmt)); break;
 	case AST::RETURN_STMT		: visit(static_cast<ReturnStmt *>(stmt)); break;
+	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt)); break;
 	default				: ;
 	}
 
@@ -458,6 +461,19 @@ void TypeResolver::visit(CompStmt *cs) throw (SemanticsError) {
 	return;
 }
 
+void TypeResolver::visit(NamespaceStmt *ns) throw (SemanticsError) {
+	DBG_PRINT(+, NamespaceStmt);
+	assert(ns != NULL);
+
+	for (std::vector<Stmt *>::iterator it = ns->stmts.begin();
+			it != ns->stmts.end(); ++it) {
+		visit(*it);
+	}
+
+	DBG_PRINT(-, NamespaceStmt);
+
+}
+
 void TypeResolver::visit(IfStmt *is) throw (SemanticsError) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
@@ -565,6 +581,7 @@ Type *TypeResolver::visit(Expr *expr) throw (SemanticsError) {
 	case AST::CONSTRUCTOR_EXPR	: type = visit(static_cast<ConstructorExpr *>(expr)); break;
 	case AST::SUBSCR_EXPR		: type = visit(static_cast<SubscrExpr *>(expr)); break;
 	case AST::MEMBER_EXPR		: type = visit(static_cast<MemberExpr *>(expr)); break;
+	case AST::STATIC_MEMBER_EXPR	: type = visit(static_cast<StaticMemberExpr *>(expr)); break;
 	default				: assert(false);
 	}
 
@@ -899,20 +916,75 @@ Type *TypeResolver::visit(SubscrExpr *se) throw (SemanticsError) {
 	return se->type;
 }
 
-// TODO: need check
 Type *TypeResolver::visit(MemberExpr *me) throw (SemanticsError) {
 	DBG_PRINT(+, MemberExpr);
-	assert(false);
 	assert(me != NULL);
 
-	// TODO: STUB!!!
-
 	visit(me->receiver);
-	visit(me->member);
+
+	if (me->receiver->type->unmodify()->getTypeType() != Type::CLASS_TYPE
+		&& !(me->receiver->type->unmodify()->is(String_))
+		&& me->receiver->type->unmodify()->getTypeType() != Type::ARRAY_TYPE) {
+		throw SemanticsError(me->token.getPosition(),
+			std::string("error: invalid left hand side type (")
+			+ me->receiver->type->getTypeName() + ")");
+	}
+
+	assert(me->receiver->type->getTypeType() != Type::CLASS_TYPE && "class not supported");
+
+	assert(me->member->getASTType() == AST::IDENTIFIER);
+
+	if (me->receiver->type->unmodify()->is(String_)) {
+		if (me->member->getString() == "length") {
+			me->type = new ModifierType(true, true, Int_);
+		} else {
+			throw SemanticsError(me->token.getPosition(),
+				std::string("error: invalid member ") + me->member->getString()
+				+ " for type " + me->receiver->type->getTypeName());
+		}
+	} else if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE) {
+		if (me->member->getString() == "length") {
+			me->type = new ModifierType(true, true, Int_);
+		} else {
+			throw SemanticsError(me->token.getPosition(),
+				std::string("error: invalid member ") + me->member->getString()
+				+ " for type " + me->receiver->type->getTypeName());
+		}
+	}
 
 	DBG_PRINT(-, MemberExpr);
 
-	return NULL;
+	return me->type;
+}
+
+Type *TypeResolver::visit(StaticMemberExpr *sme) throw (SemanticsError) {
+	DBG_PRINT(+, StaticMemberExpr);
+	assert(sme != NULL);
+
+	assert(sme->receiver->type->getTypeType() == Type::NAMESPACE_TYPE
+		|| sme->receiver->type->getTypeType() == Type::CLASS_TYPE);
+
+	assert(sme->receiver->type->getTypeType() != Type::CLASS_TYPE && "class not supported");
+
+	assert(sme->member->getASTType() == AST::IDENTIFIER);
+
+	if (sme->receiver->type->getTypeType() == Type::NAMESPACE_TYPE) {
+		NamespaceSymbol *ns = static_cast<NamespaceSymbol *>(sme->receiver->type);
+		Symbol *symbol = ns->resolveMember(sme->member->getString(), sme->member->token.getPosition());
+		if (symbol == NULL) {
+			throw SemanticsError(sme->member->token.getPosition(),
+				std::string("error : unknown member ") + sme->member->getString());
+		}
+		assert (symbol->getType() != NULL);
+
+		sme->member->symbol = symbol;
+		sme->member->type = symbol->getType();
+		sme->type = symbol->getType();
+	}
+
+	DBG_PRINT(-, StaticMemberExpr);
+
+	return sme->type;
 }
 
 };

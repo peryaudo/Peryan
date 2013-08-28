@@ -1,6 +1,8 @@
-// SymbolResolver resolves symbols without types,
-// but also resolves the types of the symbols which are specified explicitly.
-// Type definitions disallows forward reference, so they can be resolved in this class.
+// SymbolResolver resolves symbols without type recognition,
+// but also it resolves the types of the symbols which are specified explicitly.
+// Forward reference of type definitions is disallowed, so types will be resolved in this class.
+// You can't resolve symbols inside data structure (i.e. class or namespace) without types,
+// so SymbolResolver won't resolve such symbols. (right hand side of MemberExpr, StaticMemberExpr)
 
 #include <iostream>
 
@@ -42,6 +44,7 @@ void SymbolResolver::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
 	case AST::GOSUB_STMT		: visit(static_cast<GosubStmt*>(stmt), scope); break;
 	case AST::RETURN_STMT		: visit(static_cast<ReturnStmt *>(stmt), scope); break;
 	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt), scope); break;
+	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt), scope); break;
 	default				: ;
 	}
 
@@ -217,6 +220,12 @@ void SymbolResolver::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) 
 	DBG_PRINT(+, ExternStmt);
 }
 
+void SymbolResolver::visit(NamespaceStmt *ns, Scope *Scope) throw (SemanticsError) {
+	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
+		visit(*it, ns->symbol);
+}
+
+
 void SymbolResolver::visit(Expr *expr, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
@@ -236,6 +245,7 @@ void SymbolResolver::visit(Expr *expr, Scope *scope) throw (SemanticsError) {
 	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr), scope); break;
 	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr), scope); break;
 	case AST::MEMBER_EXPR		: visit(static_cast<MemberExpr *>(expr), scope); break;
+	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr), scope); break;
 	default				: ;
 	}
 
@@ -251,7 +261,7 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) throw (SemanticsError) 
 	// There are four statuses of symbol and typeSpec (type is always NULL)
 	// sym\ts o  x
 	//  o     *  *
-	//  x     x  * (x won't occur)
+	//  x     -  * (- won't occur)
 
 	// if typeSpec is null you should concentrate on symbol resolving
 
@@ -415,12 +425,20 @@ void SymbolResolver::visit(MemberExpr *me, Scope *scope) throw (SemanticsError) 
 	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
-	// STUB!!!
-
 	visit(me->receiver, scope);
-	visit(me->member, scope);
+	// won't visit identifier
 
 	DBG_PRINT(-, MemberExpr);
+	return;
+}
+
+void SymbolResolver::visit(StaticMemberExpr *sme, Scope *scope) throw (SemanticsError) {
+	DBG_PRINT(+, StaticMemberExpr);
+	assert(sme != NULL);
+
+	visit(sme->receiver, scope);
+
+	DBG_PRINT(-, StaticMemberExpr);
 	return;
 }
 
@@ -436,19 +454,32 @@ Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) throw (SemanticsError) {
 	}
 
 	Symbol *symbol = scope->resolve(ts->token.getString(), ts->token.getPosition());
-	// TODO: fix it to support classes
-	if (symbol == NULL || symbol->getSymbolType() != Symbol::BUILTIN_TYPE_SYMBOL) {
+	if (symbol == NULL) {
 		throw SemanticsError(ts->token.getPosition(),
-			std::string("error: unknown or incorrect type \"") + ts->token.getString()
+			std::string("error: unknown type \"") + ts->token.getString()
 				+ std::string("\""));
 	}
 
-	BuiltInTypeSymbol *bts = static_cast<BuiltInTypeSymbol *>(symbol);
+	assert(symbol->getSymbolType() == Symbol::BUILTIN_TYPE_SYMBOL
+	    || symbol->getSymbolType() == Symbol::NAMESPACE_SYMBOL && "class not supported yet");
 
-	if (ts->isConst || ts->isRef) {
-		ts->type = new ModifierType(ts->isConst, ts->isRef, bts);
-	} else {
-		ts->type = bts;
+	if (symbol->getSymbolType() == Symbol::BUILTIN_TYPE_SYMBOL) {
+		BuiltInTypeSymbol *bts = static_cast<BuiltInTypeSymbol *>(symbol);
+
+		if (ts->isConst || ts->isRef) {
+			ts->type = new ModifierType(ts->isConst, ts->isRef, bts);
+		} else {
+			ts->type = bts;
+		}
+	} else if (symbol->getSymbolType() == Symbol::NAMESPACE_SYMBOL) {
+		NamespaceSymbol *ns = static_cast<NamespaceSymbol *>(symbol);
+
+		if (ts->isConst || ts->isRef) {
+			ts->type = new ModifierType(ts->isConst, ts->isRef, ns);
+		} else {
+			ts->type = ns;
+		}
+
 	}
 
 	DBG_PRINT(-, TypeSpec);
