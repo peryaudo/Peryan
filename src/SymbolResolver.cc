@@ -377,13 +377,6 @@ void SymbolResolver::visit(FuncCallExpr *fce, Scope *scope) throw (SemanticsErro
 	assert(fce != NULL);
 	assert(fce->func != NULL);
 
-	assert(fce->func->token.getType() == Token::ID);
-	if ((fce->symbol = scope->resolve(fce->func->token.getString(),
-					fce->func->token.getPosition())) == NULL) {
-		throw SemanticsError(fce->func->token.getPosition(),
-			std::string("error : unknown identifier ") + fce->func->token.getString());
-	}
-
 	visit(fce->func, scope);
 
 	for (std::vector<Expr *>::iterator it = fce->params.begin();
@@ -450,7 +443,8 @@ Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) throw (SemanticsError) {
 	case AST::TYPE_SPEC		: break;
 	case AST::ARRAY_TYPE_SPEC	: return visit(static_cast<ArrayTypeSpec *>(ts), scope);
 	case AST::FUNC_TYPE_SPEC	: return visit(static_cast<FuncTypeSpec *>(ts), scope);
-	default				: assert(false);
+	case AST::MEMBER_TYPE_SPEC	: return visit(static_cast<MemberTypeSpec *>(ts), scope);
+	default				: assert(false && "unknown type specifier");
 	}
 
 	Symbol *symbol = scope->resolve(ts->token.getString(), ts->token.getPosition());
@@ -516,6 +510,38 @@ FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) throw (Semantic
 
 	DBG_PRINT(-, FuncTypeSpec);
 	return ft;
+}
+
+Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) throw (SemanticsError) {
+	DBG_PRINT(+, MemberTypeSpec);
+	assert(mts != NULL);
+
+	visit(mts->lhs, scope);
+
+	assert (mts->lhs->type != NULL);
+
+	if (mts->lhs->type->getTypeType() != Type::CLASS_TYPE
+		&& mts->lhs->type->getTypeType() != Type::NAMESPACE_TYPE) {
+		throw SemanticsError(mts->lhs->token.getPosition(),
+			std::string("error: type \"") + mts->lhs->type->getTypeName()
+				+ "\" is neither class nor namespace");
+	}
+
+	assert(mts->lhs->type->getTypeType() != Type::CLASS_TYPE);
+	if (mts->lhs->type->getTypeType() == Type::NAMESPACE_TYPE) {
+		NamespaceSymbol *ns = static_cast<NamespaceSymbol *>(mts->lhs->type);
+		Symbol *resolved = ns->resolveMember(mts->rhs.getString(), mts->rhs.getPosition());
+		if (resolved == NULL) {
+			throw SemanticsError(mts->rhs.getPosition(),
+				std::string("error: unknown member ") + mts->rhs.getString());
+		}
+		if (resolved->getSymbolType() == Symbol::NAMESPACE_SYMBOL) {
+			mts->type = static_cast<Type *>(static_cast<NamespaceSymbol *>(resolved));
+		} else {
+			assert(false && "unknown type");
+		}
+	}
+	return mts->type;
 }
 
 };

@@ -362,8 +362,10 @@ CompStmt *Parser::parseCompStmt() throw (LexerError, ParserError) {
 	while (la() != Token::RBRACE) {
 		if (la() == Token::END)
 			throw ParserError(getPosition(), "error: no closing '}'");
-		while (la() == Token::TERM)
+		if (la() == Token::TERM) {
 			consume();
+			continue;
+		}
 		std::vector<Stmt *> curStmts = parseStmt(false);
 		assert(curStmts.size() != 0);
 
@@ -480,6 +482,7 @@ TypeSpec *Parser::parseTypeSpec() throw (LexerError, ParserError) {
 	}
 
 	TypeSpec *typeSpec = NULL, *first = NULL;
+
 	switch (la()) {
 	case Token::TYPE_ID:
 		if (!isSpeculating())
@@ -516,6 +519,17 @@ TypeSpec *Parser::parseTypeSpec() throw (LexerError, ParserError) {
 		break;
 	default:
 		throw ParserError(getPosition(), "error: invalid or unsupported type specifier");
+	}
+		
+
+	while (la(0) == Token::DOT && la(1) == Token::TYPE_ID) {
+		Token token = lt(0), rhs = lt(1);
+		consume(2);
+
+		// TODO: deal with first modifier
+		if (!isSpeculating()) {
+			typeSpec = new MemberTypeSpec(typeSpec, token, rhs, isConst, isRef);
+		}
 	}
 
 	if (la() == Token::RARROW) {
@@ -1244,8 +1258,10 @@ NamespaceStmt *Parser::parseNamespaceStmt() throw (LexerError, ParserError) {
 		if (la() == Token::END)
 			throw ParserError(getPosition(), "error: no closing '}'");
 
-		while (la() == Token::TERM)
+		if (la() == Token::TERM) {
 			consume();
+			continue;
+		}
 		std::vector<Stmt *> curStmts = parseStmt(true);
 		assert(curStmts.size() != 0);
 
@@ -1253,6 +1269,10 @@ NamespaceStmt *Parser::parseNamespaceStmt() throw (LexerError, ParserError) {
 	}
 
 	// la() == Token::RBRACE
+	consume();
+
+	if (la() != Token::TERM)
+		throw ParserError(getPosition(), "error: no terminal character");
 	consume();
 
 	DBG_PRINT(-, parseNamespaceStmt);

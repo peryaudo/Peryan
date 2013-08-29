@@ -997,10 +997,20 @@ llvm::Value *LLVMCodeGen::Impl::generateArrayLiteralExpr(ArrayLiteralExpr *ale) 
 llvm::Value *LLVMCodeGen::Impl::generateFuncCallExpr(FuncCallExpr *fce) {
 	DBG_PRINT(+, generateFuncCallExpr);
 
-	assert(fce->func->getASTType() == AST::IDENTIFIER);
-	Identifier *id = static_cast<Identifier *>(fce->func);
+	Symbol *symbol = NULL;
 
-	FuncType *ft = static_cast<FuncType *>(id->symbol->getType());
+	if (fce->func->getASTType() == AST::IDENTIFIER) {
+		Identifier *id = static_cast<Identifier *>(fce->func);
+		symbol = id->symbol;
+	} else if (fce->func->getASTType() == AST::STATIC_MEMBER_EXPR) {
+		StaticMemberExpr *sme = static_cast<StaticMemberExpr *>(fce->func);
+		symbol = sme->member->symbol;
+	} else {
+		assert(false && "member instruction not supported yet!");
+	}
+	assert(symbol != NULL);
+
+	FuncType *ft = static_cast<FuncType *>(symbol->getType());
 
 	std::vector<llvm::Value *> params;
 	for (std::vector<Expr *>::iterator it = fce->params.begin(); it != fce->params.end(); ++it) {
@@ -1015,10 +1025,10 @@ llvm::Value *LLVMCodeGen::Impl::generateFuncCallExpr(FuncCallExpr *fce) {
 	}
 
 	std::string funcName;
-	if (id->symbol->getSymbolType() == Symbol::EXTERN_SYMBOL) {
-		funcName = id->symbol->getSymbolName();
+	if (symbol->getSymbolType() == Symbol::EXTERN_SYMBOL) {
+		funcName = symbol->getSymbolName();
 	} else {
-		funcName = id->symbol->getMangledSymbolName();
+		funcName = symbol->getMangledSymbolName();
 	}
 
 	llvm::Function *func = module_.getFunction(funcName);

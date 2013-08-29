@@ -36,6 +36,7 @@ public:
 		case AST::TYPE_SPEC		:
 		case AST::ARRAY_TYPE_SPEC	:
 		case AST::FUNC_TYPE_SPEC	:
+		case AST::MEMBER_TYPE_SPEC	:
 			return toString(static_cast<TypeSpec *>(ast));
 
 		case AST::EXPR			: 
@@ -99,7 +100,8 @@ public:
 		case AST::TYPE_SPEC		: ss<<"(TypeSpec"; break;
 		case AST::ARRAY_TYPE_SPEC	: ss<<"(ArrayTypeSpec"; break;
 		case AST::FUNC_TYPE_SPEC	: ss<<"(FuncTypeSpec"; break;
-		default				: ;
+		case AST::MEMBER_TYPE_SPEC	: ss<<"(MemberTypeSpec"; break;
+		default: ;
 		}
 
 		if (ts->isConst)
@@ -112,7 +114,10 @@ public:
 		case AST::ARRAY_TYPE_SPEC	: ss<<ind()<<toString(static_cast<ArrayTypeSpec *>(ts)->typeSpec); break;
 		case AST::FUNC_TYPE_SPEC	: ss<<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->lhs)
 						    <<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->rhs); break;
-		default				: ;
+		case AST::MEMBER_TYPE_SPEC	: ss<<ind()<<toString(static_cast<MemberTypeSpec *>(ts)->lhs)
+						  <<" "<<static_cast<MemberTypeSpec *>(ts)->rhs.getString();
+						  break;
+		default: ;
 		}
 
 		ss<<")";

@@ -13,7 +13,8 @@ private:
 
 	SymbolTable& symbolTable_;
 public:
-	SymbolResolver(SymbolTable& symbolTable) : symbolTable_(symbolTable) {}
+	SymbolResolver(SymbolTable& symbolTable)
+		: symbolTable_(symbolTable) {}
 
 	void visit(TransUnit *tu) throw (SemanticsError);
 
@@ -48,6 +49,7 @@ public:
 	Type *visit(TypeSpec *ts, Scope *scope) throw (SemanticsError);
 	ArrayType *visit(ArrayTypeSpec *ts, Scope *scope) throw (SemanticsError);
 	FuncType *visit(FuncTypeSpec *fs, Scope *scope) throw (SemanticsError);
+	Type *visit(MemberTypeSpec *mts, Scope *scope) throw (SemanticsError);
 };
 
 };

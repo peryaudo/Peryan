@@ -17,6 +17,7 @@ public:
 		TYPE_SPEC,
 		ARRAY_TYPE_SPEC,
 		FUNC_TYPE_SPEC,
+		MEMBER_TYPE_SPEC,
 		EXPR,
 		IDENTIFIER,
 		BINARY_EXPR,
@@ -97,6 +98,16 @@ public:
 		: AST(token), isConst(isConst), isRef(isRef) {}
 
 	Type *type;
+};
+
+class MemberTypeSpec : public TypeSpec {
+public:
+	virtual AST::ASTType getASTType() { return MEMBER_TYPE_SPEC; }
+
+	TypeSpec *lhs;
+	Token rhs;
+	MemberTypeSpec(TypeSpec *lhs, const Token& token, const Token& rhs, bool isConst, bool isRef)
+		: TypeSpec(token, isConst, isRef), lhs(lhs), rhs(rhs) {}
 };
 
 class ArrayTypeSpec : public TypeSpec {
