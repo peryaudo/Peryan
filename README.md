@@ -1,5 +1,7 @@
 # プログラミング言語 Peryan
 
+![Peryan Logo](./peryan.png)
+
 ## Peryanについて
 
 Peryanによって書かれたエラトステネスのふるい(1000より小さい素数を列挙)

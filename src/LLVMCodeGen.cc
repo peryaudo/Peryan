@@ -564,8 +564,8 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 // if you implement C++ style cleanup, the overview is like that:
 // (1) make sure which statements cause cleanup
 // (2) add cleanup block at the end of the compound / function statement
-//     with label variable to memory destination after cleanup
-//  -  when come to these statements, register its destination to the label variable,
+//     with label variable to memorize destination after cleanup
+//  -  when it comes to these statements, register its destination to the label variable,
 // (3) and jump to the cleanup block
 
 // to realize this:
