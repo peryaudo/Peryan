@@ -1,7 +1,7 @@
 all: runtime.ll
 
 runtime.ll: runtime.c common.h
-	clang -O0 -S -emit-llvm runtime.c -o runtime.ll
+	clang -O3 -Wall -c runtime.c -o runtime.o
 
 clean:
-	rm -rf runtime.ll
+	rm -rf runtime.o

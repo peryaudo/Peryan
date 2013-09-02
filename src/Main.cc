@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
 		std::cerr<<"error: please set PERYAN_RUNTIME_PATH"<<std::endl;
 		return -1;
 	}
+
+	// TODO: rewrite this Windows compatible
 	char *tmpDir = getenv("TMPDIR");
 	if (tmpDir == NULL) {
 		std::cerr<<"error: please set TMPDIR"<<std::endl;
@@ -62,7 +64,7 @@ int main(int argc, char *argv[])
 	opt.includePaths.push_back(runtimePath);
 	opt.includePaths.push_back(".");
 
-	// Lexer, Parser, Code Generator
+	// Lexer and parser
 
 	Peryan::WarningPrinter warnings;
 
@@ -91,9 +93,11 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt.dumpAST) {
-		Peryan::ASTPrinter printer(true);
+		Peryan::ASTPrinter printer(/* pretty = */ true);
 		std::cerr<<printer.toString(parser.getTransUnit())<<std::endl;
 	}
+
+	// Code generator
 
 	Peryan::LLVMCodeGen codeGen(parser, std::string(tmpDir) + std::string("/tmp.ll"));
 	
@@ -103,18 +107,14 @@ int main(int argc, char *argv[])
 
 	{
 		std::stringstream ss;
-		ss<<"llvm-link \""<<tmpDir<<"/tmp.ll\" \""<<runtimePath<<"/runtime.ll\" -S -o \"";
-		ss<<tmpDir<<"/tmp_linked.ll\"";
+		ss<<"llc -filetype=obj -o \""<<tmpDir<<"/tmp.o\" \""<<tmpDir<<"/tmp.ll\"";
+		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		system(ss.str().c_str());
 	}
 	{
 		std::stringstream ss;
-		ss<<"llc -o="<<tmpDir<<"/tmp.s \""<<tmpDir<<"/tmp_linked.ll\"";
-		system(ss.str().c_str());
-	}
-	{
-		std::stringstream ss;
-		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<tmpDir<<"/tmp.s\"";
+		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<tmpDir<<"/tmp.o\" \""<<runtimePath<<"/runtime.o\"";
+		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		system(ss.str().c_str());
 	}
 
