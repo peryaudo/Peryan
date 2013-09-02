@@ -780,6 +780,41 @@ llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
 	DBG_PRINT(+-, generateBinaryExpr);
 	assert(be->lhs->type->is(be->rhs->type));
 
+	// logical AND, OR (& | with Bool)
+	if (be->lhs->type->is(Bool_) &&
+			(be->token.getType() == Token::AMP || be->token.getType() == Token::PIPE)) {
+		std::string numStr = getUniqNumStr();
+		llvm::Function *func = getEnclosingFunc();
+		llvm::BasicBlock *logicLhs = blocks.back().body;
+		llvm::BasicBlock *logicRhs = llvm::BasicBlock::Create(context_,
+							"logicRhs" + numStr, func);
+		llvm::BasicBlock *logicAfter = llvm::BasicBlock::Create(context_,
+							"logicAfter" + numStr, func);
+
+		const bool isAnd = (be->token.getType() == Token::AMP);
+
+		builder_.SetInsertPoint(logicLhs);
+		llvm::Value *lhs = generateExpr(be->lhs);
+
+		builder_.CreateCondBr(
+			builder_.CreateICmpEQ(lhs, llvm::ConstantInt::get(getLLVMType(Bool_), (isAnd ? 1 : 0))),
+			logicRhs,
+			logicAfter);
+
+		builder_.SetInsertPoint(logicRhs);
+		blocks.back().body = logicRhs;
+		llvm::Value *rhs = generateExpr(be->rhs);
+		builder_.CreateBr(logicAfter);
+
+		builder_.SetInsertPoint(logicAfter);
+		blocks.back().body = logicAfter;
+
+		llvm::PHINode *pn = builder_.CreatePHI(getLLVMType(Bool_), 2);
+		pn->addIncoming(llvm::ConstantInt::get(getLLVMType(Bool_), (isAnd ? 0 : 1)), logicLhs);
+		pn->addIncoming(rhs, logicRhs);
+		return pn;
+	}
+
 	llvm::Value *lhs = generateExpr(be->lhs);
 	llvm::Value *rhs = generateExpr(be->rhs);
 

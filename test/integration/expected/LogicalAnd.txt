@@ -1,0 +1,8 @@
+lhs for and
+rhs for and
+total true
+lhs for and
+lhs for or
+total true
+lhs for or
+rhs for or

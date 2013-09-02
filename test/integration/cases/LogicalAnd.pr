@@ -1,0 +1,26 @@
+func lhs(ty::String, b::Bool) :: Bool {
+	mes "lhs for " + ty
+	return b
+}
+
+func rhs(ty::String, b::Bool) :: Bool {
+	mes "rhs for " + ty
+	return b
+}
+
+if lhs("and", true) & rhs("and", true) {
+	mes "total true"
+}
+
+
+if lhs("and", false) & rhs("and", true) {
+	mes "total false"
+}
+
+if lhs("or", true) | rhs("or", false) {
+	mes "total true"
+}
+
+if lhs("or", false) | rhs("or", false) {
+	mes "total false"
+}
