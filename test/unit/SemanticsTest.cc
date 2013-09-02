@@ -156,5 +156,20 @@ TEST_F(SemanticsTest, SimpleTypeInference) {
 	ASSERT_NO_THROW(parse());
 }
 
+TEST_F(SemanticsTest, DoNotInstantiateNamespace) {
+	const std::string source =
+		"extern mes :: String -> Void\n"
+		"namespace Hoge {\n"
+			"\tfunc hige() :: Void {\n"
+				"\t\tmes \"foo\"\n"
+			"\t}\n"
+		"}\n"
+		"var foo :: Hoge\n";
+
+	ssr.setString("main.pr", source);
+
+	ASSERT_THROW(parse(), Peryan::SemanticsError);
+}
+
 };
 

@@ -62,12 +62,25 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 
 	Type *curType = fds->retTypeSpec->type;
 
+	if (curType->getTypeType() == Type::NAMESPACE_TYPE) {
+		throw SemanticsError(fds->token.getPosition(),
+			std::string("error : cannot use namespace type ")
+			+ curType->getTypeName()
+			+ " as a return value");
+	}
+
 	if (fds->params.size() > 0) {
 		for (std::vector<Identifier *>::reverse_iterator it = fds->params.rbegin();
 				it != fds->params.rend(); ++it) {
 			visit(*it, scope);
-
 			assert((*it)->type != NULL);
+
+			if ((*it)->type->getTypeType() == Type::NAMESPACE_TYPE) {
+				throw SemanticsError(fds->token.getPosition(),
+					std::string("error : cannot use namespace type ")
+					+ (*it)->type->getTypeName()
+					+ " as a parameter value");
+			}
 
 			curType = new FuncType((*it)->type, curType);
 		}

@@ -21,7 +21,6 @@ TypeResolver::TypeResolver(SymbolTable& symbolTable) : symbolTable_(symbolTable)
 	Label_	= static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Label"));
 	Void_	= static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Void"));
 
-	assert(Int_ != NULL);
 	//initPromotionTable();
 	initBinaryPromotionTable();
 }
@@ -321,6 +320,12 @@ void TypeResolver::visit(VarDefStmt *vds) throw (SemanticsError) {
 	} else if (vds->id->type == NULL && vds->init == NULL) {
 			throw SemanticsError(vds->token.getPosition(),
 					"error: (STUB) cannot infer the type of the variable");
+	}
+
+	if (vds->id->type->getTypeType() == Type::NAMESPACE_TYPE) {
+		throw SemanticsError(vds->token.getPosition(),
+			std::string("error : cannot instantiate namespace type ")
+			+ vds->id->type->getTypeName());
 	}
 
 	DBG_PRINT(-, VarDefStmt);
