@@ -1,5 +1,3 @@
-# プログラミング言語 Peryan
-
 ![Peryan Logo](./peryan.png)
 
 ## Peryanについて
