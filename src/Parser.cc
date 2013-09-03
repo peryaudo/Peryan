@@ -45,7 +45,7 @@ void Parser::parse() throw (LexerError, ParserError, SemanticsError) {
 	if (options_.verbose) std::cerr<<"ok."<<std::endl;
 
 	if (options_.verbose) std::cerr<<"resolving types...";
-	TypeResolver typeResolver(getSymbolTable());
+	TypeResolver typeResolver(getSymbolTable(), options_);
 	typeResolver.visit(getTransUnit());
 	if (options_.verbose) {
 		std::cerr<<"ok."<<std::endl;
@@ -222,23 +222,25 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 
 		Identifier *curParam = parseIdentifier();
 
-		// TODO: will be optional
-		if (la() != Token::CLNCLN)
-			throw ParserError(getPosition(), "error: STUB: type inference not implemented yet");
-		consume();
+		if (la() == Token::CLNCLN) {
+			consume();
 
-		curParam->typeSpec = parseTypeSpec();
+			curParam->typeSpec = parseTypeSpec();
+		}
 
 		params.push_back(curParam);
 	}
 
 	consume();
 
-	if (la() != Token::CLNCLN)
-		throw ParserError(getPosition(), "error: '::' expected");
-	consume();
+	TypeSpec *retTypeSpec = NULL;
+	if (la() == Token::CLNCLN) {
+		consume();
 
-	TypeSpec *retType = parseTypeSpec();
+		retTypeSpec = parseTypeSpec();
+	} else {
+		retTypeSpec = NULL;
+	}
 
 	if (la() != Token::LBRACE)
 		throw ParserError(getPosition(), "error: '{' expected");
@@ -252,7 +254,7 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 
 	FuncDefStmt *fds = new FuncDefStmt(token, name, body);
 	fds->params = params;
-	fds->retTypeSpec = retType;
+	fds->retTypeSpec = retTypeSpec;
 
 	DBG_PRINT(-, parseFuncDefStmt);
 	return fds;
@@ -1116,23 +1118,25 @@ Expr *Parser::parseFuncExpr() throw (LexerError, ParserError) {
 
 		Identifier *curParam = parseIdentifier();
 
-		// TODO: will be optional
-		if (la() != Token::CLNCLN)
-			throw ParserError(getPosition(), "error: STUB: type inference not implemented yet");
-		consume();
+		if (la() == Token::CLNCLN) {
+			consume();
 
-		curParam->typeSpec = parseTypeSpec();
+			curParam->typeSpec = parseTypeSpec();
+		} else {
+			curParam->typeSpec = NULL;
+		}
 
 		params.push_back(curParam);
 	}
 
 	consume();
 
-	if (la() != Token::CLNCLN)
-		throw ParserError(getPosition(), "error: '::' expected");
-	consume();
+	TypeSpec *retTypeSpec = NULL;
+	if (la() == Token::CLNCLN) {
+		consume();
 
-	TypeSpec *retType = parseTypeSpec();
+		retTypeSpec = parseTypeSpec();
+	}
 
 	if (la() != Token::LBRACE)
 		throw ParserError(getPosition(), "error: '{' expected");
@@ -1141,7 +1145,7 @@ Expr *Parser::parseFuncExpr() throw (LexerError, ParserError) {
 
 	FuncExpr *fe = new FuncExpr(token, body);
 	fe->params = params;
-	fe->retTypeSpec = retType;
+	fe->retTypeSpec = retTypeSpec;
 
 	return fe;
 }

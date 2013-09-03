@@ -1,4 +1,4 @@
-func testfunc() :: Int {
+func testfunc() {
 	return 1
 	return 2
 	return 3

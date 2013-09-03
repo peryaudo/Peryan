@@ -46,6 +46,7 @@ public:
 	virtual TypeType getTypeType() { return TYPE; }
 
 	Type(const std::string& name) : name_(name) {}
+
 	virtual std::string getTypeName() { return name_; }
 
 	virtual bool is(Type *to) {
@@ -121,12 +122,14 @@ public:
 	FuncType(Type *car, Type *cdr) : Type("->"), car_(car), cdr_(cdr) {}
 
 	virtual std::string getTypeName() {
-		return car_->getTypeName() + std::string(" -> ") + cdr_->getTypeName();
+		return (car_ != NULL ? car_->getTypeName() : std::string("NULL"))
+			+ std::string(" -> ")
+			+ (cdr_ != NULL ? cdr_->getTypeName() : std::string("NULL"));
 	}
 
 	virtual TypeType getTypeType() { return FUNC_TYPE; }
-	Type *getCar() { return car_; }
-	Type *getCdr() { return cdr_; }
+	Type *& getCar() { return car_; }
+	Type *& getCdr() { return cdr_; }
 
 	virtual bool is(Type *to) {
 		if (to->getTypeType() != FUNC_TYPE)
@@ -136,13 +139,12 @@ public:
 			cdr_->is(static_cast<FuncType *>(to)->getCdr());
 	}
 
-	Type *getReturnType() {
-		Type *ret = this;
-		while (ret->getTypeType() == FUNC_TYPE) {
-			ret = static_cast<FuncType *>(ret)->getCdr();
-			assert(ret != NULL);
-		}
-		return ret;
+	Type *& getReturnType() {
+		if (this->cdr_ == NULL)
+			return this->cdr_;
+		if (this->cdr_->getTypeType() != Type::FUNC_TYPE)
+			return this->cdr_;
+		return static_cast<FuncType *>(this->cdr_)->getReturnType();
 	}
 };
 

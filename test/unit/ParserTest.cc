@@ -187,6 +187,7 @@ TEST_F(ParserTest, Externs) {
 				" (IntLiteralExpr 36)"
 				" (FloatLiteralExpr 114.514)))";
 
+	opt.verbose = true;
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
 

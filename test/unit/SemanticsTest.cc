@@ -171,5 +171,29 @@ TEST_F(SemanticsTest, DoNotInstantiateNamespace) {
 	ASSERT_THROW(parse(), Peryan::SemanticsError);
 }
 
+TEST_F(SemanticsTest, AdvReturnStmt) {
+	const std::string source =
+		"extern funfun :: Int->Int\n"
+		"func foo(x::Int) :: Int {\n"
+		"\treturn funfun(x)\n"
+		"}\n";
+
+	ssr.setString("main.pr", source);
+
+	ASSERT_NO_THROW(parse());
+}
+
+TEST_F(SemanticsTest, FunctionTypeInference) {
+	const std::string source =
+		"func hoge(x) {\n"
+		"\treturn 123\n"
+		"}\n"
+		"var hige = hoge(\"foo\")\n";
+
+	ssr.setString("main.pr", source);
+
+	ASSERT_NO_THROW(parse());
+}
+
 };
 

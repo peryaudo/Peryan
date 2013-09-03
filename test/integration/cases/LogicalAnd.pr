@@ -1,4 +1,4 @@
-func lhs(ty::String, b::Bool) :: Bool {
+func lhs(ty, b) :: Bool {
 	mes "lhs for " + ty
 	return b
 }

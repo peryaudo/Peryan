@@ -58,11 +58,13 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 
 	scope = fds->symbol;
 
-	visit(fds->retTypeSpec, scope);
+	if (fds->retTypeSpec != NULL) {
+		visit(fds->retTypeSpec, scope);
+	}
 
-	Type *curType = fds->retTypeSpec->type;
+	Type *curType = (fds->retTypeSpec != NULL ? fds->retTypeSpec->type : NULL);
 
-	if (curType->getTypeType() == Type::NAMESPACE_TYPE) {
+	if (curType != NULL && curType->getTypeType() == Type::NAMESPACE_TYPE) {
 		throw SemanticsError(fds->token.getPosition(),
 			std::string("error : cannot use namespace type ")
 			+ curType->getTypeName()
@@ -73,9 +75,8 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 		for (std::vector<Identifier *>::reverse_iterator it = fds->params.rbegin();
 				it != fds->params.rend(); ++it) {
 			visit(*it, scope);
-			assert((*it)->type != NULL);
 
-			if ((*it)->type->getTypeType() == Type::NAMESPACE_TYPE) {
+			if ((*it)->type != NULL && (*it)->type->getTypeType() == Type::NAMESPACE_TYPE) {
 				throw SemanticsError(fds->token.getPosition(),
 					std::string("error : cannot use namespace type ")
 					+ (*it)->type->getTypeName()
@@ -352,7 +353,7 @@ void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) throw (SemanticsError) {
 void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+, IntLiteralExpr);
 	assert(lit != NULL);
-	lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Int"));
+	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Int"));
 	DBG_PRINT(-, IntLiteralExpr);
 	return;
 }
@@ -360,28 +361,28 @@ void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsEr
 void SymbolResolver::visit(StrLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
-	lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("String"));
+	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("String"));
 	return;
 }
 
 void SymbolResolver::visit(CharLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
-	lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Char"));
+	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Char"));
 	return;
 }
 
 void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
-	lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Float"));
+	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Double"));
 	return;
 }
 
 void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
-	lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Bool"));
+	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Bool"));
 	return;
 }
 

@@ -1,4 +1,4 @@
-var goodMessage :: [Int] = [1, 1, 8, 5, 1, 4]
+var goodMessage = [1, 1, 8, 5, 1, 4]
 
 goodMessage[2] = 4
 

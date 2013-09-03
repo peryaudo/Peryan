@@ -5,7 +5,9 @@
 #include <map>
 
 #include "SymbolTable.h"
+#include "Token.h"
 #include "AST.h"
+#include "Options.h"
 
 namespace Peryan {
 
@@ -15,30 +17,42 @@ private:
 	TypeResolver& operator=(const TypeResolver&);
 
 private:
+
+	bool changed_, unresolved_;
+	Position unresolvedPos_;
+
+	typedef Type** TypeVar;
+
+	class TypeConstraint {
+	public:
+		// lowerBound <: T <: upperBound ( = by default, NULL)
+		Type *lowerBound;
+		Type *upperBound;
+		bool takeLowerBound;
+		// true for function return type and variable
+		// false for function parameters
+		TypeConstraint() : lowerBound(NULL), upperBound(NULL), takeLowerBound(true) {}
+		TypeConstraint(Type *lowerBound)
+			: lowerBound(lowerBound), upperBound(NULL), takeLowerBound(true) {}
+	};
+
+	std::map<TypeVar, TypeConstraint> constraints_;
+	std::set<TypeVar> incomplete_;
+	TypeVar curTypeVar_;
+	void addTypeConstraint(Type *constraint, TypeVar typeVar);
+
 	SymbolTable& symbolTable_;
 
 	Type *Int_, *String_, *Char_, *Float_, *Double_, *Bool_, *Label_, *Void_;
 
-	Type *curFuncRetType_;
+	FuncSymbol *curFunc_;
 
 	bool canPromote(Type *from, Type *to, bool isFuncParam = false);
-	Type *PromoteWithBinary(Type *from, Token::Type type, Type *to);
+
+	bool canConvertModifier(Type *from, Type *to, bool isFuncParam = false);
+	bool isSubtypeOf(Type *sub, Type *super);
 
 	Expr *insertPromoter(Expr *from, Type *toType);
-
-	/*class PromotionKey {
-	public:
-		Type *from, *to;
-		PromotionKey(Type *from, Type *to) : from(from), to(to) {}
-
-		bool operator<(const PromotionKey& p) const {
-			if (from != p.from) {
-				return from < p.from;
-			} else {
-				return to < p.to;
-			}
-		}
-	};*/
 
 	class BinaryPromotionKey {
 	public:
@@ -61,14 +75,14 @@ private:
 		}
 	};
 
-	//std::set<PromotionKey> promotionTable;
 	std::map<BinaryPromotionKey, Type *> binaryPromotionTable;
 
 	void initPromotionTable();
 	void initBinaryPromotionTable();
 
+	Options& opt_;
 public:
-	TypeResolver(SymbolTable& symbolTable);
+	TypeResolver(SymbolTable& symbolTable, Options& opt);
 	void visit(TransUnit *tu) throw (SemanticsError);
 	void visit(Stmt *stmt) throw (SemanticsError);
 	void visit(FuncDefStmt *fds) throw (SemanticsError);
@@ -98,6 +112,8 @@ public:
 	Type *visit(SubscrExpr *se) throw (SemanticsError);
 	Type *visit(MemberExpr *me) throw (SemanticsError);
 	Type *visit(StaticMemberExpr *sme) throw (SemanticsError);
+	Type *visit(DerefExpr *de) throw (SemanticsError);
+	Type *visit(RefExpr *re) throw (SemanticsError);
 };
 
 };

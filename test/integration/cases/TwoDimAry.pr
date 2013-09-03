@@ -1,4 +1,4 @@
-var ary :: [[Int]] = [[Int]](5, [Int](5, 1))
+var ary = [[Int]](5, [Int](5, 1))
 
 ary[1][2] = 5
 mes String(ary[1][2])

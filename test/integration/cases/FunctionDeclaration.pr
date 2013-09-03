@@ -1,6 +1,6 @@
 extern testfunc1 :: Int -> Int
 
-func addNums(foo :: Int, bar :: Int) :: Int {
+func addNums(foo, bar) {
 	{
 		var baz = 3
 	}

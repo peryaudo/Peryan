@@ -1,6 +1,6 @@
 namespace NamespaceA {
 	namespace NamespaceB {
-		func getMessage() :: String {
+		func getMessage() {
 			return "we are nested namespaces!"
 		}
 	}

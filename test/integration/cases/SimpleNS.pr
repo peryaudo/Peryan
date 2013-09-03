@@ -1,5 +1,5 @@
 namespace Foo {
-	func bar (message :: String) :: Int {
+	func bar (message) {
 		mes message
 		return 0
 	}
