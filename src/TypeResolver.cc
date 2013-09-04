@@ -364,20 +364,24 @@ void TypeResolver::visit(FuncDefStmt *fds) throw (SemanticsError) {
 	assert(curFunc_->getType()->getTypeType() == Type::FUNC_TYPE);
 
 	FuncType *curFuncType = static_cast<FuncType *>(curFunc_->getType());
-	for (int i = 0; i < fds->params.size(); ++i) {
-		if (curFuncType->getCar() == NULL) {
+
+	std::vector<Identifier *>::iterator prmIt = fds->params.begin();
+	FuncType::iterator ftIt = curFuncType->begin(Void_);
+
+	for ( ; prmIt != fds->params.end() && ftIt != curFuncType->end(); ++prmIt, ++ftIt) {
+		if (*ftIt == NULL) {
 			unresolved_ = true;
-			unresolvedPos_ = fds->params[i]->token.getPosition();
+			unresolvedPos_ = (*prmIt)->token.getPosition();
 		}
-		if (curFuncType->getCar() != NULL && fds->params[i]->type == NULL) {
-			fds->params[i]->symbol->setType(fds->params[i]->type = curFuncType->getCar());
+		if (*ftIt != NULL && (*prmIt)->type == NULL) {
+			(*prmIt)->symbol->setType((*prmIt)->type = *ftIt);
 		}
-		if (curFuncType->getCdr() == NULL || curFuncType->getCdr()->getTypeType() != Type::FUNC_TYPE)
-			break;
-		curFuncType = static_cast<FuncType *>(curFuncType->getCdr());
 	}
 
-	if (curFuncType->getCdr() == NULL) {
+	assert(prmIt == fds->params.end());
+	assert(ftIt == curFuncType->end());
+
+	if (curFuncType->getReturnType() == NULL) {
 		unresolved_ = true;
 		unresolvedPos_ = fds->token.getPosition();
 	}
@@ -472,20 +476,21 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 	assert(is != NULL);
 	assert(is->inst != NULL);
 
+
 	FuncType *curFuncType = NULL;
 	{
-		Type *tmp = visit(is->inst);
-		if (tmp == NULL) {
+		Type *instType = visit(is->inst);
+		if (instType == NULL) {
 			assert(unresolved_);
 			curTypeVar_ = NULL;
 			return;
 		}
-		tmp = tmp->unmodify();
-		if (tmp->getTypeType() != Type::FUNC_TYPE) {
+		instType = instType->unmodify();
+		if (instType->getTypeType() != Type::FUNC_TYPE) {
 			throw SemanticsError(is->inst->token.getPosition(), "error: it is not function ("
-				+ tmp->getTypeName() + std::string(")"));
+				+ instType->getTypeName() + std::string(")"));
 		}
-		curFuncType = static_cast<FuncType *>(tmp);
+		curFuncType = static_cast<FuncType *>(instType);
 	}
 
 	std::vector<Expr *> defaults;
@@ -507,80 +512,88 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 		}
 	}
 
-	defaults.resize(std::max(is->params.size(), defaults.size()), NULL);
-
 	assert(curFuncType != NULL);
 
-	int last = 0;
-	for (std::vector<Expr *>::iterator it = is->params.begin();
-			it != is->params.end(); ++it) {
-		assert(curFuncType != NULL);
-		last++;
+	std::vector<Expr *>::iterator prmIt = is->params.begin();
+	std::vector<Expr *>::iterator defIt = defaults.begin();
+	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
 
-		if (*it == NULL) {
-			*it = defaults[it - is->params.begin()];
-		}
-		if (*it == NULL) {
-			std::stringstream ss;
-			ss<<"error: you cannot omit "<<(it - is->params.begin() + 1)<<"st/nd/th argument";
-			throw SemanticsError(is->token.getPosition(), ss.str());
+	for ( ; prmIt != is->params.end() && ftIt != ftEnd; ++prmIt, ++defIt, ++ftIt) {
+		if (prmIt != is->params.end() && ftIt == ftEnd) {
+			// given parameters > parameters in the type
+			throw SemanticsError((*prmIt)->token.getPosition(),
+					"error: too many arguments in the function call");
+
+		} else if (prmIt == is->params.end() && ftIt != ftEnd) {
+			// given parameters < parameters in the type
+
+			if (defIt != defaults.end() && *defIt != NULL) {
+				// the default value exists
+				is->params.push_back(*defIt);
+			} else {
+				throw SemanticsError(is->token.getPosition(),
+						"error: fewer arguments in the function call");
+			}
+		} else {
+			assert(prmIt != is->params.end() && ftIt != ftEnd);
+
+			// the given parameter is empty
+			if (*prmIt == NULL) {
+				// the default value exists
+				if (defIt != defaults.end() && *defIt != NULL) {
+					*prmIt = *defIt;
+				} else {
+					std::stringstream ss;
+					ss<<"error: you cannot omit ";
+					ss<<(prmIt - is->params.begin() + 1)<<"st/nd/th argument";
+					throw SemanticsError(is->token.getPosition(), ss.str());
+				}
+			}
 		}
 
-		Type *actual = visit(*it);
+		Type *actual = visit(*prmIt);
 
 		// bidirectional checking
-		if (actual == NULL && curFuncType->getCar() == NULL) {
+		if (actual == NULL && *ftIt == NULL) {
 			// you have nothing to do
 			assert(unresolved_);
 			curTypeVar_ = NULL;
-		} else if (actual == NULL && curFuncType->getCar() != NULL) {
+		} else if (actual == NULL && *ftIt != NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
-				addTypeConstraint(curFuncType->getCar()->unmodify(), curTypeVar_);
+				addTypeConstraint((*ftIt)->unmodify(), curTypeVar_);
 				curTypeVar_ = NULL;
 			}
-		} else if (actual != NULL && curFuncType->getCar() == NULL) {
-			addTypeConstraint(actual->unmodify(), &(curFuncType->getCar()));
-			constraints_[&(curFuncType->getCar())].takeLowerBound = false;
+		} else if (actual != NULL && *ftIt == NULL) {
+			addTypeConstraint(actual->unmodify(), &(*ftIt));
+			constraints_[&(*ftIt)].takeLowerBound = false;
 			unresolved_ = true;
 			curTypeVar_ = NULL;
-		} else if (actual != NULL && curFuncType->getCar() != NULL) {
+		} else if (actual != NULL && *ftIt != NULL) {
 			assert(actual != NULL);
-			assert(curFuncType->getCar() != NULL);
-			if (!canPromote(actual, curFuncType->getCar(), (*it)->token.getPosition(), true)) {
-				throw SemanticsError((*it)->token.getPosition(),
+			assert(*ftIt != NULL);
+			if (!canPromote(actual, *ftIt, (*prmIt)->token.getPosition(), true)) {
+				throw SemanticsError((*prmIt)->token.getPosition(),
 						std::string("error: argument type (")
 						+ actual->getTypeName()
 						+ std::string(") doesn't match to the function's one (")
-						+ curFuncType->getCar()->getTypeName()
+						+ (*ftIt)->getTypeName()
 						+ std::string(")"));
+
 			}
 
-			assert((*it)->type != NULL);
-			*it = insertPromoter(*it, curFuncType->getCar());
-		}
+			assert((*prmIt)->type != NULL);
 
-		if (it + 1 != is->params.end()) {
-			if (curFuncType->getCdr() == NULL || curFuncType->getCdr()->getTypeType() != Type::FUNC_TYPE) {
-				throw SemanticsError((*it)->token.getPosition(),
-						"error: too many arguments in the function call");
-			}
-
-			curFuncType = static_cast<FuncType *>(curFuncType->getCdr());
+			*prmIt = insertPromoter(*prmIt, *ftIt);
 		}
 	}
 
-	if (curFuncType->getCdr() == NULL) {
+	if (curFuncType->getReturnType() == NULL) {
 		unresolved_ = true;
 		curTypeVar_ = NULL;
 
 		DBG_PRINT(-, InstStmt);
 		return;
-	}
-
-	if (curFuncType->getCdr()->getTypeType() == Type::FUNC_TYPE) {
-		throw SemanticsError(is->token.getPosition(),
-				"error: fewer arguments in the function call");
 	}
 
 	DBG_PRINT(-, InstStmt);

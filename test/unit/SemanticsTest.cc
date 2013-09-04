@@ -17,8 +17,7 @@ protected:
 	Peryan::Parser parser;
 
 public:
-	SemanticsTest() : ssr("main.pr"), wp(), lexer(ssr, opt, wp), parser(lexer, opt, wp) {
-	}
+	SemanticsTest() : ssr("main.pr"), wp(), lexer(ssr, opt, wp), parser(lexer, opt, wp) {}
 
 	void parse() {
 		try {

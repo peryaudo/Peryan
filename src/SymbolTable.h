@@ -136,8 +136,28 @@ public:
 		if (to->getTypeType() != FUNC_TYPE)
 			return false;
 
-		return car_->is(static_cast<FuncType *>(to)->getCar()) &&
-			cdr_->is(static_cast<FuncType *>(to)->getCdr());
+		FuncType *ftTo = static_cast<FuncType *>(to);
+
+		if (car_ == NULL) {
+			if (ftTo->getCar() != NULL) {
+				return false;
+			}
+		} else {
+			if (!(car_->is(static_cast<FuncType *>(to)->getCar()))) {
+				return false;
+			}
+		}
+		if (cdr_ == NULL) {
+			if (ftTo->getCdr() != NULL) {
+				return false;
+			}
+		} else {
+			if (!(cdr_->is(static_cast<FuncType *>(to)->getCdr()))) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	Type *& getReturnType() {
@@ -153,31 +173,45 @@ public:
 		FuncType *ft_;
 	public:
 		iterator(FuncType *ft) : ft_(ft) {}
-		Type *& operator*() const { return ft_->getCar(); }
+		Type *& operator*() const { assert(ft_ != NULL); return ft_->getCar(); }
 		iterator& operator++() {
+			if (ft_ == NULL) {
+				return *this;
+			}
+
 			if (ft_->getCdr() == NULL) {
+				ft_ = NULL;
 				return *this;
 			} else if (ft_->getCdr()->getTypeType() != Type::FUNC_TYPE) {
+				ft_ = NULL;
 				return *this;
 			} else {
 				ft_ = static_cast<FuncType *>(ft_->getCdr());
 				return *this;
 			}
 		}
-		bool operator!=(const iterator& to) const { return !(ft_->is(to.ft_)); }
-		bool operator==(const iterator& to) const { return ft_->is(to.ft_); }
+		bool operator!=(const iterator& to) const {
+			return !(operator==(to));
+		}
+		bool operator==(const iterator& to) const {
+			if (ft_ == NULL || to.ft_ == NULL) {
+				return ft_ == to.ft_;
+			} else {
+				return ft_->is(to.ft_);
+			}
+		}
 	};
 
-	virtual iterator begin() {
-		return iterator(this);
+	virtual iterator begin(Type *Void_) {
+		if (this->car_ != NULL && this->car_->is(Void_)) {
+			return iterator(NULL);
+		} else {
+			return iterator(this);
+		}
 	}
 
 	virtual iterator end() {
-		FuncType *ftEnd = this;
-		while (ftEnd->getCdr() != NULL && ftEnd->getCdr()->getTypeType() == Type::FUNC_TYPE) {
-			ftEnd = static_cast<FuncType *>(ftEnd);
-		}
-		return ftEnd;
+		return iterator(NULL);
 	}
 
 

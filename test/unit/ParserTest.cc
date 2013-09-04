@@ -94,8 +94,6 @@ TEST_F(ParserTest, BasicInstructions) {
 			" (InstStmt (Identifier \"await\"))"
 			" (InstStmt (Identifier \"pos\") (IntLiteralExpr 20) (IntLiteralExpr 25)))";
 
-	opt.verbose = true;
-
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
 
@@ -191,7 +189,6 @@ TEST_F(ParserTest, Externs) {
 				" (IntLiteralExpr 36)"
 				" (FloatLiteralExpr 114.514)))";
 
-	opt.verbose = true;
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
 
