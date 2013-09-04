@@ -82,21 +82,7 @@ private:
 		return;
 	}
 
-	Token lt(int n = 0) throw (LexerError) {
-		if (markers_.size() > 0) {
-			n += markers_.back();
-		}
-		while (n >= tokens_.size()) {
-			if (tokens_.size() > 0 && tokens_.back().getType() == Token::END) {
-				return tokens_.back();
-			}
-
-			Token token = lexer_.getNextToken();
-			//std::cout<<token.toString()<<std::endl;
-			tokens_.push_back(token);
-		}
-		return tokens_[n];
-	}
+	Token lt(int n = 0) throw (LexerError);
 
 	Token::Type la(int n = 0) throw (LexerError) {
 		return lt(n).getType();

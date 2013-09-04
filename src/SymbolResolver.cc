@@ -1,4 +1,3 @@
-// SymbolResolver resolves symbols without type recognition,
 // but also it resolves the types of the symbols which are specified explicitly.
 // Forward reference of type definitions is disallowed, so types will be resolved in this class.
 // You can't resolve symbols inside data structure (i.e. class or namespace) without types,
@@ -8,6 +7,8 @@
 
 #include "SymbolTable.h"
 #include "SymbolResolver.h"
+#include "Options.h"
+#include "WarningPrinter.h"
 
 //#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
 #define DBG_PRINT(TYPE, FUNC_NAME)
@@ -71,6 +72,11 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 			+ " as a return value");
 	}
 
+	for (std::vector<Expr *>::iterator it = fds->defaults.begin(); it != fds->defaults.end(); ++it) {
+		if (*it != NULL)
+			visit(*it, scope);
+	}
+
 	if (fds->params.size() > 0) {
 		for (std::vector<Identifier *>::reverse_iterator it = fds->params.rbegin();
 				it != fds->params.rend(); ++it) {
@@ -93,6 +99,8 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 	visit(fds->body, scope);
 
 	fds->symbol->setType(curType);
+
+	fds->symbol->defaults = &(fds->defaults);
 
 	DBG_PRINT(-, FuncDefStmt);
 	return;
@@ -119,7 +127,8 @@ void SymbolResolver::visit(InstStmt *is, Scope *scope) throw (SemanticsError) {
 
 	for (std::vector<Expr *>::iterator it = is->params.begin();
 			it != is->params.end(); ++it) {
-		visit(*it, scope);
+		if (*it != NULL)
+			visit(*it, scope);
 	}
 
 	DBG_PRINT(-, InstStmt);
@@ -231,6 +240,13 @@ void SymbolResolver::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) 
 
 	visit(es->id, scope);
 
+	for (std::vector<Expr *>::iterator it = es->defaults.begin(); it != es->defaults.end(); ++it) {
+		if (*it != NULL)
+			visit(*it, scope);
+	}
+
+	es->symbol->defaults = &(es->defaults);
+
 	DBG_PRINT(+, ExternStmt);
 }
 
@@ -299,8 +315,17 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) throw (SemanticsError) 
 		// usual identifier reference
 		Symbol *symbol = scope->resolve(id->getString(), id->token.getPosition());
 		if (symbol == NULL) {
-			throw SemanticsError(id->token.getPosition(),
-				std::string("error : unknown identifier ") + id->getString());
+			if (options_.hspCompat) {
+				wp_.add(id->token.getPosition(),
+					"warning: implicit global variable declaration is deprecated");
+				VarSymbol *varSymbol = new VarSymbol(id->getString(), 0);
+				bool res = symbolTable_.getGlobalScope()->define(varSymbol);
+				assert(res == false);
+				symbol = varSymbol;
+			} else {
+				throw SemanticsError(id->token.getPosition(),
+					std::string("error : unknown identifier ") + id->getString());
+			}
 		}
 		id->symbol = symbol;
 	}
@@ -349,11 +374,9 @@ void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-// TODO: add them const
 void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+, IntLiteralExpr);
 	assert(lit != NULL);
-	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Int"));
 	DBG_PRINT(-, IntLiteralExpr);
 	return;
 }
@@ -361,28 +384,24 @@ void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsEr
 void SymbolResolver::visit(StrLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
-	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("String"));
 	return;
 }
 
 void SymbolResolver::visit(CharLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
-	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Char"));
 	return;
 }
 
 void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
-	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Double"));
 	return;
 }
 
 void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
-	//lit->type = static_cast<BuiltInTypeSymbol *>(scope->resolve("Bool"));
 	return;
 }
 
@@ -433,7 +452,11 @@ void SymbolResolver::visit(MemberExpr *me, Scope *scope) throw (SemanticsError) 
 	assert(me != NULL);
 
 	visit(me->receiver, scope);
-	// won't visit identifier
+
+	// won't visit identifier in usual case
+	if (options_.hspCompat && me->member->getString() != "length") {
+		visit(me->member, scope);
+	}
 
 	DBG_PRINT(-, MemberExpr);
 	return;

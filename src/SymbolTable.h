@@ -12,6 +12,7 @@
 namespace Peryan {
 
 class Lexer;
+class Expr;
 
 class SemanticsError : public std::exception {
 private:
@@ -106,7 +107,7 @@ public:
 
 	virtual TypeType getTypeType() { return ARRAY_TYPE; }
 
-	Type *getElemType() { return elemType_; }
+	Type *& getElemType() { return elemType_; }
 
 	virtual bool is(Type *to) {
 		if (to->getTypeType() != ARRAY_TYPE)
@@ -249,10 +250,13 @@ class ExternSymbol : public Symbol {
 public:
 	virtual SymbolType getSymbolType() { return EXTERN_SYMBOL; }
 
+	std::vector<Expr *> *defaults;
+
 	ExternSymbol(const std::string& name, Position position)
-		: Symbol(name, position) {}
+		: Symbol(name, position), defaults(NULL) {}
 	ExternSymbol(const std::string& name, Type *type, Position position)
-		: Symbol(name, type, position) {}
+		: Symbol(name, type, position), defaults(NULL) {}
+
 };
 
 class VarSymbol : public Symbol {
@@ -298,10 +302,17 @@ public:
 		symbol->setScope(this);
 		return false;
 	}
+
 	// [class] TODO: make functions and definitions in class able to be used before definition
 	virtual Symbol *resolve(const std::string& name, Position curPos = 0) {
 		Symbol *symbol = getMember(name);
 		if (symbol != NULL && symbol->getPosition() <= curPos) {
+			return symbol;
+		} else if (symbol != NULL &&
+				(symbol->getSymbolType() == Symbol::FUNC_SYMBOL ||
+				 symbol->getSymbolType() == Symbol::CLASS_SYMBOL ||
+				 symbol->getSymbolType() == Symbol::NAMESPACE_SYMBOL ||
+				 symbol->getSymbolType() == Symbol::LABEL_SYMBOL)) {
 			return symbol;
 		} else if (getParentScope() != NULL) {
 			return getParentScope()->resolve(name, curPos);
@@ -318,11 +329,13 @@ class FuncSymbol : public ScopedSymbol {
 private:
 	std::map<std::string, Symbol *> args_;
 public:
+	std::vector<Expr *> *defaults;
+
 	virtual iterator begin() { return iterator(args_.begin()); }
 	virtual iterator end() { return iterator(args_.end()); }
 
 	FuncSymbol(const std::string& name, Scope *parent, Position position)
-		: ScopedSymbol(name, parent, position) {}
+		: ScopedSymbol(name, parent, position), defaults(NULL) {}
 
 	virtual SymbolType getSymbolType() { return FUNC_SYMBOL; }
 
@@ -343,6 +356,7 @@ public:
 	}
 
 	virtual std::string getScopeName() { return getSymbolName(); }
+
 };
 
 class ClassSymbol : public ScopedSymbol { 
@@ -382,7 +396,8 @@ public:
 	virtual std::string getScopeName() { return getSymbolName(); }
 
 	virtual Symbol *resolveMember(const std::string& name, Position curPos = 0) {
-		if (members_.count(name) && members_[name]->getPosition() <= curPos) {
+		// allows forward reference
+		if (members_.count(name)/* && members_[name]->getPosition() <= curPos */) {
 			return members_[name];
 		} else {
 			// don't unwind to the parent scope because it is member
@@ -412,6 +427,12 @@ public:
 
 	virtual Symbol *resolve(const std::string& name, Position curPos = 0) {
 		if (symbols_.count(name) && symbols_[name]->getPosition() <= curPos) {
+			return symbols_[name];
+		} else if (symbols_.count(name) &&
+				(symbols_[name]->getSymbolType() == Symbol::FUNC_SYMBOL ||
+				 symbols_[name]->getSymbolType() == Symbol::CLASS_SYMBOL ||
+				 symbols_[name]->getSymbolType() == Symbol::NAMESPACE_SYMBOL ||
+				 symbols_[name]->getSymbolType() == Symbol::LABEL_SYMBOL)) {
 			return symbols_[name];
 		} else if (getParentScope() != NULL) {
 			return getParentScope()->resolve(name, curPos);

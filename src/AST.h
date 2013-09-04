@@ -318,6 +318,8 @@ public:
 	CompStmt *body;
 	FuncDefStmt(const Token& token, Identifier *name, CompStmt *body) : Stmt(token), name(name), body(body) {}
 
+	std::vector<Expr *> defaults;
+
 	FuncSymbol *symbol;
 };
 
@@ -444,6 +446,8 @@ public:
 
 	ExternStmt(const Token& token, Identifier *id)
 		: Stmt(token), id(id) {}
+
+	std::vector<Expr *> defaults;
 
 	ExternSymbol *symbol;
 };

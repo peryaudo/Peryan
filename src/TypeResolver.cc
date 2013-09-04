@@ -12,7 +12,8 @@
 
 namespace Peryan {
 
-TypeResolver::TypeResolver(SymbolTable& symbolTable, Options& opt) : symbolTable_(symbolTable), opt_(opt) {
+TypeResolver::TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp)
+	: symbolTable_(symbolTable), opt_(opt), wp_(wp) {
 	GlobalScope *gs = symbolTable_.getGlobalScope();
 	Int_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Int"));
 	String_ = static_cast<BuiltInTypeSymbol *>(gs->resolve("String"));
@@ -76,11 +77,18 @@ bool TypeResolver::isSubtypeOf(Type *sub, Type *super) {
 	}
 }
 
-bool TypeResolver::canPromote(Type *from, Type *to, bool isFuncParam) {
+bool TypeResolver::canPromote(Type *from, Type *to, Position pos, bool isFuncParam) {
 	assert(from != NULL && to != NULL);
 
-	if (!isSubtypeOf(/*sub = */ from, /*super = */ to))
+	if (isSubtypeOf(/*sub = */ from->unmodify(), /*super = */ to->unmodify())) {
+		// correct
+	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Double_)) {
+		wp_.add(pos, "warning: implicit conversion from Int to Double is deprecated");
+	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Bool_)) {
+		wp_.add(pos, "warning: implicit conversion from Int to Bool is deprecated");
+	} else {
 		return false;
+	}
 
 	// From can promote to To, so we'll check modifiers
 	return canConvertModifier(from, to, isFuncParam);
@@ -90,7 +98,7 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 	assert(from != NULL);
 	assert(from->type != NULL);
 	assert(toType != NULL);
-	assert(canPromote(from->type, toType, true));
+	// assert(canPromote(from->type, toType, true));
 
 	if (from->type->is(toType))
 		return from;
@@ -106,7 +114,7 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 
 	Type *fromType = from->type;
 	assert(fromType != NULL);
-	assert(canPromote(fromType, toType, true));
+	// assert(canPromote(fromType, toType, true));
 
 	bool fromRef = false;
 	if (fromType->getTypeType() == Type::MODIFIER_TYPE)
@@ -169,6 +177,7 @@ void TypeResolver::initBinaryPromotionTable() {
 			binaryPromotionTable[BinaryPromotionKey(type, Token::GTEQ, type)] = Bool_;
 		}
 	}
+
 	{
 		const char *typeNames[2] = {"Float", "Double"};
 		for (int i = 0; i < sizeof(typeNames) / sizeof(typeNames[0]); ++i) {
@@ -197,6 +206,18 @@ void TypeResolver::initBinaryPromotionTable() {
 			binaryPromotionTable[BinaryPromotionKey(type, Token::STAR, type)] = type;
 			binaryPromotionTable[BinaryPromotionKey(type, Token::SLASH, type)] = type;
 		}
+	}
+
+	if (opt_.hspCompat) {
+		binaryPromotionTable[BinaryPromotionKey(Double_, Token::PLUS, Int_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Double_, Token::MINUS, Int_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Double_, Token::STAR, Int_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Double_, Token::SLASH, Int_)] = Double_;
+
+		binaryPromotionTable[BinaryPromotionKey(Int_, Token::PLUS, Double_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Int_, Token::MINUS, Double_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Int_, Token::STAR, Double_)] = Double_;
+		binaryPromotionTable[BinaryPromotionKey(Int_, Token::SLASH, Double_)] = Double_;
 	}
 
 	// %
@@ -253,6 +274,8 @@ void TypeResolver::visit(TransUnit *tu) throw (SemanticsError) {
 
 		incomplete_.clear();
 		constraints_.clear();
+
+		curFunc_ = NULL;
 
 		DBG_PRINT(+, TransUnitStmts);
 		for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
@@ -393,7 +416,7 @@ void TypeResolver::visit(VarDefStmt *vds) throw (SemanticsError) {
 		} else {
 			assert(initType != NULL);
 			assert(vds->id->type != NULL);
-			if (!canPromote(initType, vds->id->type, false)) {
+			if (!canPromote(initType, vds->id->type, vds->id->token.getPosition(), false)) {
 				throw SemanticsError(vds->token.getPosition(),
 						std::string("error: type of variable (")
 						+ vds->id->type->getTypeName()
@@ -452,7 +475,11 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 	FuncType *curFuncType = NULL;
 	{
 		Type *tmp = visit(is->inst);
-		assert (tmp != NULL);
+		if (tmp == NULL) {
+			assert(unresolved_);
+			curTypeVar_ = NULL;
+			return;
+		}
 		tmp = tmp->unmodify();
 		if (tmp->getTypeType() != Type::FUNC_TYPE) {
 			throw SemanticsError(is->inst->token.getPosition(), "error: it is not function ("
@@ -460,14 +487,44 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 		}
 		curFuncType = static_cast<FuncType *>(tmp);
 	}
+
+	std::vector<Expr *> defaults;
+	{
+		Symbol *sym = NULL;
+		if (is->inst->getASTType() == AST::IDENTIFIER) {
+			sym = static_cast<Identifier *>(is->inst)->symbol;
+		} else if (is->inst->getASTType() == AST::STATIC_MEMBER_EXPR) {
+			sym = static_cast<StaticMemberExpr *>(is->inst)->member->symbol;
+		}
+		// TODO: make it able to deal with class members
+
+		if (sym != NULL && sym->getSymbolType() == Symbol::FUNC_SYMBOL) {
+			if (static_cast<FuncSymbol *>(sym)->defaults != NULL)
+				defaults = *(static_cast<FuncSymbol *>(sym)->defaults);
+		} else if (sym != NULL && sym->getSymbolType() == Symbol::EXTERN_SYMBOL) {
+			if (static_cast<ExternSymbol *>(sym)->defaults != NULL)
+				defaults = *(static_cast<ExternSymbol *>(sym)->defaults);
+		}
+	}
+
+	defaults.resize(std::max(is->params.size(), defaults.size()), NULL);
+
 	assert(curFuncType != NULL);
 
+	int last = 0;
 	for (std::vector<Expr *>::iterator it = is->params.begin();
 			it != is->params.end(); ++it) {
 		assert(curFuncType != NULL);
+		last++;
 
-		// assert(curFuncType->getCar() != NULL);
-		assert(*it != NULL);
+		if (*it == NULL) {
+			*it = defaults[it - is->params.begin()];
+		}
+		if (*it == NULL) {
+			std::stringstream ss;
+			ss<<"error: you cannot omit "<<(it - is->params.begin() + 1)<<"st/nd/th argument";
+			throw SemanticsError(is->token.getPosition(), ss.str());
+		}
 
 		Type *actual = visit(*it);
 
@@ -490,7 +547,7 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 		} else if (actual != NULL && curFuncType->getCar() != NULL) {
 			assert(actual != NULL);
 			assert(curFuncType->getCar() != NULL);
-			if (!canPromote(actual, curFuncType->getCar(), true)) {
+			if (!canPromote(actual, curFuncType->getCar(), (*it)->token.getPosition(), true)) {
 				throw SemanticsError((*it)->token.getPosition(),
 						std::string("error: argument type (")
 						+ actual->getTypeName()
@@ -594,7 +651,7 @@ void TypeResolver::visit(AssignStmt *as) throw (SemanticsError) {
 	if (lhsType->getTypeType() != Type::MODIFIER_TYPE
 		|| !(static_cast<ModifierType *>(lhsType)->isRef())) {
 		throw SemanticsError(as->token.getPosition(),
-			std::string("error: left hand side")
+			std::string("error: left hand side ")
 			+ lhsType->getTypeName()
 			+ std::string(" should be reference to a variable"));
 	}
@@ -617,7 +674,7 @@ void TypeResolver::visit(AssignStmt *as) throw (SemanticsError) {
 		{
 			assert(rhsType != NULL);
 			assert(lhsType->unmodify() != NULL);
-			if (!canPromote(rhsType, lhsType->unmodify(), false)) {
+			if (!canPromote(rhsType, lhsType->unmodify(), as->rhs->token.getPosition(), false)) {
 				throw SemanticsError(as->token.getPosition(),
 					std::string("error: left hand side (")
 					+ lhsType->getTypeName()
@@ -675,7 +732,7 @@ void TypeResolver::visit(IfStmt *is) throw (SemanticsError) {
 				curTypeVar_ = NULL;
 			}
 		} else {
-			if (!canPromote(cur, Bool_, false))
+			if (!canPromote(cur, Bool_, is->ifCond->token.getPosition(), false))
 				throw SemanticsError(is->token.getPosition(), "error: condition should be Bool");
 			assert(is->ifCond->type != NULL);
 			is->ifCond = insertPromoter(is->ifCond, Bool_);
@@ -694,7 +751,7 @@ void TypeResolver::visit(IfStmt *is) throw (SemanticsError) {
 				curTypeVar_ = NULL;
 			}
 		} else {
-			if (!canPromote(cur, Bool_, false))
+			if (!canPromote(cur, Bool_, is->elseIfCond[i]->token.getPosition(), false))
 				throw SemanticsError(is->token.getPosition(), "error: condition should be Bool");
 			is->elseIfCond[i] = insertPromoter(is->elseIfCond[i], Bool_);
 		}
@@ -723,7 +780,7 @@ void TypeResolver::visit(RepeatStmt *rs) throw (SemanticsError) {
 			}
 			return;
 		}
-		if (!canPromote(cur, Int_, false))
+		if (!canPromote(cur, Int_, rs->count->token.getPosition(), false))
 			throw SemanticsError(rs->token.getPosition(), "error: repeat counter should be Int");
 		rs->count = insertPromoter(rs->count, Int_);
 	}
@@ -756,7 +813,14 @@ void TypeResolver::visit(GosubStmt *gs) throw (SemanticsError) {
 void TypeResolver::visit(ReturnStmt *rs) throw (SemanticsError) {
 	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
-	assert(curFunc_ != NULL);
+
+	if (curFunc_ == NULL) {
+		// this is global return
+		if (rs->expr != NULL)
+			throw SemanticsError(rs->token.getPosition(),
+				"error: global return shouldn't have return value");
+		return;
+	}
 
 	FuncType *ft = static_cast<FuncType *>(curFunc_->getType());
 	assert(ft != NULL);
@@ -793,7 +857,7 @@ void TypeResolver::visit(ReturnStmt *rs) throw (SemanticsError) {
 				curTypeVar_ = NULL;
 			}
 		} else {
-			if (!canPromote(cur, retType))
+			if (!canPromote(cur, retType, rs->expr->token.getPosition()))
 				throw SemanticsError(rs->token.getPosition(),
 						"error: type of the expression doesn't match the return type");
 
@@ -804,7 +868,7 @@ void TypeResolver::visit(ReturnStmt *rs) throw (SemanticsError) {
 	return;
 }
 
-Type *TypeResolver::visit(Expr *expr) throw (SemanticsError) {
+Type *TypeResolver::visit(Expr *& expr) throw (SemanticsError) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
 
@@ -824,7 +888,7 @@ Type *TypeResolver::visit(Expr *expr) throw (SemanticsError) {
 	case AST::FUNC_CALL_EXPR	: type = visit(static_cast<FuncCallExpr *>(expr)); break;
 	case AST::CONSTRUCTOR_EXPR	: type = visit(static_cast<ConstructorExpr *>(expr)); break;
 	case AST::SUBSCR_EXPR		: type = visit(static_cast<SubscrExpr *>(expr)); break;
-	case AST::MEMBER_EXPR		: type = visit(static_cast<MemberExpr *>(expr)); break;
+	case AST::MEMBER_EXPR		: type = visit(reinterpret_cast<MemberExpr **>(&expr)); break;
 	case AST::STATIC_MEMBER_EXPR	: type = visit(static_cast<StaticMemberExpr *>(expr)); break;
 	case AST::DEREF_EXPR		: type = visit(static_cast<DerefExpr *>(expr)); break;
 	case AST::REF_EXPR		: type = visit(static_cast<RefExpr *>(expr)); break;
@@ -920,11 +984,11 @@ Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
 		}
 
 		// insert promoters
-		if (canPromote(lhsType, rhsType->unmodify(), false)) {
+		if (canPromote(lhsType, rhsType->unmodify(), be->lhs->token.getPosition(), false)) {
 			// rhsType->unmodify() is wider than lhsType->unmodify().
 			be->lhs = insertPromoter(be->lhs, rhsType->unmodify());
 			be->rhs = insertPromoter(be->rhs, rhsType->unmodify());
-		} else if (canPromote(rhsType, lhsType->unmodify(), false)) {
+		} else if (canPromote(rhsType, lhsType->unmodify(), be->lhs->token.getPosition(), false)) {
 			// lhsType->unmodify() is wider than rhsType->unmodify().
 			be->rhs = insertPromoter(be->rhs, lhsType->unmodify());
 			be->lhs = insertPromoter(be->lhs, lhsType->unmodify());
@@ -936,7 +1000,8 @@ Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
 	} else {
 		throw SemanticsError(be->token.getPosition(),
 			std::string("error: the operation between these two types is not allowed: ")
-				+ lhsType->getTypeName() + " and " + rhsType->getTypeName());
+			+ lhsType->getTypeName() + " and " + rhsType->getTypeName()
+			+ "; you may use casts");
 	}
 
 }
@@ -1048,7 +1113,7 @@ Type *TypeResolver::visit(ArrayLiteralExpr *ale) throw (SemanticsError) {
 			return NULL;
 		}
 
-		if (!canPromote(curElemType, elemType, false)) {
+		if (!canPromote(curElemType, elemType, (*it)->token.getPosition(), false)) {
 			throw SemanticsError(
 				(*it)->token.getPosition(),
 				std::string("error: the type of the element (")
@@ -1070,7 +1135,11 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 	FuncType *curFuncType = NULL;
 	{
 		Type *tmp = visit(fce->func);
-		assert (tmp != NULL);
+		if (tmp == NULL) {
+			assert(unresolved_);
+			curTypeVar_ = NULL;
+			return NULL;
+		}
 		tmp = tmp->unmodify();
 		assert (tmp != NULL);
 		if (tmp->getTypeType() != Type::FUNC_TYPE) {
@@ -1098,7 +1167,7 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 			unresolved_ = true;
 			curTypeVar_ = NULL;
 		} else if (argType != NULL && curFuncType->getCar() != NULL) {
-			if (!canPromote(argType, curFuncType->getCar())) {
+			if (!canPromote(argType, curFuncType->getCar(), (*it)->token.getPosition())) {
 				throw SemanticsError((*it)->token.getPosition(),
 						std::string("error: argument type (")
 						+ argType->getTypeName()
@@ -1181,6 +1250,14 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 		// Int(String)
 		ce->params[0] = insertPromoter(ce->params[0], String_);
 	} else if (ce->params.size() == 1 &&
+			ce->type->is(Bool_) &&
+			ce->params[0]->type->unmodify()->is(Int_)) {
+		// Bool(Int)
+	} else if (ce->params.size() == 1 &&
+			ce->type->is(Double_) &&
+			ce->params[0]->type->unmodify()->is(Int_)) {
+		// Double(Int)
+	} else if (ce->params.size() == 1 &&
 			ce->type->getTypeType() == Type::ARRAY_TYPE &&
 			ce->params[0]->type->unmodify()->is(Int_)) {
 		// [Type](...)
@@ -1256,13 +1333,27 @@ Type *TypeResolver::visit(SubscrExpr *se) throw (SemanticsError) {
 	return se->type;
 }
 
-Type *TypeResolver::visit(MemberExpr *me) throw (SemanticsError) {
+Type *TypeResolver::visit(MemberExpr **mePtr) throw (SemanticsError) {
 	DBG_PRINT(+, MemberExpr);
+	MemberExpr *&me = *mePtr;
 	assert(me != NULL);
 
 	if (visit(me->receiver) == NULL) {
 		assert(unresolved_);
-		// TODO: there will be the most important part of the type inference
+
+		if (opt_.hspCompat) {
+			// in HSP compatible mode, the member expression means reference to the array element
+			if (curTypeVar_ != NULL && me->type != NULL) {
+				*curTypeVar_ = new ModifierType(false, true, new ArrayType(me->type));
+				curTypeVar_ = NULL;
+				me->type = NULL;
+			} else {
+				curTypeVar_ = &(me->type);
+			}
+		} else {
+			// TODO: there will be the most important part of the type inference
+			curTypeVar_ = NULL;
+		}
 		return NULL;
 	}
 
@@ -1270,7 +1361,7 @@ Type *TypeResolver::visit(MemberExpr *me) throw (SemanticsError) {
 		&& !(me->receiver->type->unmodify()->is(String_))
 		&& me->receiver->type->unmodify()->getTypeType() != Type::ARRAY_TYPE) {
 		throw SemanticsError(me->token.getPosition(),
-			std::string("error: invalid left hand side type (")
+			std::string("error: invalid receiver type (")
 			+ me->receiver->type->getTypeName() + ")");
 	}
 
@@ -1290,9 +1381,25 @@ Type *TypeResolver::visit(MemberExpr *me) throw (SemanticsError) {
 		if (me->member->getString() == "length") {
 			me->type = new ModifierType(true, true, Int_);
 		} else {
-			throw SemanticsError(me->token.getPosition(),
-				std::string("error: invalid member ") + me->member->getString()
-				+ " for type " + me->receiver->type->getTypeName());
+			if (opt_.hspCompat) {
+				// rewrite the whole expression as an array reference
+				Expr *array = me->receiver;
+				Expr *subscr = me->member;
+				Token token = me->token;
+
+				// TODO: delete
+				SubscrExpr *rewritten = new SubscrExpr(array, token, subscr);
+				rewritten->type = NULL;
+
+				*(reinterpret_cast<SubscrExpr **>(mePtr)) = rewritten;
+				visit(rewritten);
+
+				return rewritten->type;
+			} else {
+				throw SemanticsError(me->token.getPosition(),
+					std::string("error: invalid member ") + me->member->getString()
+					+ " for type " + me->receiver->type->getTypeName());
+			}
 		}
 	}
 

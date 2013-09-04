@@ -10,11 +10,12 @@ class Options {
 public:
 	bool dumpAST;
 	bool verbose;
-	bool strict;
+	bool hspCompat;
+	bool dumpTokens;
 	std::string mainFileName;
 	std::vector<std::string> includePaths;
 	std::string outputFileName;
-	Options() : dumpAST(false), verbose(false), strict(false) {}
+	Options() : dumpAST(false), verbose(false), hspCompat(false), dumpTokens(false) {}
 };
 
 }

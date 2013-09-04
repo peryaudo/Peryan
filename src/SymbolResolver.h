@@ -6,15 +6,20 @@
 
 namespace Peryan {
 
+class Options;
+class WarningPrinter;
+
 class SymbolResolver {
 private:
 	SymbolResolver(const SymbolResolver&);
 	SymbolResolver& operator=(const SymbolResolver&);
 
 	SymbolTable& symbolTable_;
+	Options& options_;
+	WarningPrinter& wp_;
 public:
-	SymbolResolver(SymbolTable& symbolTable)
-		: symbolTable_(symbolTable) {}
+	SymbolResolver(SymbolTable& symbolTable, Options& options, WarningPrinter& wp)
+		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
 	void visit(TransUnit *tu) throw (SemanticsError);
 
@@ -44,6 +49,8 @@ public:
 	void visit(FuncCallExpr *fce, Scope *scope) throw (SemanticsError);
 	void visit(ConstructorExpr *fce, Scope *scope) throw (SemanticsError);
 	void visit(SubscrExpr *se, Scope *scope) throw (SemanticsError);
+
+	// always disallow implicit variable declaration in these situation
 	void visit(MemberExpr *me, Scope *scope) throw (SemanticsError);
 	void visit(StaticMemberExpr *sme, Scope *scope) throw (SemanticsError);
 	Type *visit(TypeSpec *ts, Scope *scope) throw (SemanticsError);

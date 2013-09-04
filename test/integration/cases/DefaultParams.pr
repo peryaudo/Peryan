@@ -1,0 +1,5 @@
+func foo (hoge :: Int = 145, hige :: Int) :: Void {
+	mes String(hoge + hige)
+}
+
+foo , 111

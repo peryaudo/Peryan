@@ -6,15 +6,21 @@
 
 namespace Peryan {
 
+class Options;
+class WarningPrinter;
+
 class SymbolRegister {
 private:
 	SymbolRegister(const SymbolRegister&);
 	SymbolRegister& operator=(const SymbolRegister&);
 
-private:
 	SymbolTable& symbolTable_;
+
+	Options& options_;
+	WarningPrinter& wp_;
 public:
-	SymbolRegister(SymbolTable& symbolTable) : symbolTable_(symbolTable) {}
+	SymbolRegister(SymbolTable& symbolTable, Options& options, WarningPrinter& wp)
+		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
 	bool isDisallowedIdentifier(const std::string& name);
 	void visit(TransUnit *tu) throw (SemanticsError);

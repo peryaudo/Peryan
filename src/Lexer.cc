@@ -11,7 +11,8 @@
 
 namespace Peryan {
 
-Lexer::Lexer(SourceReader& sr, WarningPrinter& wp) : sr_(sr), wp_(wp), p_(0), isPrevWS_(false) {
+Lexer::Lexer(SourceReader& sr, Options& opt, WarningPrinter& wp)
+		: sr_(sr), opt_(opt), wp_(wp), p_(0), isPrevWS_(false) {
 	initializeKeywords();
 };
 
@@ -52,15 +53,17 @@ Token Lexer::getNextToken() throw (LexerError) {
 		} else if (lookahead(0) == '/' && lookahead(1) == '/') {
 			consume(2);
 
-			while (!(lookahead() == '\n' || lookahead() == 0))
+			while (!((lookahead(0) == '\r' && lookahead(1) == '\n')
+						|| lookahead() == '\n' || lookahead() == 0))
 				consume();
-			consume(1);
+			//consume(1);
 		} else if (lookahead(0) == ';') {
 			consume(1);
 
-			while (!(lookahead() == '\n' || lookahead() == 0))
+			while (!((lookahead(0) == '\r' && lookahead(1) == '\n')
+						|| lookahead() == '\n' || lookahead() == 0))
 				consume();
-			consume(1);
+			//consume(1);
 		} else {
 			break;
 		}

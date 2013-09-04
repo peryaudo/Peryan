@@ -9,6 +9,8 @@
 #include "Lexer.h"
 #include "SymbolTable.h"
 #include "SymbolRegister.h"
+#include "Options.h"
+#include "WarningPrinter.h"
 
 namespace Peryan {
 
@@ -190,6 +192,13 @@ void SymbolRegister::visit(CompStmt *cs, Scope *scope) throw (SemanticsError) {
 void SymbolRegister::visit(LabelStmt *ls, Scope *scope) throw (SemanticsError) {
 	assert(ls != NULL);
 
+	if (options_.hspCompat) {
+		wp_.add(ls->label->token.getPosition(), "warning: use of label is deprecated");
+	} else {
+		throw SemanticsError(ls->label->token.getPosition(),
+				"error: use of labels is deprecated. if you want to use them, try --hsp-compatible .");
+	}
+
 	if (isDisallowedIdentifier(ls->label->token.getString())) {
 		throw SemanticsError(ls->label->token.getPosition(),
 				std::string("error: you can't use ")
@@ -198,6 +207,7 @@ void SymbolRegister::visit(LabelStmt *ls, Scope *scope) throw (SemanticsError) {
 
 	LabelSymbol *labelSymbol = new LabelSymbol(ls->label->token.getString(),
 								ls->label->token.getPosition());
+
 	if (scope->define(labelSymbol)) {
 		throw SemanticsError(ls->token.getPosition(),
 				std::string("error: ") + ls->label->token.getString() +

@@ -23,6 +23,7 @@ extern strmid :: String -> Int -> Int -> String
 extern instr :: String -> Int -> String -> Int
 
 extern rnd :: Int -> Int
+extern randomize :: Void -> Void
 
 // func sdim(str :: ref String,  length :: String) :: Void {
 // 	return
@@ -39,3 +40,13 @@ extern noteinfo :: Int -> Int
 extern noteget :: (ref String) -> Int -> Void
 
 extern noteload :: String -> Void
+
+var stat :: Int = 0 // will be rewritten as a extern variable
+
+extern sqrt :: Double -> Double
+extern sin :: Double -> Double
+extern cos :: Double -> Double
+extern limitf :: Double -> Double -> Double -> Double
+extern redraw :: Int -> Void
+extern pos :: Int -> Int -> Void
+extern color :: Int -> Int -> Int -> Void = -1, -1, -1

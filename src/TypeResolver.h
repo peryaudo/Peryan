@@ -8,6 +8,7 @@
 #include "Token.h"
 #include "AST.h"
 #include "Options.h"
+#include "WarningPrinter.h"
 
 namespace Peryan {
 
@@ -15,8 +16,6 @@ class TypeResolver {
 private:
 	TypeResolver(const TypeResolver&);
 	TypeResolver& operator=(const TypeResolver&);
-
-private:
 
 	bool changed_, unresolved_;
 	Position unresolvedPos_;
@@ -47,7 +46,7 @@ private:
 
 	FuncSymbol *curFunc_;
 
-	bool canPromote(Type *from, Type *to, bool isFuncParam = false);
+	bool canPromote(Type *from, Type *to, Position pos, bool isFuncParam = false);
 
 	bool canConvertModifier(Type *from, Type *to, bool isFuncParam = false);
 	bool isSubtypeOf(Type *sub, Type *super);
@@ -81,8 +80,9 @@ private:
 	void initBinaryPromotionTable();
 
 	Options& opt_;
+	WarningPrinter& wp_;
 public:
-	TypeResolver(SymbolTable& symbolTable, Options& opt);
+	TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp);
 	void visit(TransUnit *tu) throw (SemanticsError);
 	void visit(Stmt *stmt) throw (SemanticsError);
 	void visit(FuncDefStmt *fds) throw (SemanticsError);
@@ -96,7 +96,7 @@ public:
 	void visit(GosubStmt *gs) throw (SemanticsError);
 	void visit(ReturnStmt *rs) throw (SemanticsError);
 	void visit(NamespaceStmt *ns) throw (SemanticsError);
-	Type *visit(Expr *expr) throw (SemanticsError);
+	Type *visit(Expr *& expr) throw (SemanticsError);
 	Type *visit(Identifier *id) throw (SemanticsError);
 	Type *visit(Label *label) throw (SemanticsError);
 	Type *visit(BinaryExpr *be) throw (SemanticsError);
@@ -110,7 +110,7 @@ public:
 	Type *visit(FuncCallExpr *fce) throw (SemanticsError);
 	Type *visit(ConstructorExpr *ce) throw (SemanticsError);
 	Type *visit(SubscrExpr *se) throw (SemanticsError);
-	Type *visit(MemberExpr *me) throw (SemanticsError);
+	Type *visit(MemberExpr ** mePtr) throw (SemanticsError);
 	Type *visit(StaticMemberExpr *sme) throw (SemanticsError);
 	Type *visit(DerefExpr *de) throw (SemanticsError);
 	Type *visit(RefExpr *re) throw (SemanticsError);

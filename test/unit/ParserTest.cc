@@ -19,7 +19,7 @@ protected:
 	Peryan::Parser parser;
 
 public:
-	ParserTest() : ssr("main.pr"), wp(), lexer(ssr, wp), parser(lexer, opt, wp) {
+	ParserTest() : ssr("main.pr"), wp(), lexer(ssr, opt, wp), parser(lexer, opt, wp) {
 	}
 
 	std::string parseAndPrint(std::string str) throw (Peryan::ParserError, Peryan::SemanticsError) {
@@ -93,6 +93,8 @@ TEST_F(ParserTest, BasicInstructions) {
 			" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"Hello, World.\"))"
 			" (InstStmt (Identifier \"await\"))"
 			" (InstStmt (Identifier \"pos\") (IntLiteralExpr 20) (IntLiteralExpr 25)))";
+
+	opt.verbose = true;
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
@@ -170,6 +172,8 @@ TEST_F(ParserTest, Labels) {
 			" (InstStmt (Identifier \"wait\")"
 				" (BinaryExpr <STAR> (IntLiteralExpr 2) (DerefExpr (Identifier \"bar\")))))";
 
+	opt.hspCompat = true;
+
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
 
@@ -177,7 +181,7 @@ TEST_F(ParserTest, Externs) {
 	const std::string source =
 		"extern hogefunc :: Int -> Double -> String\n"
 		"extern hagefunc :: Void -> Void\n"
-		"hogefunc 36 114.514\n";
+		"hogefunc 36, 114.514\n";
 
 	const std::string expected =
 		"(TransUnit"

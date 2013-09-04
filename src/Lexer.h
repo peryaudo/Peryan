@@ -11,6 +11,7 @@ namespace Peryan {
 
 class SourceReader;
 class Lexer;
+class Options;
 class WarningPrinter;
 
 class LexerError : public std::exception {
@@ -34,6 +35,7 @@ private:
 
 private:
 	SourceReader& sr_;
+	Options& opt_;
 	WarningPrinter& wp_;
 
 	class Breadcrumb {
@@ -102,7 +104,7 @@ public:
 	Token getNextToken() throw (LexerError);
 	Position getPosition() { return p_; }
 
-	Lexer(SourceReader& fsr, WarningPrinter& wp);
+	Lexer(SourceReader& fsr, Options& opt, WarningPrinter& wp);
 };
 
 

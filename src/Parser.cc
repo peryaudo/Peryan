@@ -28,6 +28,21 @@ namespace Peryan {
 std::string ParserError::toString(const Lexer& lexer) {
 	return lexer.getPrettyPrint(position_, message_);
 }
+Token Parser::lt(int n/* = 0 */) throw (LexerError) {
+	if (markers_.size() > 0) {
+		n += markers_.back();
+	}
+	while (n >= tokens_.size()) {
+		if (tokens_.size() > 0 && tokens_.back().getType() == Token::END) {
+			return tokens_.back();
+		}
+
+		Token token = lexer_.getNextToken();
+		if (options_.dumpTokens) std::cout<<token.toString()<<std::endl;
+		tokens_.push_back(token);
+	}
+	return tokens_[n];
+}
 
 void Parser::parse() throw (LexerError, ParserError, SemanticsError) {
 	if (options_.verbose) std::cerr<<"parsing...";
@@ -35,17 +50,17 @@ void Parser::parse() throw (LexerError, ParserError, SemanticsError) {
 	if (options_.verbose) std::cerr<<"ok."<<std::endl;
 
 	if (options_.verbose) std::cerr<<"registering symbols...";
-	SymbolRegister symRegister(getSymbolTable());
+	SymbolRegister symRegister(getSymbolTable(), options_, wp_);
 	symRegister.visit(getTransUnit());
 	if (options_.verbose) std::cerr<<"ok."<<std::endl;
 
 	if (options_.verbose) std::cerr<<"resolving symbols...";
-	SymbolResolver symResolver(getSymbolTable());
+	SymbolResolver symResolver(getSymbolTable(), options_, wp_);
 	symResolver.visit(getTransUnit());
 	if (options_.verbose) std::cerr<<"ok."<<std::endl;
 
 	if (options_.verbose) std::cerr<<"resolving types...";
-	TypeResolver typeResolver(getSymbolTable(), options_);
+	TypeResolver typeResolver(getSymbolTable(), options_, wp_);
 	typeResolver.visit(getTransUnit());
 	if (options_.verbose) {
 		std::cerr<<"ok."<<std::endl;
@@ -142,9 +157,10 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 		stmt = new ContinueStmt(lt(0));
 		consume();
 		if (!withoutTerm) {
-			if (la() != Token::TERM && la() != Token::CLN)
+			if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 				throw ParserError(getPosition(), "error: no terminal character");
-			consume();
+			if (la() == Token::TERM || la() == Token::CLN)
+				consume();
 		}
 		break;
 
@@ -152,9 +168,10 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 		stmt = new BreakStmt(lt(0));
 		consume();
 		if (!withoutTerm) {
-			if (la() != Token::TERM && la() != Token::CLN)
+			if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 				throw ParserError(getPosition(), "error: no terminal character");
-			consume();
+			if (la() == Token::TERM || la() == Token::CLN)
+				consume();
 		}
 		break;
 
@@ -170,9 +187,11 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 			stmt = new ReturnStmt(token, expr);
 
 			if (!withoutTerm) {
-				if (la() != Token::TERM && la() != Token::CLN)
+				if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 					throw ParserError(getPosition(), "error: no terminal character");
-				consume();
+				if (la() == Token::TERM || la() == Token::CLN)
+					consume();
+
 			}
 
 			break;
@@ -190,7 +209,7 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 	return std::vector<Stmt *>(1, stmt);
 }
 
-// FunctionDefinition : "func" IDENTIFIER  "(" ParameterDeclarationList? ")"
+// FunctionDefinition : "func" IDENTIFIER  "(" ParameterDeclarationList? {= default } ")"
 // 					[ "::" TypeSpecifier ] CompoundStatement TERM ;
 FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 	DBG_PRINT(+, parseFuncDefStmt);
@@ -208,6 +227,8 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 	consume();
 
 	std::vector<Identifier *> params;
+	std::vector<Expr *> defaults;
+
 	bool first = true;
 	while (la() != Token::RPAREN) {
 		if (la() == Token::TERM)
@@ -229,6 +250,14 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 		}
 
 		params.push_back(curParam);
+
+		if (la() == Token::EQL) {
+			consume();
+
+			defaults.push_back(parseExpr());
+		} else {
+			defaults.push_back(NULL);
+		}
 	}
 
 	consume();
@@ -251,16 +280,16 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 		throw ParserError(getPosition(), "error: no terminal character");
 	consume();
 
-
 	FuncDefStmt *fds = new FuncDefStmt(token, name, body);
 	fds->params = params;
 	fds->retTypeSpec = retTypeSpec;
+	fds->defaults = defaults;
 
 	DBG_PRINT(-, parseFuncDefStmt);
 	return fds;
 }
 
-// ExternStmt : "extern" ID "::" TypeSpec (":" | TERM)
+// ExternStmt : "extern" ID "::" TypeSpec {"=" default parameters } (":" | TERM)
 ExternStmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
 	DBG_PRINT(+, parseExternStmt);
 	assert(la() == Token::KW_EXTERN);
@@ -276,9 +305,35 @@ ExternStmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
 
 	es->id->typeSpec = parseTypeSpec();
 
-	if (la() != Token::TERM && la() != Token::CLN)
+	if (la() == Token::EQL) {
+		consume();
+
+		bool first = true;
+		while (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE) {
+			if (la() == Token::END)
+				throw ParserError(getPosition(), "error: no terminal character");
+
+			if (first == false) {
+				if (la() != Token::COMMA) {
+					throw ParserError(getPosition(), "error: ',' expected");
+				}
+				consume();
+			}
+
+			first = false;
+
+			if (la() == Token::COMMA) {
+				es->defaults.push_back(NULL);
+			} else {
+				es->defaults.push_back(parseExpr());
+			}
+		}
+	}
+
+	if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 		throw ParserError(getPosition(), "error: no terminal character");
-	consume();
+	if (la() == Token::TERM || la() == Token::CLN)
+		consume();
 
 	DBG_PRINT(-, parseExternStmt);
 	return es;
@@ -305,9 +360,10 @@ Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) throw (LexerError, ParserErro
 	}
 
 	if (!withoutTerm) {
-		if (la() != Token::TERM && la() != Token::CLN)
+		if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 			throw ParserError(getPosition(), "error: no terminal character");
-		consume();
+		if (la() == Token::TERM || la() == Token::CLN)
+			consume();
 	}
 
 	DBG_PRINT(-, parseGotoGosubStmt);
@@ -340,7 +396,8 @@ Label *Parser::parseLabel() throw (LexerError, ParserError) {
 	DBG_PRINT(+, parseLabel);
 	assert(la() == Token::STAR);
 
-	if (la() == Token::STAR && (lt().hasTrailingAlphabet())) {
+	if (la(0) == Token::STAR && (la(1) == Token::ID || la(1) == Token::TYPE_ID)
+			&& (lt(0).hasTrailingAlphabet())) {
 		consume();
 
 		Label *label = new Label(lt());
@@ -606,9 +663,10 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) throw (LexerError, ParserError) {
 		}
 
 		if (!withoutTerm) {
-			if (la() != Token::TERM && la() != Token::CLN)
+			if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 				throw ParserError(getPosition(), "error: no terminal character");
-			consume();
+			if (la() == Token::TERM || la() == Token::CLN)
+				consume();
 		}
 	} else if (la() == Token::CLN) {
 		// "if" Expression ":" StatementWithoutTerm { ":" StatementWithoutTerm }
@@ -620,9 +678,11 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) throw (LexerError, ParserError) {
 			std::vector<Stmt *> curStmts = parseStmt(false, true);
 			if (la() == Token::END)
 				throw ParserError(getPosition(), "error: no terminal character");
+
 			if (la() == Token::CLN) {
 				consume();
 			}
+
 			ifThen->stmts.insert(ifThen->stmts.end(), curStmts.begin(), curStmts.end());
 		}
 
@@ -677,8 +737,10 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) throw (LexerError, ParserE
 	} else {
 		count = parseExpr();
 
-		if (la() != Token::CLN && la() != Token::TERM)
+		if (la() != Token::CLN && la() != Token::TERM && la() != Token::RBRACE)
 			throw ParserError(getPosition(), "error: no terminal character");
+		if (la() == Token::CLN || la() == Token::TERM)
+			consume();
 	}
 	
 	RepeatStmt *rs = new RepeatStmt(token, count);
@@ -699,9 +761,10 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) throw (LexerError, ParserE
 	consume();
 
 	if (!withoutTerm) {
-		if (la() != Token::TERM && la() != Token::CLN)
+		if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 			throw ParserError(getPosition(), "error: no terminal character");
-		consume();
+		if (la() == Token::TERM || la() == Token::CLN)
+			consume();
 	}
 
 	DBG_PRINT(-, parseRepeatStmt);
@@ -729,9 +792,10 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) throw (LexerError, ParserE
 			consume();
 
 			if (!withoutTerm) {
-				if (la() != Token::TERM && la() != Token::CLN)
+				if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 					throw ParserError(getPosition(), "error: no terminal character");
-				consume();
+				if (la() == Token::TERM || la() == Token::CLN)
+					consume();
 			}
 
 			return new AssignStmt(topExpr, token, NULL);
@@ -748,9 +812,10 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) throw (LexerError, ParserE
 			Expr *rhs = parseExpr();
 
 			if (!withoutTerm) {
-				if (la() != Token::TERM && la() != Token::CLN)
+				if (la() != Token::TERM && la() != Token::CLN && la() != Token::RBRACE)
 					throw ParserError(getPosition(), "error: no terminal character");
-				consume();
+				if (la() == Token::TERM || la() == Token::CLN)
+					consume();
 			}
 
 			return new AssignStmt(topExpr, token, rhs);
@@ -765,11 +830,20 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) throw (LexerError, ParserE
 		if (la() == Token::END)
 			throw ParserError(getPosition(), "error: no terminal character");
 
-		if (!first && la() == Token::COMMA)
+		if (first == false) {
+			if (la() != Token::COMMA) {
+				throw ParserError(getPosition(), "error: ',' expected");
+			}
 			consume();
+		}
+
 		first = false;
 
-		instStmt->params.push_back(parseExpr());
+		if (la() == Token::COMMA) {
+			instStmt->params.push_back(NULL);
+		} else {
+			instStmt->params.push_back(parseExpr());
+		}
 	}
 
 	if (!withoutTerm)

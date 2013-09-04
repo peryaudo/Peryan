@@ -4,6 +4,7 @@
 #include <map>
 
 #include "../../src/WarningPrinter.h"
+#include "../../src/Options.h"
 #include "../../src/Lexer.h"
 #include "../../src/StringSourceReader.h"
 
@@ -14,10 +15,11 @@ class LexerTest : public ::testing::Test {
 protected:
 	Peryan::StringSourceReader ssr;
 	Peryan::Lexer lexer;
+	Peryan::Options opt;
 	Peryan::WarningPrinter wp;
 
 public:
-	LexerTest() : ssr("main.pr"), lexer(ssr, wp) {
+	LexerTest() : ssr("main.pr"), lexer(ssr, opt, wp) {
 	}
 
 	void lexAndCompare(const char *expected[], int len) {
@@ -105,6 +107,8 @@ TEST_F(LexerTest, VariousTypesOfTokens) {
 		"<EQL>", "<TYPE_ID, String>", "<LPAREN>", "<STRING, this is string\t>", "<RPAREN>", "<TERM>",
 		"<INTEGER, 12>", "<INTEGER, 3>", "<TERM>",
 		"<FLOAT>", "<TERM>",
+		"<TERM>",
+		"<TERM>",
 		"<INTEGER, 2748>", "<TERM>",
 		"<INTEGER, 11>", "<TERM>",
 		"<CHAR, A>", "<TERM>",
