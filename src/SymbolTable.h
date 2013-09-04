@@ -147,6 +147,40 @@ public:
 			return this->cdr_;
 		return static_cast<FuncType *>(this->cdr_)->getReturnType();
 	}
+
+	class iterator : public std::iterator<std::forward_iterator_tag, Type *> {
+	private:
+		FuncType *ft_;
+	public:
+		iterator(FuncType *ft) : ft_(ft) {}
+		Type *& operator*() const { return ft_->getCar(); }
+		iterator& operator++() {
+			if (ft_->getCdr() == NULL) {
+				return *this;
+			} else if (ft_->getCdr()->getTypeType() != Type::FUNC_TYPE) {
+				return *this;
+			} else {
+				ft_ = static_cast<FuncType *>(ft_->getCdr());
+				return *this;
+			}
+		}
+		bool operator!=(const iterator& to) const { return !(ft_->is(to.ft_)); }
+		bool operator==(const iterator& to) const { return ft_->is(to.ft_); }
+	};
+
+	virtual iterator begin() {
+		return iterator(this);
+	}
+
+	virtual iterator end() {
+		FuncType *ftEnd = this;
+		while (ftEnd->getCdr() != NULL && ftEnd->getCdr()->getTypeType() == Type::FUNC_TYPE) {
+			ftEnd = static_cast<FuncType *>(ftEnd);
+		}
+		return ftEnd;
+	}
+
+
 };
 
 class Scope {
