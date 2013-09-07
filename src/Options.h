@@ -12,10 +12,11 @@ public:
 	bool verbose;
 	bool hspCompat;
 	bool dumpTokens;
+	bool inhibitWarnings;
 	std::string mainFileName;
 	std::vector<std::string> includePaths;
 	std::string outputFileName;
-	Options() : dumpAST(false), verbose(false), hspCompat(false), dumpTokens(false) {}
+	Options() : dumpAST(false), verbose(false), hspCompat(false), dumpTokens(false), inhibitWarnings(false) {}
 };
 
 }

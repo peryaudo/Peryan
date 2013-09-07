@@ -20,15 +20,17 @@ int main(int argc, char *argv[])
 			opt.includePaths.push_back(cur.substr(2));
 		} else if (cur == "--dump-ast") {
 			opt.dumpAST = true;
-		} else if (cur == "--verbose") {
+		} else if (cur == "--verbose" || cur == "-v") {
 			opt.verbose = true;
-		} else if (cur == "--hsp-compatible") {
+		} else if (cur == "-hsp" || cur == "--hsp-compatible") {
 			opt.hspCompat = true;
 			warnings.add(-1, "warning: using HSP compatible mode");
 		} else if (cur == "--dump-tokens") {
 			opt.dumpTokens = true;
+		} else if (cur == "-w") {
+			opt.inhibitWarnings = true;
 		} else if (cur.find("-") != std::string::npos) {
-			std::cerr<<"warning: unknown option"<<std::endl;
+			std::cerr<<"warning: unknown option "<<cur<<std::endl;
 		} else {
 			if (opt.mainFileName.empty()) {
 				opt.mainFileName = cur;
@@ -79,24 +81,24 @@ int main(int argc, char *argv[])
 	try {
 		parser.parse();
 	} catch (Peryan::LexerError le) {
-		warnings.print(lexer);
+		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<le.toString(lexer)<<std::endl;
 		return -1;
 	} catch (Peryan::ParserError pe) {
-		warnings.print(lexer);
+		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<pe.toString(lexer)<<std::endl;
 		return -1;
 	} catch (Peryan::SemanticsError se) {
-		warnings.print(lexer);
+		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<se.toString(lexer)<<std::endl;
 		return -1;
 	} catch (...) {
-		warnings.print(lexer);
+		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<"error: unknown error"<<std::endl;
 		return -1;
 	}
 
-	warnings.print(lexer);
+	if (!opt.inhibitWarnings) warnings.print(lexer);
 
 	if (opt.dumpAST) {
 		Peryan::ASTPrinter printer(/* pretty = */ true);

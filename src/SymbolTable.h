@@ -342,7 +342,7 @@ public:
 	virtual SymbolType getSymbolType() { return LABEL_SYMBOL; }
 
 	LabelSymbol(const std::string& name, Position position)
-		: Symbol(name, new Type("Label"), position) {}
+		: Symbol(name, position) {}
 };
 
 class BuiltInTypeSymbol : public Symbol, public Type {

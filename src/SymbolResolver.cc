@@ -340,7 +340,7 @@ void SymbolResolver::visit(Label *label, Scope *scope) throw (SemanticsError) {
 	assert(scope != NULL);
 
 	if (label->symbol == NULL) {
-		Symbol *symbol = scope->resolve(label->token.getString(), label->token.getPosition());
+		Symbol *symbol = scope->resolve(std::string("*") + label->token.getString(), label->token.getPosition());
 		if (symbol == NULL) {
 			throw SemanticsError(label->token.getPosition(),
 					"error: unknown label " + label->token.getString());

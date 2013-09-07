@@ -205,8 +205,12 @@ void SymbolRegister::visit(LabelStmt *ls, Scope *scope) throw (SemanticsError) {
 				+ ls->label->token.getString() + " as an identifier");
 	}
 
-	LabelSymbol *labelSymbol = new LabelSymbol(ls->label->token.getString(),
+	LabelSymbol *labelSymbol = new LabelSymbol(std::string("*") + ls->label->token.getString(),
 								ls->label->token.getPosition());
+
+	Type *Label_ = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Label"));
+	labelSymbol->setType(Label_);
+	ls->label->type = Label_;
 
 	if (scope->define(labelSymbol)) {
 		throw SemanticsError(ls->token.getPosition(),

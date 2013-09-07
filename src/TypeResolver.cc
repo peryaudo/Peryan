@@ -1083,8 +1083,14 @@ Type *TypeResolver::visit(Label *label) throw (SemanticsError) {
 	DBG_PRINT(+, Label);
 	assert(label != NULL);
 
+	if (label->type == NULL) {
+		label->type = Label_;
+	}
+
+	assert(label->symbol != NULL);
+
 	DBG_PRINT(-, Label);
-	return Label_;
+	return label->type;
 }
 
 Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {

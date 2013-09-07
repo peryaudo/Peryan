@@ -89,6 +89,7 @@ private:
 	void generateGlobalVarDecl(const std::string& name, Type *type, bool isExternal);
 
 	llvm::Type *getLLVMType(Type *type);
+	llvm::FunctionType *getLLVMFuncType(FuncType *ft);
 
 	void generateTransUnit(TransUnit *tu);
 	void generateGlobalDecl(Scope *scope);
@@ -276,7 +277,6 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 			break;
 
 		case Symbol::BUILTIN_TYPE_SYMBOL:
-			// doesn't have to declare
 			break;
 
 		case Symbol::CLASS_SYMBOL:
@@ -285,6 +285,10 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 
 		case Symbol::NAMESPACE_SYMBOL:
 			generateGlobalDecl(static_cast<NamespaceSymbol *>(*it));
+			break;
+
+		case Symbol::LABEL_SYMBOL:
+			generateFuncDecl((*it)->getMangledSymbolName(), (*it)->getType());
 			break;
 
 		default: ;
@@ -487,32 +491,36 @@ llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
 		else if (type->is(Void_))	return llvm::Type::getVoidTy(context_);
 		else				assert(false && "unknown builtin type");
 
+	} else if (type->getTypeType() == Type::FUNC_TYPE) {
+		return getLLVMFuncType(static_cast<FuncType *>(type))->getPointerTo();
 	} else {
 		assert(false && "unknown type"); //unsupported
 		return NULL;
 	}
 }
 
+llvm::FunctionType *LLVMCodeGen::Impl::getLLVMFuncType(FuncType *ft) {
+	std::vector<llvm::Type *> paramTypes;
+	for (FuncType::iterator it = ft->begin(Void_); it != ft->end(); ++it) {
+		paramTypes.push_back(getLLVMType(*it));
+	}
+
+	return llvm::FunctionType::get(getLLVMType(ft->getReturnType()), paramTypes, false);
+}
+
 void LLVMCodeGen::Impl::generateFuncDecl(const std::string& name, Type *type) {
 	DBG_PRINT(+, generateFuncDecl);
-	std::vector<llvm::Type *> paramTypes;
-	while (type->getTypeType() == Type::FUNC_TYPE) {
-		FuncType *cur = static_cast<FuncType *>(type);
-		if (cur->getCar()->is(Void_)) {
-			// there's no parameter, so we have nothing to do.
-			assert(cur->getCdr()->getTypeType() != Type::FUNC_TYPE);
-		} else {
-			paramTypes.push_back(getLLVMType(cur->getCar()));
-		}
 
-		type = cur->getCdr();
+	if (type->getTypeType() == Type::FUNC_TYPE) {
+		llvm::Function::Create(
+			getLLVMFuncType(static_cast<FuncType *>(type)),
+			llvm::Function::ExternalLinkage, name, &module_);
+	} else if (type->is(Label_)) {
+		llvm::Function::Create(getLLVMFuncType(new FuncType(Void_, Void_)),
+			llvm::Function::ExternalLinkage, name, &module_);
+	} else {
+		assert(false);
 	}
-	assert(type->getTypeType() == Type::BUILTIN_TYPE); // class not implemented
-
-	llvm::FunctionType *funcType =
-		llvm::FunctionType::get(getLLVMType(type), paramTypes, false);
-
-	llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, &module_);
 
 	DBG_PRINT(-, generateFuncDecl);
 	return;
@@ -532,7 +540,11 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 				|| type->unmodify()->is(Bool_)) {
 			// they will be initialized again, it is just to avoid LLVM IR syntax error
 			init = llvm::ConstantInt::get(getLLVMType(type), 0);
+		} else if (type->unmodify()->is(Float_) || type->unmodify()->is(Double_)) {
+			// they will be initialized again, it is just to avoid LLVM IR syntax error
+			init = llvm::ConstantFP::get(getLLVMType(type), 0.0);
 		} else if (type->unmodify()->is(String_)) {
+
 			init = llvm::ConstantPointerNull::get(
 				static_cast<llvm::PointerType *>(getLLVMType(String_)));
 		} else if (type->unmodify()->getTypeType() == Type::ARRAY_TYPE) {
@@ -1053,12 +1065,7 @@ llvm::Value *LLVMCodeGen::Impl::generateFuncCallExpr(FuncCallExpr *fce) {
 
 	std::vector<llvm::Value *> params;
 	for (std::vector<Expr *>::iterator it = fce->params.begin(); it != fce->params.end(); ++it) {
-		if (ft->getCar()->getTypeType() == Type::MODIFIER_TYPE
-			&& static_cast<ModifierType *>(ft->getCar())->isRef()) {
-			params.push_back(generateExpr(*it));
-		} else {
-			params.push_back(generateExpr(*it));
-		}
+		params.push_back(generateExpr(*it));
 
 		ft = static_cast<FuncType *>(ft->getCdr());
 	}
@@ -1834,20 +1841,61 @@ void LLVMCodeGen::Impl::generateBreakStmt(BreakStmt *bs) {
 //
 //
 void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
-	assert(false && "goto statement not supported yet");
+	DBG_PRINT(+, generateGotoStmt);
+	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+
+	llvm::Function  *func = module_.getFunction(gs->to->symbol->getMangledSymbolName());
+	assert(func != NULL);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	builder_.CreateCall(func);
+
+	DBG_PRINT(-, generateGotoStmt);
+	return;
 }
 
 void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
-	assert(false && "label statement not supported yet");
+	DBG_PRINT(+, generateLabelStmt);
+	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+
+	llvm::Function  *func = module_.getFunction(ls->label->symbol->getMangledSymbolName());
+	assert(func != NULL);
+
+	llvm::BasicBlock *body = llvm::BasicBlock::Create(context_, "labelEntry" + getUniqNumStr(), func);
+	
+	blocks.back().func = func;
+	blocks.back().body = body;
+	blocks.back().end->moveAfter(body);
+
+	builder_.SetInsertPoint(blocks.back().body);
+
+	DBG_PRINT(-, generateLabelStmt);
+	return;
 }
 
 void LLVMCodeGen::Impl::generateGosubStmt(GosubStmt *gs) {
-	DBG_PRINT(+-, generateGosubStmt);
-	assert(false && "gosub statement not supported yet");
+	DBG_PRINT(+, generateGosubStmt);
+	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+
+	llvm::Function  *func = module_.getFunction(gs->to->symbol->getMangledSymbolName());
+	assert(func != NULL);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	builder_.CreateCall(func);
+
+	DBG_PRINT(-, generateGosubStmt);
+
+	return;
 }
 void LLVMCodeGen::Impl::generateGlobalReturnStmt(ReturnStmt *rs) {
-	DBG_PRINT(+-, generateGlobalReturnStmt);
-	assert(false && "global return statement not supported yet");
+	DBG_PRINT(+, generateGlobalReturnStmt);
+	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	builder_.CreateRetVoid();
+
+	DBG_PRINT(-, generateGlobalReturnStmt);
+	return;
 }
 
 void LLVMCodeGen::Impl::generateFuncReturnStmt(ReturnStmt *rs) {
