@@ -83,8 +83,13 @@ bool TypeResolver::canPromote(Type *from, Type *to, Position pos, bool isFuncPar
 	if (isSubtypeOf(/*sub = */ from->unmodify(), /*super = */ to->unmodify())) {
 		// correct
 	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Double_)) {
+		// Int to Double
 		wp_.add(pos, "warning: implicit conversion from Int to Double is deprecated");
+	} else if (opt_.hspCompat && from->unmodify()->is(Double_) && to->unmodify()->is(Int_)) {
+		// Double to Int
+		wp_.add(pos, "warning: implicit conversion from Double to Int is deprecated");
 	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Bool_)) {
+		// Int to Bool
 		wp_.add(pos, "warning: implicit conversion from Int to Bool is deprecated");
 	} else {
 		return false;
@@ -142,89 +147,165 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 	// TODO: copy ArrayType?
 }
 
+#define REGISTER_BINARY_PROMOTION(TABLE, TOKEN_TYPES) \
+	for (int iLhs = 1; iLhs < 9; ++iLhs) \
+	for (int iRhs = 1; iRhs < 9; ++iRhs) \
+	for (int iToken = 0; iToken < sizeof(TOKEN_TYPES) / sizeof(TOKEN_TYPES[0]); ++iToken) \
+		if (TABLE[iLhs][iRhs] != NULL) \
+			binaryPromotionTable[\
+				BinaryPromotionKey(TABLE[iLhs][0], TOKEN_TYPES[iToken], TABLE[0][iRhs])] \
+					= TABLE[iLhs][iRhs];
+
 void TypeResolver::initBinaryPromotionTable() {
-	// TODO: rewrite this with the style of initPoromotionTable()
-
 	// ^ | &
-	binaryPromotionTable[BinaryPromotionKey(Bool_, Token::CARET, Bool_)] = Bool_;
-	binaryPromotionTable[BinaryPromotionKey(Bool_, Token::PIPE, Bool_)] = Bool_;
-	binaryPromotionTable[BinaryPromotionKey(Bool_, Token::AMP, Bool_)] = Bool_;
-
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::CARET, Int_)] = Int_;
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::PIPE, Int_)] = Int_;
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::AMP, Int_)] = Int_;
+	Token::Type caretPipeAmpTokenTypes[] = { Token::CARET, Token::PIPE, Token::AMP };
+	Type *caretPipeAmp[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , Bool_	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, Int_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+	REGISTER_BINARY_PROMOTION(caretPipeAmp, caretPipeAmpTokenTypes);
 
 	// = == != !
-	// they only allows comparison with same type
-	{
-		const char *typeNames[7] = {"Int", "String", "Char", "Float", "Double", "Bool", "Label"};
-		for (int i = 0; i < sizeof(typeNames) / sizeof(typeNames[0]); ++i) {
-			Type *type = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve(typeNames[i]));
-			binaryPromotionTable[BinaryPromotionKey(type, Token::EQL, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::EQEQ, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::EXCLEQ, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::EXCL, type)] = Bool_;
-		}
-	}
-	// < <= > >=
-	{
-		const char *typeNames[2] = {"Int", "Char"};
-		for (int i = 0; i < sizeof(typeNames) / sizeof(typeNames[0]); ++i) {
-			Type *type = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve(typeNames[i]));
-			binaryPromotionTable[BinaryPromotionKey(type, Token::LT, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::LTEQ, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::GT, type)] = Bool_;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::GTEQ, type)] = Bool_;
-		}
-	}
+	Token::Type eqlEqeqExcleqExclTokenTypes[] = { Token::EQL, Token::EQEQ, Token::EXCLEQ, Token::EXCL};
+	Type *eqlEqeqExcleqExcl[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , Bool_	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, Bool_	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, Bool_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, Bool_	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, Bool_	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , Bool_  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , Bool_ , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , Bool_  }
+	};
+	REGISTER_BINARY_PROMOTION(eqlEqeqExcleqExcl, eqlEqeqExcleqExclTokenTypes);
 
-	{
-		const char *typeNames[2] = {"Float", "Double"};
-		for (int i = 0; i < sizeof(typeNames) / sizeof(typeNames[0]); ++i) {
-			for (int j = 0; j < sizeof(typeNames) / sizeof(typeNames[0]); ++j) {
-				Type *lhs = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve(typeNames[i]));
-				Type *rhs = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve(typeNames[j]));
-				binaryPromotionTable[BinaryPromotionKey(lhs, Token::LT, rhs)] = Bool_;
-				binaryPromotionTable[BinaryPromotionKey(lhs, Token::LTEQ, rhs)] = Bool_;
-				binaryPromotionTable[BinaryPromotionKey(lhs, Token::GT, rhs)] = Bool_;
-				binaryPromotionTable[BinaryPromotionKey(lhs, Token::GTEQ, rhs)] = Bool_;
-			}
-		}
-	}
+	// < <= > >=
+	Token::Type ltLteqGtGteqTokenTypes[] = { Token::LT, Token::LTEQ, Token::GT, Token::GTEQ };
+	Type *ltLteqGtGteq[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, Bool_	, Bool_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, Bool_	, Bool_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, Bool_	, Bool_	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, Bool_	, Bool_	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+	REGISTER_BINARY_PROMOTION(ltLteqGtGteq, ltLteqGtGteqTokenTypes);
 
 	// << >>
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::LTLT, Int_)] = Int_;
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::GTGT, Int_)] = Int_;
+	// Token::LTLT Token::GTGT
+	Token::Type ltltGtgtTokenTypes[] = { Token::LTLT, Token::GTGT };
+	Type *ltltGtgt[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, Int_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+	REGISTER_BINARY_PROMOTION(ltltGtgt, ltltGtgtTokenTypes);
 
 	// + - * / 
-	{
-		const char *typeNames[4] = {"Int", "Char", "Float", "Double"};
-		for (int i = 0; i < sizeof(typeNames) / sizeof(typeNames[0]); ++i) {
-			Type *type = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve(typeNames[i]));
-			binaryPromotionTable[BinaryPromotionKey(type, Token::PLUS, type)] = type;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::MINUS, type)] = type;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::STAR, type)] = type;
-			binaryPromotionTable[BinaryPromotionKey(type, Token::SLASH, type)] = type;
-		}
-	}
 
+	Token::Type plusMinusStarSlashTokenTypes[] = { Token::PLUS, Token::MINUS, Token::STAR, Token::SLASH };
+	Type *plusMinusStarSlash[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, Char_	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, Int_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, Float_, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, Double_, NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+
+	Type *hspCompatPlusMinusStarSlash[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , Int_	, Int_	, Int_	, Int_	, Int_	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, Char_	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, Int_	, Int_	, Int_	, Int_	, Int_	 , NULL	  , NULL  , NULL   },
+		{ Float_, Float_, Float_, Float_, Float_, Double_, NULL	  , NULL  , NULL   },
+		{ Double_,Double_,Double_,Double_,Double_,Double_, NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
 	if (opt_.hspCompat) {
-		binaryPromotionTable[BinaryPromotionKey(Double_, Token::PLUS, Int_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Double_, Token::MINUS, Int_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Double_, Token::STAR, Int_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Double_, Token::SLASH, Int_)] = Double_;
-
-		binaryPromotionTable[BinaryPromotionKey(Int_, Token::PLUS, Double_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Int_, Token::MINUS, Double_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Int_, Token::STAR, Double_)] = Double_;
-		binaryPromotionTable[BinaryPromotionKey(Int_, Token::SLASH, Double_)] = Double_;
+		REGISTER_BINARY_PROMOTION(hspCompatPlusMinusStarSlash, plusMinusStarSlashTokenTypes);
+	} else {
+		REGISTER_BINARY_PROMOTION(plusMinusStarSlash, plusMinusStarSlashTokenTypes);
 	}
 
 	// %
-	binaryPromotionTable[BinaryPromotionKey(Int_, Token::PERC, Int_)] = Int_;
+	Token::Type percTokenTypes[] = { Token::PERC };
+	Type *perc[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, Int_	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+	REGISTER_BINARY_PROMOTION(perc, percTokenTypes);
 
 	// + for String
-	binaryPromotionTable[BinaryPromotionKey(String_, Token::PLUS, String_)] = String_;
+	Token::Type stringPlusTokenTypes[] = { Token::PLUS };
+	Type *stringPlus[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, NULL  ,NULL	, NULL	 , String_, NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+
+	Type *hspCompatStringPlus[9][9] = {
+		/*lhs\rhs*/
+		{ NULL	, Bool_ , Char_ , Int_	, Float_, Double_, String_, Void_ , Label_ },
+		{ Bool_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Char_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Int_	, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Float_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Double_,NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ String_,NULL	, NULL	, String_,NULL	, NULL	 , String_, NULL  , NULL   },
+		{ Void_ , NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   },
+		{ Label_, NULL	, NULL	, NULL	, NULL	, NULL	 , NULL	  , NULL  , NULL   }
+	};
+
+	if (opt_.hspCompat) {
+		REGISTER_BINARY_PROMOTION(hspCompatStringPlus, stringPlusTokenTypes);
+	} else {
+		REGISTER_BINARY_PROMOTION(stringPlus, stringPlusTokenTypes);
+	}
+
 	return;
 }
 
@@ -996,17 +1077,22 @@ Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
 			return be->type = new ModifierType(true, false, be->type);
 		}
 
-		// insert promoters
-		if (canPromote(lhsType, rhsType->unmodify(), be->lhs->token.getPosition(), false)) {
+		// in HSP, the rhs is always casted to the lhs type
+		if (!opt_.hspCompat && canPromote(lhsType, rhsType->unmodify(),
+					be->lhs->token.getPosition(), false)) {
 			// rhsType->unmodify() is wider than lhsType->unmodify().
 			be->lhs = insertPromoter(be->lhs, rhsType->unmodify());
 			be->rhs = insertPromoter(be->rhs, rhsType->unmodify());
-		} else if (canPromote(rhsType, lhsType->unmodify(), be->lhs->token.getPosition(), false)) {
+		} else if (canPromote(rhsType, lhsType->unmodify(),
+					be->lhs->token.getPosition(), false)) {
 			// lhsType->unmodify() is wider than rhsType->unmodify().
 			be->rhs = insertPromoter(be->rhs, lhsType->unmodify());
 			be->lhs = insertPromoter(be->lhs, lhsType->unmodify());
 		} else {
-			assert(false);
+			std::cout<<lhsType->unmodify()->getTypeName();
+			std::cout<<be->token.toString();
+			std::cout<<rhsType->unmodify()->getTypeName()<<std::endl;
+			assert(false && "no viable cast");
 		}
 		DBG_PRINT(-, BinaryExpr);
 		return be->type = new ModifierType(true, false, be->type);
@@ -1241,8 +1327,6 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 		}
 	}
 
-	// [class] TODO: check parameters to the constructor's type
-
 	ce->type = ce->constructor->type;
 
 	assert(ce->type != NULL);
@@ -1271,6 +1355,10 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 			ce->params[0]->type->unmodify()->is(Int_)) {
 		// Double(Int)
 	} else if (ce->params.size() == 1 &&
+			ce->type->is(Int_) &&
+			ce->params[0]->type->unmodify()->is(Double_)) {
+		// Int(Double)
+	} else if (ce->params.size() == 1 &&
 			ce->type->getTypeType() == Type::ARRAY_TYPE &&
 			ce->params[0]->type->unmodify()->is(Int_)) {
 		// [Type](...)
@@ -1285,7 +1373,10 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 					static_cast<ArrayType *>(ce->type)->getElemType()->unmodify());
 	} else {
 		// [class] TODO: Support class
-		throw SemanticsError(ce->token.getPosition(), "error: Unknown constructor type");
+		throw SemanticsError(ce->token.getPosition(),
+			std::string("error: Unknown constructor type (")
+			+ ce->type->getTypeName()
+			+ ")");
 	}
 
 	DBG_PRINT(-, ConstructorExpr);
