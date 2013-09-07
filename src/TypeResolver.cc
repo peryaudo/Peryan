@@ -24,6 +24,7 @@ TypeResolver::TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinte
 	Label_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Label"));
 	Void_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Void"));
 
+	initPromotionTable();
 	initBinaryPromotionTable();
 }
 
@@ -82,15 +83,9 @@ bool TypeResolver::canPromote(Type *from, Type *to, Position pos, bool isFuncPar
 
 	if (isSubtypeOf(/*sub = */ from->unmodify(), /*super = */ to->unmodify())) {
 		// correct
-	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Double_)) {
-		// Int to Double
+	} else if (opt_.hspCompat && promotionTable.count(PromotionKey(from->unmodify(), to->unmodify())) > 0) {
+		// explicit type conversion is always prohibited in Peryan mode
 		wp_.add(pos, "warning: implicit conversion from Int to Double is deprecated");
-	} else if (opt_.hspCompat && from->unmodify()->is(Double_) && to->unmodify()->is(Int_)) {
-		// Double to Int
-		wp_.add(pos, "warning: implicit conversion from Double to Int is deprecated");
-	} else if (opt_.hspCompat && from->unmodify()->is(Int_) && to->unmodify()->is(Bool_)) {
-		// Int to Bool
-		wp_.add(pos, "warning: implicit conversion from Int to Bool is deprecated");
 	} else {
 		return false;
 	}
@@ -99,11 +94,20 @@ bool TypeResolver::canPromote(Type *from, Type *to, Position pos, bool isFuncPar
 	return canConvertModifier(from, to, isFuncParam);
 }
 
+Type *TypeResolver::canPromoteBinary(Type *lhsType, Token::Type tokenType, Type* rhsType) {
+	BinaryPromotionKey key(lhsType, tokenType, rhsType);
+
+	if (binaryPromotionTable.count(key)) {
+		return binaryPromotionTable[key];
+	} else {
+		return NULL;
+	}
+}
+
 Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 	assert(from != NULL);
 	assert(from->type != NULL);
 	assert(toType != NULL);
-	// assert(canPromote(from->type, toType, true));
 
 	if (from->type->is(toType))
 		return from;
@@ -119,7 +123,6 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 
 	Type *fromType = from->type;
 	assert(fromType != NULL);
-	// assert(canPromote(fromType, toType, true));
 
 	bool fromRef = false;
 	if (fromType->getTypeType() == Type::MODIFIER_TYPE)
@@ -145,6 +148,28 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 		return NULL;
 	}
 	// TODO: copy ArrayType?
+}
+
+void TypeResolver::initPromotionTable() {
+	Type *types[8] = { Bool_, Char_, Int_, Float_, Double_, String_, Void_, Label_ };
+	bool table[8][8] = {
+		/*frm\to	  Bool	  Char	  Int	  Float	  Double  String  Void    Label */
+		/* Bool   */	{ true	, true	, true	, true	, true	, false	, false	, false	},
+		/* Char   */	{ true	, true	, true	, true	, true	, false	, false	, false	},
+		/* Int	  */	{ true	, true	, true	, true	, true	, true  , false	, false	},
+		/* Float  */	{ false , false	, false	, true	, false	, false	, false	, false	},
+		/* Double */	{ false	, false	, true	, false	, true	, false	, false	, false	},
+		/* String */	{ false	, false	, true  , false	, false	, true	, false	, false	},
+		/* Void   */	{ false	, false	, false	, false	, false	, false	, true	, false	},
+		/* Label  */	{ false	, false	, false	, false	, false	, false	, false	, true	}
+	};
+
+	for (int iFrom = 0; iFrom < 8; ++iFrom)
+	for (int iTo = 0; iTo < 8; ++iTo)
+		if (table[iFrom][iTo] == true)
+			promotionTable.insert(PromotionKey(types[iFrom], types[iTo]));
+
+	return;
 }
 
 #define REGISTER_BINARY_PROMOTION(TABLE, TOKEN_TYPES) \
@@ -511,6 +536,20 @@ void TypeResolver::visit(VarDefStmt *vds) throw (SemanticsError) {
 			}
 			assert(vds->init->type != NULL);
 			vds->init = insertPromoter(vds->init, vds->id->type);
+
+			// cheap optimization
+			//
+			// rewrite such code:
+			//	var str :: String = String()
+			//like this:
+			//	var str :: String
+
+			if (vds->init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+				ConstructorExpr *ce = static_cast<ConstructorExpr *>(vds->init);
+				if (ce->type->is(vds->id->type) && ce->params.size() == 0) {
+					vds->init = NULL;
+				}
+			}
 		}
 	// ex. : var foo :: String
 	} else if (vds->id->type != NULL && vds->init == NULL) {
@@ -980,7 +1019,7 @@ Type *TypeResolver::visit(Expr *& expr) throw (SemanticsError) {
 	case AST::BOOL_LITERAL_EXPR	: type = visit(static_cast<BoolLiteralExpr *>(expr)); break;
 	case AST::ARRAY_LITERAL_EXPR	: type = visit(static_cast<ArrayLiteralExpr *>(expr)); break;
 	case AST::FUNC_CALL_EXPR	: type = visit(static_cast<FuncCallExpr *>(expr)); break;
-	case AST::CONSTRUCTOR_EXPR	: type = visit(static_cast<ConstructorExpr *>(expr)); break;
+	case AST::CONSTRUCTOR_EXPR	: type = visit(reinterpret_cast<ConstructorExpr **>(&expr)); break;
 	case AST::SUBSCR_EXPR		: type = visit(static_cast<SubscrExpr *>(expr)); break;
 	case AST::MEMBER_EXPR		: type = visit(reinterpret_cast<MemberExpr **>(&expr)); break;
 	case AST::STATIC_MEMBER_EXPR	: type = visit(static_cast<StaticMemberExpr *>(expr)); break;
@@ -1060,12 +1099,7 @@ Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
 		return NULL;
 	}
 
-	// TODO: separate this to another function
-	BinaryPromotionKey key(lhsType->unmodify(), be->token.getType(), rhsType->unmodify());
-
-	if (binaryPromotionTable.count(key)) {
-		be->type = binaryPromotionTable[key];
-
+	if ((be->type = canPromoteBinary(lhsType->unmodify(), be->token.getType(), rhsType->unmodify())) != NULL) {
 		assert(be != NULL);
 		assert(be->lhs != NULL);
 		assert(be->lhs->type != NULL);
@@ -1312,9 +1346,9 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 	return fce->type;
 }
 
-// TODO: STUB
-Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
+Type *TypeResolver::visit(ConstructorExpr **cePtr) throw (SemanticsError) {
 	DBG_PRINT(+, ConstructorExpr);
+	ConstructorExpr *ce = *cePtr;
 	assert(ce != NULL);
 	assert(ce->constructor != NULL);
 
@@ -1337,37 +1371,21 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 		// Type(Type)
 		// TODO: add optimization there from LLVMCodeGen and check the type
 	} else if (ce->params.size() == 1 &&
-			ce->type->is(String_) &&
-			ce->params[0]->type->unmodify()->is(Int_)) {
-		// String(Int)
-		ce->params[0] = insertPromoter(ce->params[0], Int_);
-	} else if (ce->params.size() == 1 &&
-			ce->type->is(Int_) && 
-			ce->params[0]->type->unmodify()->is(String_)) {
-		// Int(String)
-		ce->params[0] = insertPromoter(ce->params[0], String_);
-	} else if (ce->params.size() == 1 &&
-			ce->type->is(Bool_) &&
-			ce->params[0]->type->unmodify()->is(Int_)) {
-		// Bool(Int)
-	} else if (ce->params.size() == 1 &&
-			ce->type->is(Double_) &&
-			ce->params[0]->type->unmodify()->is(Int_)) {
-		// Double(Int)
-	} else if (ce->params.size() == 1 &&
-			ce->type->is(Int_) &&
-			ce->params[0]->type->unmodify()->is(Double_)) {
-		// Int(Double)
+			ce->type->getTypeType() == Type::BUILTIN_TYPE &&
+			promotionTable.count(PromotionKey(ce->params[0]->type->unmodify(), ce->type)) > 0) {
+		// TypeA(TypeB) where TypeB can promote to TypeA
+		ce->params[0] = insertPromoter(ce->params[0], ce->params[0]->type->unmodify());
 	} else if (ce->params.size() == 1 &&
 			ce->type->getTypeType() == Type::ARRAY_TYPE &&
 			ce->params[0]->type->unmodify()->is(Int_)) {
-		// [Type](...)
+		// [Type](length)
 		ce->params[0] = insertPromoter(ce->params[0], Int_);
 	} else if (ce->params.size() == 2 &&
 			ce->type->getTypeType() == Type::ARRAY_TYPE &&
 			ce->params[0]->type->unmodify()->is(Int_) &&
 			ce->params[1]->type->unmodify()->is(
 				static_cast<ArrayType *>(ce->type)->getElemType()->unmodify())) {
+		// [Type](length, initializer)
 		ce->params[0] = insertPromoter(ce->params[0], Int_);
 		ce->params[1] = insertPromoter(ce->params[1],
 					static_cast<ArrayType *>(ce->type)->getElemType()->unmodify());
@@ -1377,6 +1395,32 @@ Type *TypeResolver::visit(ConstructorExpr *ce) throw (SemanticsError) {
 			std::string("error: Unknown constructor type (")
 			+ ce->type->getTypeName()
 			+ ")");
+	}
+
+	// cheap optimization
+	//
+	// rewrite such code:
+	// 	var str :: String = String("this is string!")
+	//
+	// like this:
+	// 	var str :: String = "this is string!"
+
+	while (true) {
+		Expr *expr = *cePtr;
+		if (expr->getASTType() != AST::CONSTRUCTOR_EXPR)
+			break;
+
+		ConstructorExpr *ce = static_cast<ConstructorExpr *>(expr);
+
+		if (ce->type->getTypeType() != Type::BUILTIN_TYPE)
+			break;
+
+		if (ce->params.size() == 1
+				&& ce->params[0]->type->unmodify()->is(ce->type->unmodify())) {
+			*(reinterpret_cast<Expr **>(cePtr)) = ce->params[0];
+		} else {
+			break;
+		}
 	}
 
 	DBG_PRINT(-, ConstructorExpr);

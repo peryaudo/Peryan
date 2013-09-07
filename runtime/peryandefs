@@ -41,7 +41,13 @@ extern noteget :: (ref String) -> Int -> Void
 
 extern noteload :: String -> Void
 
-var stat :: Int = 0 // will be rewritten as a extern variable
+// will be rewritten as a extern variable
+var stat :: Int = 0
+var mousex :: Int = 0
+var mousey :: Int = 0
+var mousew :: Int = 0
+var ginfo_winx :: Int = 0
+var ginfo_winy :: Int = 0
 
 extern sqrt :: Double -> Double
 extern sin :: Double -> Double
@@ -50,3 +56,18 @@ extern limitf :: Double -> Double -> Double -> Double
 extern redraw :: Int -> Void
 extern pos :: Int -> Int -> Void
 extern color :: Int -> Int -> Int -> Void = -1, -1, -1
+
+extern stick :: Int -> Void
+extern bmpsave :: String -> Void
+extern dialog :: String -> Int -> Void
+extern await :: Int -> Void
+extern boxf :: Int -> Int -> Int -> Int -> Void
+extern font :: String -> Int -> Void
+var msgothic :: String = "MS Gothic"
+var mspgothic :: String = "MS P Gothic"
+
+func int (x :: Double) :: Int {
+	return Int(x)
+}
+
+extern getkey :: (ref Int) -> Int -> Void

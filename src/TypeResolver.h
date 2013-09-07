@@ -47,11 +47,26 @@ private:
 	FuncSymbol *curFunc_;
 
 	bool canPromote(Type *from, Type *to, Position pos, bool isFuncParam = false);
+	Type *canPromoteBinary(Type *lhsType, Token::Type tokenType, Type* rhsType);
 
 	bool canConvertModifier(Type *from, Type *to, bool isFuncParam = false);
 	bool isSubtypeOf(Type *sub, Type *super);
 
 	Expr *insertPromoter(Expr *from, Type *toType);
+
+	class PromotionKey {
+	public:
+		Type *from, *to;
+		PromotionKey(Type *from, Type *to) : from(from), to(to) {}
+
+		bool operator<(const PromotionKey& p) const {
+			if (from != p.from) {
+				return from < p.from;
+			} else {
+				return to < p.to;
+			}
+		}
+	};
 
 	class BinaryPromotionKey {
 	public:
@@ -74,9 +89,11 @@ private:
 		}
 	};
 
+	std::set<PromotionKey> promotionTable;
 	std::map<BinaryPromotionKey, Type *> binaryPromotionTable;
 
 	void initPromotionTable();
+
 	void initBinaryPromotionTable();
 
 	Options& opt_;
@@ -108,9 +125,9 @@ public:
 	Type *visit(BoolLiteralExpr *lit) throw (SemanticsError);
 	Type *visit(ArrayLiteralExpr *ale) throw (SemanticsError);
 	Type *visit(FuncCallExpr *fce) throw (SemanticsError);
-	Type *visit(ConstructorExpr *ce) throw (SemanticsError);
+	Type *visit(ConstructorExpr **cePtr) throw (SemanticsError);
 	Type *visit(SubscrExpr *se) throw (SemanticsError);
-	Type *visit(MemberExpr ** mePtr) throw (SemanticsError);
+	Type *visit(MemberExpr **mePtr) throw (SemanticsError);
 	Type *visit(StaticMemberExpr *sme) throw (SemanticsError);
 	Type *visit(DerefExpr *de) throw (SemanticsError);
 	Type *visit(RefExpr *re) throw (SemanticsError);

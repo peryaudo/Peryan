@@ -16,6 +16,7 @@
 #include "AST.h"
 #include "Parser.h"
 #include "LLVMCodeGen.h"
+#include "ASTPrinter.h"
 
 //#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
 #define DBG_PRINT(TYPE, FUNC_NAME)
@@ -287,6 +288,9 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 			break;
 
 		default: ;
+			{
+				std::cout<<(*it)->getSymbolName()<<std::endl;
+			}
 			assert(false && "unknown symbol");
 		}
 	}
@@ -476,8 +480,8 @@ llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
 						// opaque*
 
 		else if (type->is(Char_))	return llvm::Type::getInt8Ty(context_);
-		else if (type->is(Float_))	return llvm::Type::getFloatPtrTy(context_);
-		else if (type->is(Double_))	return llvm::Type::getDoublePtrTy(context_);
+		else if (type->is(Float_))	return llvm::Type::getFloatTy(context_);
+		else if (type->is(Double_))	return llvm::Type::getDoubleTy(context_);
 		else if (type->is(Bool_))	return llvm::Type::getInt1Ty(context_);
 		else if (type->is(Label_))	return llvm::Type::getLabelTy(context_);
 		else if (type->is(Void_))	return llvm::Type::getVoidTy(context_);
@@ -756,9 +760,9 @@ llvm::Value *LLVMCodeGen::Impl::generateDerefExpr(DerefExpr *de) {
 	llvm::Value *derefered = generateExpr(de->derefered);
 	// TODO: make it another function
 	builder_.SetInsertPoint(blocks.back().body);
-
+	llvm::Value *res = builder_.CreateLoad(derefered);
 	DBG_PRINT(-, DerefExpr);
-	return builder_.CreateLoad(derefered);
+	return res;
 }
 
 // TODO: rename (to avoid misunderstanding)
@@ -1115,40 +1119,6 @@ void LLVMCodeGen::Impl::generateVarDefStmt(VarDefStmt *vds) {
 // TODO: to run destructor in cleanup
 void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr *init) {
 	DBG_PRINT(+, generateConstructor);
-	// these optimizations should be done in TypeResolver
-
-	// rewrite such code:
-	// 	var str :: String = String("this is string!")
-	//
-	// like this:
-	// 	var str :: String = "this is string!"
-
-	if (init != NULL) {
-		while (true) {
-			if (init->getASTType() != AST::CONSTRUCTOR_EXPR)
-				break;
-
-			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-			if (ce->type->is(type) && ce->params.size() == 1
-					&& ce->params[0]->type->unmodify()->is(type->unmodify())) {
-				init = ce->params[0];
-			} else {
-				break;
-			}
-		}
-	}
-
-	// rewrite such code:
-	//	var str :: String = String()
-	//like this:
-	//	var str :: String
-
-	if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-		if (ce->type->is(type) && ce->params.size() == 0) {
-			init = NULL;
-		}
-	}
 
 	assert(init != NULL ? init->type != NULL : true);
 	assert(init != NULL ? init->type->unmodify()->is(type->unmodify()) : true);
@@ -1180,8 +1150,36 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 		llvm::Value *src = NULL;
 
 		if (init != NULL) {
-			assert(init->getASTType() != AST::CONSTRUCTOR_EXPR);
-			src = generateExpr(init);
+			if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+				ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+				assert(ce->params.size() == 1);
+
+				llvm::Value *prm = generateExpr(ce->params[0]);
+
+				Type *from = ce->params[0]->type->unmodify();
+				Type *to = ce->type;
+				if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
+					&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+
+					// integer to integer
+					builder_.SetInsertPoint(blocks.back().body);
+					src = builder_.CreateTrunc(prm, getLLVMType(to));
+				} else if ((from->is(Float_) || from->is(Double_))
+						&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+					// real to integer
+					builder_.SetInsertPoint(blocks.back().body);
+					src = builder_.CreateFPToSI(prm, getLLVMType(to));
+				} else if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
+						&& (to->is(Float_) || to->is(Double_))) {
+					// integer to real 
+					src = builder_.CreateSIToFP(prm, getLLVMType(to));
+				} else {
+					assert(false && "no viable casting constructor");
+				}
+
+			} else {
+				src = generateExpr(init);
+			}
 		} else {
 			if (type->is(Int_) || type->is(Char_) || type->is(Bool_)) {
 				src = llvm::ConstantInt::get(getLLVMType(type), 0);

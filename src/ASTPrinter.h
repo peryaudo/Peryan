@@ -462,6 +462,11 @@ public:
 		dec();
 		return ss.str();
 	}
+
+	static void dump(AST *ast) {
+		ASTPrinter printer(true);
+		std::cerr<<printer.toString(ast)<<std::endl;
+	}
 };
 
 };
