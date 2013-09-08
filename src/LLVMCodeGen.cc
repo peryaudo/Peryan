@@ -117,7 +117,7 @@ private:
 	void generateNamespaceStmt(NamespaceStmt *ns);
 
 	llvm::Value *generateExpr(Expr *expr);
-	llvm::Value *generateVarRefExpr(Identifier *id);
+	llvm::Value *generateIdentifier(Identifier *id);
 
 	llvm::Value *generateDerefExpr(DerefExpr *de);
 
@@ -150,14 +150,14 @@ public:
 		, context_(llvm::getGlobalContext())
 		, builder_(context_)
 		, module_("Peryan", context_)
-		, Int_		(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Int")))
-		, String_	(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("String")))
-		, Char_		(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Char")))
-		, Float_	(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Float")))
-		, Double_	(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Double")))
-		, Bool_		(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Bool")))
-		, Label_	(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Label")))
-		, Void_		(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Void")))
+		, Int_		(parser_.getSymbolTable().Int_)
+		, String_	(parser_.getSymbolTable().String_)
+		, Char_		(parser_.getSymbolTable().Char_)
+		, Float_	(parser_.getSymbolTable().Float_)
+		, Double_	(parser_.getSymbolTable().Double_)
+		, Bool_		(parser_.getSymbolTable().Bool_)
+		, Label_	(parser_.getSymbolTable().Label_)
+		, Void_		(parser_.getSymbolTable().Void_)
 		, blocks()
 		, counter_(0)
 	        {
@@ -306,22 +306,22 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 
 void LLVMCodeGen::Impl::generateTransUnit(TransUnit *tu) {
 
-	// generate declaration of global functions and global variables
-	generateGlobalDecl(tu->scope);
-
 	// create main function
 	{
-	Block block(Block::GLOBAL_BLOCK);
+		Block block(Block::GLOBAL_BLOCK);
 
-	llvm::FunctionType *funcType = llvm::FunctionType::get(getLLVMType(Void_), false);
-	block.func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "PeryanMain", &module_);
+		llvm::FunctionType *funcType = llvm::FunctionType::get(getLLVMType(Void_), false);
+		block.func = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "PeryanMain", &module_);
 
-	const std::string curNumStr = getUniqNumStr();
-	block.body = llvm::BasicBlock::Create(context_, "globalBlockEntry" + curNumStr, block.func);
-	block.end = llvm::BasicBlock::Create(context_, "globalBlockEnd" + curNumStr, block.func);
+		const std::string curNumStr = getUniqNumStr();
+		block.body = llvm::BasicBlock::Create(context_, "globalBlockEntry" + curNumStr, block.func);
+		block.end = llvm::BasicBlock::Create(context_, "globalBlockEnd" + curNumStr, block.func);
 
-	blocks.push_back(block);
+		blocks.push_back(block);
 	}
+
+	// generate declaration of global functions and global variables
+	generateGlobalDecl(tu->scope);
 
 	builder_.SetInsertPoint(blocks.back().body);
 
@@ -729,7 +729,7 @@ void LLVMCodeGen::Impl::generateFuncDefStmt(FuncDefStmt *fds) {
 
 llvm::Value *LLVMCodeGen::Impl::generateExpr(Expr *expr) {
 	switch (expr->getASTType()) {
-	case AST::IDENTIFIER		: return generateVarRefExpr(static_cast<Identifier *>(expr));
+	case AST::IDENTIFIER		: return generateIdentifier(static_cast<Identifier *>(expr));
 
 	case AST::LABEL			: return generateLabelLiteralExpr(static_cast<Label *>(expr));
 	case AST::BINARY_EXPR		: return generateBinaryExpr(static_cast<BinaryExpr *>(expr));
@@ -762,13 +762,15 @@ llvm::Value *LLVMCodeGen::Impl::generateDerefExpr(DerefExpr *de) {
 	return res;
 }
 
-// TODO: rename (to avoid misunderstanding)
-llvm::Value *LLVMCodeGen::Impl::generateVarRefExpr(Identifier *id) {
+llvm::Value *LLVMCodeGen::Impl::generateIdentifier(Identifier *id) {
 	assert(id->symbol->getType()->getTypeType() != Type::FUNC_TYPE);
 
-	assert(id->symbol->getSymbolType() != Symbol::EXTERN_SYMBOL); // temporarily prohibit extern variable (allows extern function)
-
-	llvm::Value *from = lookup(id->symbol->getMangledSymbolName());
+	llvm::Value *from = NULL;
+	if (id->symbol->getSymbolType() == Symbol::EXTERN_SYMBOL) {
+		from = lookup(id->symbol->getSymbolName());
+	} else {
+		from = lookup(id->symbol->getMangledSymbolName());
+	}
 	assert(from != NULL);
 
 	return from;

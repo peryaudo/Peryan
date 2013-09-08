@@ -542,17 +542,19 @@ private:
 	GlobalScope *global_;
 
 public:
+	BuiltInTypeSymbol *Int_, *String_, *Char_, *Float_, *Double_, *Bool_, *Void_, *Label_;
+
 	SymbolTable() {
 		global_ = new GlobalScope();
 
-		global_->define(new BuiltInTypeSymbol("Int"));
-		global_->define(new BuiltInTypeSymbol("String"));
-		global_->define(new BuiltInTypeSymbol("Char"));
-		global_->define(new BuiltInTypeSymbol("Float"));
-		global_->define(new BuiltInTypeSymbol("Double"));
-		global_->define(new BuiltInTypeSymbol("Bool"));
-		global_->define(new BuiltInTypeSymbol("Void"));
-		global_->define(new BuiltInTypeSymbol("Label"));
+		global_->define(Int_	= new BuiltInTypeSymbol("Int"));
+		global_->define(String_ = new BuiltInTypeSymbol("String"));
+		global_->define(Char_	= new BuiltInTypeSymbol("Char"));
+		global_->define(Float_  = new BuiltInTypeSymbol("Float"));
+		global_->define(Double_ = new BuiltInTypeSymbol("Double"));
+		global_->define(Bool_	= new BuiltInTypeSymbol("Bool"));
+		global_->define(Void_	= new BuiltInTypeSymbol("Void"));
+		global_->define(Label_	= new BuiltInTypeSymbol("Label"));
 	}
 
 	GlobalScope *getGlobalScope() { return global_; }

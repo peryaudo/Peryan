@@ -6,7 +6,7 @@ clean:
 	rm -rf ./tester
 
 test:
-	PERYAN_RUNTIME_PATH=../../runtime ../../src/peryan tester.pr ./tester
+	../../src/peryan --runtime-path ../../runtime tester.pr ./tester
 	./tester
 
 # for emergency debugging

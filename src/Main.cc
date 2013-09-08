@@ -27,10 +27,27 @@ int main(int argc, char *argv[])
 			warnings.add(-1, "warning: using HSP compatible mode");
 		} else if (cur == "--dump-tokens") {
 			opt.dumpTokens = true;
+		} else if (cur == "--runtime-path") {
+			if (i + 1 >= argc) {
+				std::cerr<<"error: no directory specified for --runtime-path"<<std::endl;
+				return 1;
+			} else {
+				opt.runtimePath = std::string(argv[i + 1]);
+				++i;
+			}
+		} else if (cur == "--tmp-dir") {
+			if (i + 1 >= argc) {
+				std::cerr<<"error: no directory specified for --tmp-dir"<<std::endl;
+				return 1;
+			} else {
+				opt.tmpDir = std::string(argv[i + 1]);
+				++i;
+			}
 		} else if (cur == "-w") {
 			opt.inhibitWarnings = true;
 		} else if (cur.find("-") != std::string::npos) {
-			std::cerr<<"warning: unknown option "<<cur<<std::endl;
+			std::cerr<<"error: unknown option "<<cur<<std::endl;
+			return 1;
 		} else {
 			if (opt.mainFileName.empty()) {
 				opt.mainFileName = cur;
@@ -52,22 +69,28 @@ int main(int argc, char *argv[])
 		std::cerr<<"Peryan Compiler (C) peryaudo"<<std::endl<<std::endl;
 	}
 
-	// Get Peryan runtime path
-	char *runtimePath = getenv("PERYAN_RUNTIME_PATH");
-	if (runtimePath == NULL) {
-		std::cerr<<"error: please set PERYAN_RUNTIME_PATH"<<std::endl;
-		return 1;
+	// Get Peryan runtime path if not specified
+	if (opt.runtimePath.empty()) {
+		char *runtimePath = getenv("PERYAN_RUNTIME_PATH");
+		if (runtimePath == NULL) {
+			std::cerr<<"error: please set PERYAN_RUNTIME_PATH"<<std::endl;
+			return 1;
+		}
+		opt.runtimePath = runtimePath;
 	}
 
-	// TODO: rewrite this Windows compatible
-	char *tmpDir = getenv("TMPDIR");
-	if (tmpDir == NULL) {
-		std::cerr<<"error: please set TMPDIR"<<std::endl;
-		return 1;
+	if (opt.tmpDir.empty()) {
+		// TODO: rewrite this with Windows compatible style
+		char *tmpDir = getenv("TMPDIR");
+		if (tmpDir == NULL) {
+			std::cerr<<"error: please set TMPDIR"<<std::endl;
+			return 1;
+		}
+		opt.tmpDir = tmpDir;
 	}
 
 	// Set default including paths
-	opt.includePaths.push_back(runtimePath);
+	opt.includePaths.push_back(opt.runtimePath);
 	opt.includePaths.push_back(".");
 
 	// Lexer and parser
@@ -107,7 +130,7 @@ int main(int argc, char *argv[])
 
 	// Code generator
 
-	Peryan::LLVMCodeGen codeGen(parser, std::string(tmpDir) + std::string("/tmp.ll"));
+	Peryan::LLVMCodeGen codeGen(parser, opt.tmpDir + std::string("/tmp.ll"));
 	
 	if (opt.verbose) std::cerr<<"generating LLVM IR...";
 	codeGen.generate();
@@ -115,7 +138,7 @@ int main(int argc, char *argv[])
 
 	{
 		std::stringstream ss;
-		ss<<"llc -filetype=obj -o \""<<tmpDir<<"/tmp.o\" \""<<tmpDir<<"/tmp.ll\"";
+		ss<<"llc -filetype=obj -o \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.tmpDir<<"/tmp.ll\"";
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		if (system(ss.str().c_str())) {
 			std::cerr<<"error: error while compiling LLVM IR"<<std::endl;
@@ -124,7 +147,7 @@ int main(int argc, char *argv[])
 	}
 	{
 		std::stringstream ss;
-		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<tmpDir<<"/tmp.o\" \""<<runtimePath<<"/runtime.o\"";
+		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/runtime.o\"";
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		if (system(ss.str().c_str())) {
 			std::cerr<<"error: error while linking"<<std::endl;

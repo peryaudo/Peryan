@@ -16,6 +16,8 @@ public:
 	std::string mainFileName;
 	std::vector<std::string> includePaths;
 	std::string outputFileName;
+	std::string runtimePath;
+	std::string tmpDir;
 	Options() : dumpAST(false), verbose(false), hspCompat(false), dumpTokens(false), inhibitWarnings(false) {}
 };
 

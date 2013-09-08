@@ -56,14 +56,14 @@ Token Lexer::getNextToken() throw (LexerError) {
 			while (!((lookahead(0) == '\r' && lookahead(1) == '\n')
 						|| lookahead() == '\n' || lookahead() == 0))
 				consume();
-			//consume(1);
+			// don't consume return characters
 		} else if (lookahead(0) == ';') {
 			consume(1);
 
 			while (!((lookahead(0) == '\r' && lookahead(1) == '\n')
 						|| lookahead() == '\n' || lookahead() == 0))
 				consume();
-			//consume(1);
+			// don't consume return characters
 		} else {
 			break;
 		}

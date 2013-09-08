@@ -46,12 +46,12 @@ extern noteget :: (ref String) -> Int -> Void
 extern noteload :: String -> Void
 
 // will be rewritten as a extern variable
-var stat :: Int = 0
-var mousex :: Int = 0
-var mousey :: Int = 0
-var mousew :: Int = 0
-var ginfo_winx :: Int = 0
-var ginfo_winy :: Int = 0
+extern stat :: Int
+extern mousex :: Int
+extern mousey :: Int
+extern mousew :: Int
+extern ginfo_winx :: Int
+extern ginfo_winy :: Int
 
 extern sqrt :: Double -> Double
 extern sin :: Double -> Double

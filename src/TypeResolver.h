@@ -17,6 +17,10 @@ private:
 	TypeResolver(const TypeResolver&);
 	TypeResolver& operator=(const TypeResolver&);
 
+	SymbolTable& symbolTable_;
+	Options& opt_;
+	WarningPrinter& wp_;
+
 	bool changed_, unresolved_;
 	Position unresolvedPos_;
 
@@ -40,7 +44,6 @@ private:
 	TypeVar curTypeVar_;
 	void addTypeConstraint(Type *constraint, TypeVar typeVar);
 
-	SymbolTable& symbolTable_;
 
 	Type *Int_, *String_, *Char_, *Float_, *Double_, *Bool_, *Label_, *Void_;
 
@@ -96,8 +99,6 @@ private:
 
 	void initBinaryPromotionTable();
 
-	Options& opt_;
-	WarningPrinter& wp_;
 public:
 	TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp);
 	void visit(TransUnit *tu) throw (SemanticsError);

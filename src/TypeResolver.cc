@@ -14,16 +14,15 @@
 namespace Peryan {
 
 TypeResolver::TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp)
-	: symbolTable_(symbolTable), opt_(opt), wp_(wp) {
-	GlobalScope *gs = symbolTable_.getGlobalScope();
-	Int_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Int"));
-	String_ = static_cast<BuiltInTypeSymbol *>(gs->resolve("String"));
-	Char_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Char"));
-	Float_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Float"));
-	Double_ = static_cast<BuiltInTypeSymbol *>(gs->resolve("Double"));
-	Bool_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Bool"));
-	Label_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Label"));
-	Void_	= static_cast<BuiltInTypeSymbol *>(gs->resolve("Void"));
+	: symbolTable_(symbolTable), opt_(opt), wp_(wp)
+	, Int_		(symbolTable_.Int_)
+	, String_	(symbolTable_.String_)
+	, Char_		(symbolTable_.Char_)
+	, Float_	(symbolTable_.Float_)
+	, Double_	(symbolTable_.Double_)
+	, Bool_		(symbolTable_.Bool_)
+	, Label_	(symbolTable_.Label_)
+	, Void_		(symbolTable_.Void_) {
 
 	initPromotionTable();
 	initBinaryPromotionTable();

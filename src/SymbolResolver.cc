@@ -92,8 +92,7 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 			curType = new FuncType((*it)->type, curType);
 		}
 	} else {
-		Type *Void_ = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Void"));
-		curType = new FuncType(Void_, curType);
+		curType = new FuncType(symbolTable_.Void_, curType);
 	}
 
 	visit(fds->body, scope);
@@ -190,10 +189,7 @@ void SymbolResolver::visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError) 
 		visit(rs->count, scope);
 	}
 
-	Type *Int_ = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Int"));
-	assert(Int_ != NULL);
-
-	rs->scope->define(new VarSymbol("cnt", Int_, rs->token.getPosition()));
+	rs->scope->define(new VarSymbol("cnt", symbolTable_.Int_, rs->token.getPosition()));
 
 	for (std::vector<Stmt *>::iterator it = rs->stmts.begin();
 			it != rs->stmts.end(); ++it) {
