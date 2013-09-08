@@ -10,6 +10,8 @@
 #include "llvm/PassManager.h"
 #include "llvm/Assembly/PrintModulePass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/IR/ValueSymbolTable.h"
 
 #include "SymbolTable.h"
@@ -17,9 +19,6 @@
 #include "Parser.h"
 #include "LLVMCodeGen.h"
 #include "ASTPrinter.h"
-
-//#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
-#define DBG_PRINT(TYPE, FUNC_NAME)
 
 namespace Peryan {
 
@@ -157,7 +156,10 @@ public:
 		, Void_		(static_cast<BuiltInTypeSymbol *>(parser_.getTransUnit()->scope->resolve("Void")))
 		, blocks()
 		, counter_(0)
-	        { }
+	        {
+			llvm::InitializeNativeTarget();
+			llvm::sys::PrintStackTraceOnErrorSignal();
+		}
 
 	void generate();
 };
@@ -232,8 +234,6 @@ void LLVMCodeGen::Impl::registerRuntimeFunctions() {
 }
 
 void LLVMCodeGen::Impl::generate() {
-	DBG_PRINT(+, generate);
-
 	registerRuntimeFunctions();
 
 	generateTransUnit(parser_.getTransUnit());
@@ -249,12 +249,10 @@ void LLVMCodeGen::Impl::generate() {
 
 	rawStream.close();
 
-	DBG_PRINT(-, generate);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
-	DBG_PRINT(+, generateGlobalDecl);
 	assert(scope != NULL);
 	// generate declaration of global functions and global variables
 	for (Scope::iterator it = scope->begin(); it != scope->end(); ++it) {
@@ -299,12 +297,10 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 		}
 	}
 
-	DBG_PRINT(-, generateGlobalDecl);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateTransUnit(TransUnit *tu) {
-	DBG_PRINT(+, generateTransUnit);
 
 	// generate declaration of global functions and global variables
 	generateGlobalDecl(tu->scope);
@@ -339,7 +335,6 @@ void LLVMCodeGen::Impl::generateTransUnit(TransUnit *tu) {
 
 	blocks.pop_back();
 
-	DBG_PRINT(-, generateTransUnit);
 	return;
 }
 
@@ -395,7 +390,6 @@ LLVMCodeGen::Impl::Block& LLVMCodeGen::Impl::getEnclosingLoopBlock() {
 }
 
 void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
-	DBG_PRINT(+, generateStmt);
 	assert(stmt != NULL);
 
 	switch (stmt->getASTType()) {
@@ -403,7 +397,7 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 		generateCompStmt(static_cast<CompStmt *>(stmt), true);
 		break;
 	case AST::FUNC_DEF_STMT	:
-		assert(isNamespaceGlobal());
+		assert(isFunctionalGlobal() && "function definition should be global[stub]");
 		generateFuncDefStmt(static_cast<FuncDefStmt *>(stmt));
 		break;
 	case AST::VAR_DEF_STMT	:
@@ -425,10 +419,11 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 		generateLabelStmt(static_cast<LabelStmt *>(stmt));
 		break;
 	case AST::GOTO_STMT	:
+		assert(isFunctionalGlobal() && "goto should be global[stub]");
 		generateGotoStmt(static_cast<GotoStmt *>(stmt));
 		break;
 	case AST::GOSUB_STMT	:
-		assert(isNamespaceGlobal());
+		assert(isFunctionalGlobal() && "gosub should be global[stub]");
 		generateGosubStmt(static_cast<GosubStmt *>(stmt));
 		break;
 	case AST::CONTINUE_STMT	:
@@ -453,12 +448,10 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 		break;
 	default: assert(false && "unknown statement");
 	}
-	DBG_PRINT(-, generateStmt);
 	return;
 }
 
 llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
-	DBG_PRINT(+-, getLLVMType);
 
 	if (type->getTypeType() == Type::MODIFIER_TYPE) {
 		if (static_cast<ModifierType *>(type)->isRef()) {
@@ -509,7 +502,6 @@ llvm::FunctionType *LLVMCodeGen::Impl::getLLVMFuncType(FuncType *ft) {
 }
 
 void LLVMCodeGen::Impl::generateFuncDecl(const std::string& name, Type *type) {
-	DBG_PRINT(+, generateFuncDecl);
 
 	if (type->unmodify()->getTypeType() == Type::FUNC_TYPE) {
 		llvm::Function::Create(
@@ -522,12 +514,10 @@ void LLVMCodeGen::Impl::generateFuncDecl(const std::string& name, Type *type) {
 		assert(false);
 	}
 
-	DBG_PRINT(-, generateFuncDecl);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *type, bool isExternal) {
-	DBG_PRINT(+, generateGlobalVarDecl);
 	assert(type->unmodify()->getTypeType() == Type::BUILTIN_TYPE
 		|| type->unmodify()->getTypeType() == Type::ARRAY_TYPE); // class not implemented
 
@@ -574,7 +564,6 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 				    : llvm::GlobalVariable::CommonLinkage), init, name);
 
 
-	DBG_PRINT(-, generateGlobalVarDecl);
 	return;
 }
 
@@ -597,7 +586,6 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 // isSimple means the CompStmt is not right after function feclaration
 // so if it is a simple block, we need to add new block
 void LLVMCodeGen::Impl::generateCompStmt(CompStmt *cs, bool isSimple, bool autoConnect, Block& compBlock) {
-	DBG_PRINT(+, generateCompStmt);
 
 	const std::string curNumStr = getUniqNumStr();
 
@@ -644,20 +632,16 @@ void LLVMCodeGen::Impl::generateCompStmt(CompStmt *cs, bool isSimple, bool autoC
 		}
 	}
 
-	DBG_PRINT(-, generateCompStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateNamespaceStmt(NamespaceStmt *ns) {
-	DBG_PRINT(+, generateNamespaceStmt);
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it) {
 		generateStmt(*it);
 	}
-	DBG_PRINT(-, generateNamespaceStmt);
 }
 
 void LLVMCodeGen::Impl::generateFuncDefStmt(FuncDefStmt *fds) {
-	DBG_PRINT(+, generateFuncDefStmt);
 
 	const std::string curNumStr = getUniqNumStr();
 
@@ -736,12 +720,10 @@ void LLVMCodeGen::Impl::generateFuncDefStmt(FuncDefStmt *fds) {
 
 	blocks.pop_back();
 
-	DBG_PRINT(-, generateFuncDefStmt);
 	return;
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateExpr(Expr *expr) {
-	DBG_PRINT(+-, generateExpr);
 	switch (expr->getASTType()) {
 	case AST::IDENTIFIER		: return generateVarRefExpr(static_cast<Identifier *>(expr));
 
@@ -767,20 +749,17 @@ llvm::Value *LLVMCodeGen::Impl::generateExpr(Expr *expr) {
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateDerefExpr(DerefExpr *de) {
-	DBG_PRINT(+, DerefExpr);
 	assert(de != NULL);
 
 	llvm::Value *derefered = generateExpr(de->derefered);
 	// TODO: make it another function
 	builder_.SetInsertPoint(blocks.back().body);
 	llvm::Value *res = builder_.CreateLoad(derefered);
-	DBG_PRINT(-, DerefExpr);
 	return res;
 }
 
 // TODO: rename (to avoid misunderstanding)
 llvm::Value *LLVMCodeGen::Impl::generateVarRefExpr(Identifier *id) {
-	DBG_PRINT(+, generateVarRefExpr);
 	assert(id->symbol->getType()->getTypeType() != Type::FUNC_TYPE);
 
 	assert(id->symbol->getSymbolType() != Symbol::EXTERN_SYMBOL); // temporarily prohibit extern variable (allows extern function)
@@ -788,13 +767,11 @@ llvm::Value *LLVMCodeGen::Impl::generateVarRefExpr(Identifier *id) {
 	llvm::Value *from = lookup(id->symbol->getMangledSymbolName());
 	assert(from != NULL);
 
-	DBG_PRINT(-, generateVarRefExpr);
 	return from;
 }
 
 
 llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
-	DBG_PRINT(+-, generateBinaryExpr);
 	assert(be->lhs->type->is(be->rhs->type));
 
 	// logical AND, OR (& | with Bool)
@@ -964,7 +941,6 @@ llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateUnaryExpr(UnaryExpr *ue) {
-	DBG_PRINT(+-, generateUnaryExpr);
 	llvm::Value *rhs = generateExpr(ue->rhs);
 
 	if (ue->token.getType() == Token::PLUS) {
@@ -996,17 +972,14 @@ llvm::Value *LLVMCodeGen::Impl::generateUnaryExpr(UnaryExpr *ue) {
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateLabelLiteralExpr(Label *label) {
-	DBG_PRINT(+, generateLabelLiteralExpr);
 
 	llvm::Value *found = lookup(label->symbol->getMangledSymbolName());
 	assert(found != NULL);
 
-	DBG_PRINT(-, generateLabelLiteralExpr);
 	return found;
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateStrLiteralExpr(StrLiteralExpr *sle) {
-	DBG_PRINT(+, generateStrLiteralExpr);
 
 
 	builder_.SetInsertPoint(blocks.back().body);
@@ -1015,39 +988,31 @@ llvm::Value *LLVMCodeGen::Impl::generateStrLiteralExpr(StrLiteralExpr *sle) {
 	generateConstructor(dest, sle->type, sle);
 
 	builder_.SetInsertPoint(blocks.back().body);
-	DBG_PRINT(-, generateStrLiteralExpr);
 	return builder_.CreateLoad(dest);
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateIntLiteralExpr(IntLiteralExpr *ile) {
-	DBG_PRINT(+-, generateIntLiteralExpr);
 	return llvm::ConstantInt::get(getLLVMType(Int_), ile->integer);
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateFloatLiteralExpr(FloatLiteralExpr *fle) {
-	DBG_PRINT(+-, generateFloatLiteralExpr);
 	return llvm::ConstantFP::get(getLLVMType(Double_), fle->float_);
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateCharLiteralExpr(CharLiteralExpr *cle) {
-	DBG_PRINT(+-, generateCharLiteralExpr);
 	return llvm::ConstantInt::get(getLLVMType(Char_), cle->char_);
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateBoolLiteralExpr(BoolLiteralExpr *ble) {
-	DBG_PRINT(+-, generateBoolLiteralExpr);
 	return llvm::ConstantInt::get(getLLVMType(Bool_), ble->bool_);
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateArrayLiteralExpr(ArrayLiteralExpr *ale) {
-	DBG_PRINT(+, generateArrayLiteralExpr);
 
-	DBG_PRINT(-, generateArrayLiteralExpr);
 	return NULL;
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateFuncCallExpr(FuncCallExpr *fce) {
-	DBG_PRINT(+, generateFuncCallExpr);
 
 	Symbol *symbol = NULL;
 
@@ -1082,13 +1047,11 @@ llvm::Value *LLVMCodeGen::Impl::generateFuncCallExpr(FuncCallExpr *fce) {
 	assert(func != NULL);
 
 	builder_.SetInsertPoint(blocks.back().body);
-	DBG_PRINT(-, generateFuncCallExpr);
 	return builder_.CreateCall(func, params);
 }
 
 // generateConstructorExpr and generateConstructor are completely different!
 llvm::Value *LLVMCodeGen::Impl::generateConstructorExpr(ConstructorExpr *ce) {
-	DBG_PRINT(+, generateConstructorExpr);
 
 	builder_.SetInsertPoint(blocks.back().body);
 	llvm::Value *dest = builder_.CreateAlloca(getLLVMType(ce->type), 0, "constructed" + getUniqNumStr());
@@ -1096,12 +1059,10 @@ llvm::Value *LLVMCodeGen::Impl::generateConstructorExpr(ConstructorExpr *ce) {
 	generateConstructor(dest, ce->type, ce);
 
 	builder_.SetInsertPoint(blocks.back().body);
-	DBG_PRINT(-, generateConstructorExpr);
 	return builder_.CreateLoad(dest);
 }
 
 void LLVMCodeGen::Impl::generateVarDefStmt(VarDefStmt *vds) {
-	DBG_PRINT(+, generateVarDefStmt);
 	assert(vds != NULL);
 
 	llvm::Value *to = NULL;
@@ -1117,7 +1078,6 @@ void LLVMCodeGen::Impl::generateVarDefStmt(VarDefStmt *vds) {
 	generateConstructor(to, vds->symbol->getType(), vds->init);
 
 
-	DBG_PRINT(-, generateVarDefStmt);
 	return;
 }
 
@@ -1126,7 +1086,6 @@ void LLVMCodeGen::Impl::generateVarDefStmt(VarDefStmt *vds) {
 // TODO: to run copy constructor and destructor on assignment
 // TODO: to run destructor in cleanup
 void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr *init) {
-	DBG_PRINT(+, generateConstructor);
 
 	assert(init != NULL ? init->type != NULL : true);
 	assert(init != NULL ? init->type->unmodify()->is(type->unmodify()) : true);
@@ -1221,7 +1180,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 			llvm::Value *src = builder_.CreateCall(func, params);
 			builder_.CreateStore(src, dest);
 
-			DBG_PRINT(-, generateConstructor);
 			return;
 
 		// int to string constructor
@@ -1241,7 +1199,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 			llvm::Value *src = builder_.CreateCall(func, params);
 			builder_.CreateStore(src, dest);
 
-			DBG_PRINT(-, generateConstructor);
 			return;
 
 		// copy constructor
@@ -1253,7 +1210,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 
 			builder_.CreateStore(src, dest);
 
-			DBG_PRINT(-, generateConstructor);
 			return;
 
 		// normal constructor with no argument
@@ -1266,7 +1222,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 			llvm::Value *src = builder_.CreateCall(func);
 			builder_.CreateStore(src, dest);
 
-			DBG_PRINT(-, generateConstructor);
 			return;
 		}
 	} else if (type->getTypeType() == Type::ARRAY_TYPE) {
@@ -1469,7 +1424,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 			assert(false && "unkown initializer");
 		}
 
-		DBG_PRINT(-, generateConstructor);
 		return;
 	} else {
 		// [class] TODO: you have to support class there
@@ -1478,7 +1432,6 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 }
 
 void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
-	DBG_PRINT(+, generateInstStmt);
 
 	Symbol *symbol = NULL;
 
@@ -1515,12 +1468,10 @@ void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateCall(func, params);
 
-	DBG_PRINT(-, generateInstStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
-	DBG_PRINT(+, generateAssignStmt);
 
 	llvm::Value *beforePtr = generateExpr(as->lhs);
 	assert(beforePtr != NULL);
@@ -1607,12 +1558,10 @@ void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 
 	builder_.CreateStore(after, beforePtr);
 
-	DBG_PRINT(-, generateAssignStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateIfStmt(IfStmt *is) {
-	DBG_PRINT(+, generateIfStmt);
 	const std::string curNumStr = getUniqNumStr();
 
 	llvm::Function *func = getEnclosingFunc();
@@ -1680,11 +1629,9 @@ void LLVMCodeGen::Impl::generateIfStmt(IfStmt *is) {
 
 	blocks.back().body = ifAfter;
 
-	DBG_PRINT(-, generateIfStmt);
 }
 
 void LLVMCodeGen::Impl::generateRepeatStmt(RepeatStmt *rs) {
-	DBG_PRINT(+, generateRepeatStmt);
 
 	// Flow of the process:
 	//
@@ -1804,12 +1751,10 @@ void LLVMCodeGen::Impl::generateRepeatStmt(RepeatStmt *rs) {
 
 	// end repeatAfter ( = blocks.back().body)
 
-	DBG_PRINT(-, generateRepeatStmt);
 }
 
 // TODO: make continue and break pass bodyBlockEnd
 void LLVMCodeGen::Impl::generateContinueStmt(ContinueStmt *cs) {
-	DBG_PRINT(+, generateContinueStmt);
 
 	Block& loopBlock = getEnclosingLoopBlock();
 
@@ -1820,11 +1765,9 @@ void LLVMCodeGen::Impl::generateContinueStmt(ContinueStmt *cs) {
 
 	blocks.back().body = llvm::BasicBlock::Create(context_, "continueAfter" + curNumStr, getEnclosingFunc());
 
-	DBG_PRINT(-, generateContinueStmt);
 }
 
 void LLVMCodeGen::Impl::generateBreakStmt(BreakStmt *bs) {
-	DBG_PRINT(+, generateBreakStmt);
 
 	Block& loopBlock = getEnclosingLoopBlock();
 
@@ -1835,15 +1778,13 @@ void LLVMCodeGen::Impl::generateBreakStmt(BreakStmt *bs) {
 
 	blocks.back().body = llvm::BasicBlock::Create(context_, "breakAfter" + curNumStr, getEnclosingFunc());
 
-	DBG_PRINT(-, generateBreakStmt);
 }
 
 // TODO: after everything's completed
 //
 //
 void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
-	DBG_PRINT(+, generateGotoStmt);
-	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+	assert(isFunctionalGlobal());
 	assert(gs != NULL);
 	assert(gs->to != NULL);
 	assert(gs->to->symbol != NULL);
@@ -1854,13 +1795,11 @@ void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateCall(func);
 
-	DBG_PRINT(-, generateGotoStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
-	DBG_PRINT(+, generateLabelStmt);
-	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+	assert(isFunctionalGlobal());
 
 	llvm::Function  *func = module_.getFunction(ls->label->symbol->getMangledSymbolName());
 	assert(func != NULL);
@@ -1878,13 +1817,11 @@ void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
 	builder_.SetInsertPoint(blocks.back().body);
 
 
-	DBG_PRINT(-, generateLabelStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateGosubStmt(GosubStmt *gs) {
-	DBG_PRINT(+, generateGosubStmt);
-	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+	assert(isFunctionalGlobal());
 
 	llvm::Function  *func = module_.getFunction(gs->to->symbol->getMangledSymbolName());
 	assert(func != NULL);
@@ -1892,23 +1829,19 @@ void LLVMCodeGen::Impl::generateGosubStmt(GosubStmt *gs) {
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateCall(func);
 
-	DBG_PRINT(-, generateGosubStmt);
 
 	return;
 }
 void LLVMCodeGen::Impl::generateGlobalReturnStmt(ReturnStmt *rs) {
-	DBG_PRINT(+, generateGlobalReturnStmt);
-	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+	assert(isFunctionalGlobal());
 
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateRetVoid();
 
-	DBG_PRINT(-, generateGlobalReturnStmt);
 	return;
 }
 
 void LLVMCodeGen::Impl::generateFuncReturnStmt(ReturnStmt *rs) {
-	DBG_PRINT(+, generateFuncReturnStmt);
 
 	llvm::Value *from = NULL;
 	if (rs->expr != NULL)
@@ -1925,12 +1858,10 @@ void LLVMCodeGen::Impl::generateFuncReturnStmt(ReturnStmt *rs) {
 	blocks.back().body = llvm::BasicBlock::Create(context_, "returnAfter" + curNumStr, funcBlock.func);
 	// little bit strange name from the viewpoint of English grammar
 
-	DBG_PRINT(-, generateFuncReturnStmt);
 	return;
 }
 
 llvm::Value *LLVMCodeGen::Impl::generateSubscrExpr(SubscrExpr *se) {
-	DBG_PRINT(+, generateSubscrExpr);
 
 	// 0: int length
 	// 1: int capacity
@@ -1955,7 +1886,6 @@ llvm::Value *LLVMCodeGen::Impl::generateSubscrExpr(SubscrExpr *se) {
 	elementParams.push_back(subscr);
 	llvm::Value *element = builder_.CreateGEP(elementsValue, elementParams);
 
-	DBG_PRINT(-, generateSubscrExpr);
 
 	return element;
 }
