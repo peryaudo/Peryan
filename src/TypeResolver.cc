@@ -1167,16 +1167,16 @@ Type *TypeResolver::visit(UnaryExpr *ue) throw (SemanticsError) {
 			&& !(rhsType->unmodify()->is(Double_)) && !(rhsType->unmodify()->is(Char_)))
 			throw SemanticsError(ue->token.getPosition(), "error: right side should be numeric type");
 
-		ue->rhs = insertPromoter(ue->rhs, new ModifierType(true, false, rhsType->unmodify()));
+		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
 		DBG_PRINT(-, UnaryExpr);
-		return ue->type = ue->rhs->type;
+		return ue->type = rhsType->unmodify();
 	case Token::EXCL:
 		if (!(rhsType->unmodify()->is(Bool_)))
 			throw SemanticsError(ue->token.getPosition(), "error: right side should be Bool");
 
-		ue->rhs = insertPromoter(ue->rhs, new ModifierType(true, false, rhsType->unmodify()));
+		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
 		DBG_PRINT(-, UnaryExpr);
-		return ue->type = ue->rhs->type;
+		return ue->type = rhsType->unmodify();
 	default: ;
 	}
 

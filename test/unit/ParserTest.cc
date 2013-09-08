@@ -131,7 +131,7 @@ TEST_F(ParserTest, UnaryExpression) {
 	const std::string source = "a = -+-b";
 	const std::string expected =
 		"(TransUnit (AssignStmt <EQL> (Identifier \"a\")"
-			" (UnaryExpr <MINUS> (UnaryExpr <PLUS> (UnaryExpr <MINUS> (Identifier \"b\"))))))";
+			" (UnaryExpr <MINUS> (UnaryExpr <PLUS> (UnaryExpr <MINUS> (DerefExpr (Identifier \"b\")))))))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
