@@ -138,6 +138,10 @@ private:
 
 
 	void generateConstructor(llvm::Value *dest, Type *type, Expr *init);
+	void generatePrimitiveTypeConstructor(llvm::Value *dest, Type *type, Expr *init);
+	void generateStringConstructor(llvm::Value *dest, Type *type, Expr *init);
+	void generateArrayConstructor(llvm::Value *dest, Type *type, Expr *init);
+
 	llvm::Value *lookup(const std::string& str);
 public:
 	Impl(Parser& parser, const std::string& fileName)
@@ -1081,6 +1085,329 @@ void LLVMCodeGen::Impl::generateVarDefStmt(VarDefStmt *vds) {
 	return;
 }
 
+// primitive type means one of these types: Int, Char, Bool, Float, Double, Label
+void LLVMCodeGen::Impl::generatePrimitiveTypeConstructor(llvm::Value *dest, Type *type, Expr *init) {
+	assert(type->is(Int_) || type->is(Char_) || type->is(Bool_)
+		|| type->is(Float_) || type->is(Double_) || type->is(Label_));
+	assert(!(type->is(Label_)));
+
+	// with the type primitive, you don't have to worry about overhead
+	// also, you don't have to worry about running copy constructors
+
+	llvm::Value *src = NULL;
+
+	if (init != NULL) {
+		if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+			assert(ce->params.size() == 1);
+
+			llvm::Value *prm = generateExpr(ce->params[0]);
+
+			Type *from = ce->params[0]->type->unmodify();
+			Type *to = ce->type;
+			if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
+				&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+
+				// integer to integer
+				builder_.SetInsertPoint(blocks.back().body);
+				src = builder_.CreateTrunc(prm, getLLVMType(to));
+			} else if ((from->is(Float_) || from->is(Double_))
+					&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+				// real to integer
+				builder_.SetInsertPoint(blocks.back().body);
+				src = builder_.CreateFPToSI(prm, getLLVMType(to));
+			} else if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
+					&& (to->is(Float_) || to->is(Double_))) {
+				// integer to real 
+				src = builder_.CreateSIToFP(prm, getLLVMType(to));
+			} else {
+				assert(false && "no viable casting constructor");
+			}
+
+		} else {
+			src = generateExpr(init);
+		}
+	} else {
+		if (type->is(Int_) || type->is(Char_) || type->is(Bool_)) {
+			src = llvm::ConstantInt::get(getLLVMType(type), 0);
+		} else if (type->is(Float_) || type->is(Double_)) {
+			src = llvm::ConstantFP::get(getLLVMType(type), 0.0);
+		}
+	}
+
+	assert(src != NULL);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	builder_.CreateStore(src, dest);
+
+	return;
+}
+
+void LLVMCodeGen::Impl::generateStringConstructor(llvm::Value *dest, Type *type, Expr *init) {
+	assert(type->is(String_));
+
+	// TODO: I'm thinking of rewriting String as a native one
+
+	// normal constructor
+	if (init != NULL && init->getASTType() == AST::STR_LITERAL_EXPR) {
+		StrLiteralExpr *sle = static_cast<StrLiteralExpr *>(init);
+
+		std::vector<llvm::Value *> params;
+		params.push_back(builder_.CreateGlobalStringPtr(sle->str));
+
+		llvm::Function *func = module_.getFunction("PRStringConstructorCStr");
+		assert(func != NULL);
+
+		builder_.SetInsertPoint(blocks.back().body);
+
+		llvm::Value *src = builder_.CreateCall(func, params);
+		builder_.CreateStore(src, dest);
+
+	// int to string constructor
+	} else if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+		assert(ce->params.size() == 1);
+		assert(ce->params[0]->type->unmodify()->is(Int_));
+
+		std::vector<llvm::Value *> params;
+		params.push_back(generateExpr(ce->params[0]));
+
+		llvm::Function *func = module_.getFunction("PRStringConstructorInt");
+		assert(func != NULL);
+
+		builder_.SetInsertPoint(blocks.back().body);
+
+		llvm::Value *src = builder_.CreateCall(func, params);
+		builder_.CreateStore(src, dest);
+
+	// copy constructor
+	} else if (init != NULL) {
+		// TODO: in some case you have to run copy constructors there
+		assert(init->getASTType() != AST::CONSTRUCTOR_EXPR);
+
+		llvm::Value *src = generateExpr(init);
+
+		builder_.CreateStore(src, dest);
+
+	// normal constructor with no argument
+	} else {
+		llvm::Function *func = module_.getFunction("PRStringConstructorVoid");
+		assert(func != NULL);
+
+		builder_.SetInsertPoint(blocks.back().body);
+
+		llvm::Value *src = builder_.CreateCall(func);
+		builder_.CreateStore(src, dest);
+
+	}
+
+	return;
+}
+
+void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, Expr *init) {
+	assert(type->getTypeType() == Type::ARRAY_TYPE);
+
+	// TODO: the case wich doesn't match this will needs copy constructor
+	assert(init == NULL ? true
+			    : init->getASTType() == AST::ARRAY_LITERAL_EXPR
+				|| init->getASTType() == AST::CONSTRUCTOR_EXPR);
+
+	ArrayType *at = static_cast<ArrayType *>(type);
+
+	if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+		if (ce->params.size() == 0) {
+		} else if (ce->params.size() == 1) {
+			assert(ce->params[0]->type->unmodify()->is(Int_));
+		} else if (ce->params.size() == 2){
+			assert(ce->params[0]->type->unmodify()->is(Int_));
+			assert(ce->params[1]->type->unmodify()->is(at->getElemType()->unmodify()));
+		} else {
+			assert(false && "unknown constructor parameters");
+		}
+	}
+
+
+	const int kArrayDefaultCapacity = 1;
+
+	// int length
+	// int capacity
+	// int elementSize
+	// Type* elements for [ Type ]
+
+	// Overview of the following LLVM IR code generation LLVM is like this:
+	// ; [Type]* is not valid LLVM type
+	//
+	// %length = getelementptr [Type]* %dest, i32 0, i32 0
+	// store i32 0, i32* %length
+	//
+	// %capacity = getelementptr [Type]* %dest, i32 0, i32 1
+	// store i32 kArrayDefaultCapacity, i32* %capacity
+	//
+	// ; elementSize can be obtained from technique in the page:
+	// ; http://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
+	// %elementSize = getelementptr [Type]* %dest, i32 0, i32 2
+	// %elementSizeTester = getelementptr Type* null, i32 1
+	// %elementSizeValue = bitcast Type* %Size to i32
+	// store i32 %elementSizeValue, i32* %elementSize
+	//
+	// %elements = getelementptr [Type]* %dest, i32 0, i32 3
+	// %capacityValue = load i32* %capacity
+	// %mallocedSize = mul i32 %capacityValue %elementSizeValue
+	// %malloced = call i8* @PRMalloc(i32 %mallocedSize)
+	// %castedMalloced = bitcast i8* %malloced to Type*
+	// store Type* %castedMalloced, Type** %elements
+	//
+	// ; then, generateConstructor(malloced, Type, NULL) if needed
+
+	builder_.SetInsertPoint(blocks.back().body);
+
+	llvm::Type *lvInt = getLLVMType(Int_);
+	//llvm::Type *lvArrayType = getLLVMType(at);
+	llvm::Type *lvType = getLLVMType(at->getElemType());
+
+	// %length = getelementptr [Type]* %dest, i32 0, i32 0
+	// store i32 0, i32* %length
+	std::vector<llvm::Value *> lengthParams;
+	lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
+	lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
+	llvm::Value *length = builder_.CreateGEP(dest, lengthParams);
+	builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
+
+	// %capacity = getelementptr [Type]* %dest, i32 0, i32 1
+	std::vector<llvm::Value *> capacityParams;
+	capacityParams.push_back(llvm::ConstantInt::get(lvInt, 0));
+	capacityParams.push_back(llvm::ConstantInt::get(lvInt, 1));
+	llvm::Value *capacity = builder_.CreateGEP(dest, capacityParams);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	llvm::Value *capValCE = NULL;
+	if (init == NULL) {
+		// store i32 kArrayDefaultCapacity, i32* %capacity
+		builder_.CreateStore(llvm::ConstantInt::get(lvInt, kArrayDefaultCapacity), capacity);
+	} else if (init->getASTType() == AST::ARRAY_LITERAL_EXPR) {
+		// store i32 ale->elements.size(), i32* %capacity
+		builder_.CreateStore(llvm::ConstantInt::get(lvInt,
+			static_cast<ArrayLiteralExpr *>(init)->elements.size()), capacity);
+	} else if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+		if (ce->params.size() > 0) {
+			capValCE = generateExpr(ce->params[0]);
+			builder_.SetInsertPoint(blocks.back().body);
+			builder_.CreateStore(capValCE, capacity);
+		}
+	} else {
+		assert(false && "unknown array constructing expression");
+	}
+	builder_.SetInsertPoint(blocks.back().body);
+
+	// %elementSize = getelementptr [Type]* %dest, i32 0, i32 2
+	// %elementSizeTester = getelementptr Type* null, i32 1
+	// %elementSizeValue = ptrtoint Type* %Size to i32
+	// store i32 %elementSizeValue, i32* %elementSize
+	std::vector<llvm::Value *> elementSizeParams;
+	elementSizeParams.push_back(llvm::ConstantInt::get(lvInt, 0));
+	elementSizeParams.push_back(llvm::ConstantInt::get(lvInt, 2));
+	llvm::Value *elementSize = builder_.CreateGEP(dest, elementSizeParams);
+	llvm::Value *elementSizeTester = builder_.CreateGEP(
+			llvm::ConstantPointerNull::get(lvType->getPointerTo()),
+			llvm::ConstantInt::get(lvInt, 2));
+	llvm::Value *elementSizeValue = builder_.CreatePtrToInt(elementSizeTester, lvInt);
+	builder_.CreateStore(elementSizeValue, elementSize);
+
+	// %elements = getelementptr [Type]* %dest, i32 0, i32 3
+	// %capacityValue = load i32* %capacity
+	// %mallocedSize = mul i32 %capacityValue %elementSizeValue
+	// %malloced = call i8* @PRMalloc(i32 %mallocedSize)
+	// %castedMalloced = bitcast i8* %malloced to Type*
+	// store Type* %castedMalloced, Type** %elements
+	std::vector<llvm::Value *> elementsParams;
+	elementsParams.push_back(llvm::ConstantInt::get(lvInt, 0));
+	elementsParams.push_back(llvm::ConstantInt::get(lvInt, 3));
+	llvm::Value *elements = builder_.CreateGEP(dest, elementsParams);
+	llvm::Value *capacityValue = builder_.CreateLoad(capacity);
+	llvm::Value *mallocedSize = builder_.CreateMul(capacityValue, elementSizeValue);
+	llvm::Value *malloced = builder_.CreateCall(lookup("PRMalloc"), mallocedSize);
+	llvm::Value *castedMalloced = builder_.CreateBitCast(malloced, lvType->getPointerTo());
+	builder_.CreateStore(castedMalloced, elements);
+
+	if (init != NULL && init->getASTType() == AST::ARRAY_LITERAL_EXPR) {
+		ArrayLiteralExpr *ale = static_cast<ArrayLiteralExpr *>(init);
+
+		for (int i = 0, iMax = ale->elements.size(); i < iMax; ++i) {
+
+			// %initialized = getelementptr Type* %castedMalloced, i32 i
+			llvm::Value *initialized = builder_.CreateGEP(castedMalloced, llvm::ConstantInt::get(lvInt, i));
+			assert(at->getElemType()->is(ale->elements[i]->type));
+			generateConstructor(initialized, at->getElemType(), ale->elements[i]);
+		}
+	} else if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
+		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
+		if (ce->params.size() > 0) {
+			assert(capValCE != NULL);
+
+			const std::string curNumStr = getUniqNumStr();
+
+			builder_.SetInsertPoint(blocks.back().body);
+			llvm::Value *counter = builder_.CreateAlloca(
+					getLLVMType(Int_), 0, "arrayLoopCounter" + curNumStr);
+			builder_.CreateStore(llvm::ConstantInt::get(getLLVMType(Int_), 0), counter);
+
+			// arrayLoopCond
+			llvm::Function *func = getEnclosingFunc();
+			llvm::BasicBlock *loopCond =
+				llvm::BasicBlock::Create(context_,
+						"arrayLoopCond" + curNumStr, func);
+			// arrayLoopBody
+			llvm::BasicBlock *loopBody =
+				llvm::BasicBlock::Create(context_,
+						"arrayLoopBody" + curNumStr, func);
+			// arrayLoopAfter
+			llvm::BasicBlock *loopAfter =
+				llvm::BasicBlock::Create(context_,
+						"arrayLoopAfter" + curNumStr, func);
+
+			builder_.SetInsertPoint(blocks.back().body);
+			builder_.CreateBr(loopCond);
+
+			builder_.SetInsertPoint(loopCond);
+			// if (counter < capValCE) { goto arrayLoopBody } else { goto arrayLoopAfter }
+			builder_.CreateCondBr(
+				builder_.CreateICmpSLT(builder_.CreateLoad(counter), capValCE),
+				loopBody,
+				loopAfter);
+
+			builder_.SetInsertPoint(loopBody);
+			blocks.back().body = loopBody;
+
+			llvm::Value *initialized =
+				builder_.CreateGEP(castedMalloced, builder_.CreateLoad(counter));
+
+			if (ce->params.size() == 1) {
+				generateConstructor(initialized, at->getElemType(), NULL);
+			} else if (ce->params.size() == 2) {
+				generateConstructor(initialized, at->getElemType(), ce->params[1]);
+			} else {
+				assert(false && "unknown constructor");
+			}
+
+			// counter += 1
+			builder_.SetInsertPoint(blocks.back().body);
+			builder_.CreateStore(
+				builder_.CreateAdd(builder_.CreateLoad(counter),
+						llvm::ConstantInt::get(getLLVMType(Int_), 1)), counter);
+			builder_.CreateBr(loopCond);
+
+			builder_.SetInsertPoint(loopAfter);
+			blocks.back().body = loopAfter;
+		}
+	} else if (init != NULL) {
+		assert(false && "unkown initializer");
+	}
+
+	return;
+}
+
 // initialize allocated variable dest with init
 // TODO: to run copy constructor
 // TODO: to run copy constructor and destructor on assignment
@@ -1109,322 +1436,15 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 	// these types are primitive
 	if (type->is(Int_) || type->is(Char_) || type->is(Bool_)
 		|| type->is(Float_) || type->is(Double_) || type->is(Label_)) {
-		assert(!(type->is(Label_)));
+		generatePrimitiveTypeConstructor(dest, type, init);
 
-		// with the type primitive, you don't have to worry about overhead
-		// also, you don't have to worry about running copy constructors
-
-		llvm::Value *src = NULL;
-
-		if (init != NULL) {
-			if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-				ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-				assert(ce->params.size() == 1);
-
-				llvm::Value *prm = generateExpr(ce->params[0]);
-
-				Type *from = ce->params[0]->type->unmodify();
-				Type *to = ce->type;
-				if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
-					&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
-
-					// integer to integer
-					builder_.SetInsertPoint(blocks.back().body);
-					src = builder_.CreateTrunc(prm, getLLVMType(to));
-				} else if ((from->is(Float_) || from->is(Double_))
-						&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
-					// real to integer
-					builder_.SetInsertPoint(blocks.back().body);
-					src = builder_.CreateFPToSI(prm, getLLVMType(to));
-				} else if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
-						&& (to->is(Float_) || to->is(Double_))) {
-					// integer to real 
-					src = builder_.CreateSIToFP(prm, getLLVMType(to));
-				} else {
-					assert(false && "no viable casting constructor");
-				}
-
-			} else {
-				src = generateExpr(init);
-			}
-		} else {
-			if (type->is(Int_) || type->is(Char_) || type->is(Bool_)) {
-				src = llvm::ConstantInt::get(getLLVMType(type), 0);
-			} else if (type->is(Float_) || type->is(Double_)) {
-				src = llvm::ConstantFP::get(getLLVMType(type), 0.0);
-			}
-		}
-
-		assert(src != NULL);
-
-		builder_.SetInsertPoint(blocks.back().body);
-		builder_.CreateStore(src, dest);
-
-		return;
 	// these types are not primitive but also built-in type
 	} else if (type->is(String_)) {
-		// TODO: I'm thinking of rewriting String as a native one
+		generateStringConstructor(dest, type, init);
 
-		// normal constructor
-		if (init != NULL && init->getASTType() == AST::STR_LITERAL_EXPR) {
-			StrLiteralExpr *sle = static_cast<StrLiteralExpr *>(init);
-
-			std::vector<llvm::Value *> params;
-			params.push_back(builder_.CreateGlobalStringPtr(sle->str));
-
-			llvm::Function *func = module_.getFunction("PRStringConstructorCStr");
-			assert(func != NULL);
-
-			builder_.SetInsertPoint(blocks.back().body);
-
-			llvm::Value *src = builder_.CreateCall(func, params);
-			builder_.CreateStore(src, dest);
-
-			return;
-
-		// int to string constructor
-		} else if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-			assert(ce->params.size() == 1);
-			assert(ce->params[0]->type->unmodify()->is(Int_));
-
-			std::vector<llvm::Value *> params;
-			params.push_back(generateExpr(ce->params[0]));
-
-			llvm::Function *func = module_.getFunction("PRStringConstructorInt");
-			assert(func != NULL);
-
-			builder_.SetInsertPoint(blocks.back().body);
-
-			llvm::Value *src = builder_.CreateCall(func, params);
-			builder_.CreateStore(src, dest);
-
-			return;
-
-		// copy constructor
-		} else if (init != NULL) {
-			// TODO: in some case you have to run copy constructors there
-			assert(init->getASTType() != AST::CONSTRUCTOR_EXPR);
-
-			llvm::Value *src = generateExpr(init);
-
-			builder_.CreateStore(src, dest);
-
-			return;
-
-		// normal constructor with no argument
-		} else {
-			llvm::Function *func = module_.getFunction("PRStringConstructorVoid");
-			assert(func != NULL);
-
-			builder_.SetInsertPoint(blocks.back().body);
-
-			llvm::Value *src = builder_.CreateCall(func);
-			builder_.CreateStore(src, dest);
-
-			return;
-		}
 	} else if (type->getTypeType() == Type::ARRAY_TYPE) {
+		generateArrayConstructor(dest, type, init);
 
-		// TODO: the case wich doesn't match this will needs copy constructor
-		assert(init == NULL ? true
-				    : init->getASTType() == AST::ARRAY_LITERAL_EXPR
-					|| init->getASTType() == AST::CONSTRUCTOR_EXPR);
-
-		ArrayType *at = static_cast<ArrayType *>(type);
-
-		if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-			if (ce->params.size() == 0) {
-			} else if (ce->params.size() == 1) {
-				assert(ce->params[0]->type->unmodify()->is(Int_));
-			} else if (ce->params.size() == 2){
-				assert(ce->params[0]->type->unmodify()->is(Int_));
-				assert(ce->params[1]->type->unmodify()->is(at->getElemType()->unmodify()));
-			} else {
-				assert(false && "unknown constructor parameters");
-			}
-		}
-
-
-		const int kArrayDefaultCapacity = 1;
-
-		// int length
-		// int capacity
-		// int elementSize
-		// Type* elements for [ Type ]
-
-		// Overview of the following LLVM IR code generation LLVM is like this:
-		// ; [Type]* is not valid LLVM type
-		//
-		// %length = getelementptr [Type]* %dest, i32 0, i32 0
-		// store i32 0, i32* %length
-		//
-		// %capacity = getelementptr [Type]* %dest, i32 0, i32 1
-		// store i32 kArrayDefaultCapacity, i32* %capacity
-		//
-		// ; elementSize can be obtained from technique in the page:
-		// ; http://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
-		// %elementSize = getelementptr [Type]* %dest, i32 0, i32 2
-		// %elementSizeTester = getelementptr Type* null, i32 1
-		// %elementSizeValue = bitcast Type* %Size to i32
-		// store i32 %elementSizeValue, i32* %elementSize
-		//
-		// %elements = getelementptr [Type]* %dest, i32 0, i32 3
-		// %capacityValue = load i32* %capacity
-		// %mallocedSize = mul i32 %capacityValue %elementSizeValue
-		// %malloced = call i8* @PRMalloc(i32 %mallocedSize)
-		// %castedMalloced = bitcast i8* %malloced to Type*
-		// store Type* %castedMalloced, Type** %elements
-		//
-		// ; then, generateConstructor(malloced, Type, NULL) if needed
-
-		builder_.SetInsertPoint(blocks.back().body);
-
-		llvm::Type *lvInt = getLLVMType(Int_);
-		//llvm::Type *lvArrayType = getLLVMType(at);
-		llvm::Type *lvType = getLLVMType(at->getElemType());
-
-		// %length = getelementptr [Type]* %dest, i32 0, i32 0
-		// store i32 0, i32* %length
-		std::vector<llvm::Value *> lengthParams;
-		lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
-		lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
-		llvm::Value *length = builder_.CreateGEP(dest, lengthParams);
-		builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
-
-		// %capacity = getelementptr [Type]* %dest, i32 0, i32 1
-		std::vector<llvm::Value *> capacityParams;
-		capacityParams.push_back(llvm::ConstantInt::get(lvInt, 0));
-		capacityParams.push_back(llvm::ConstantInt::get(lvInt, 1));
-		llvm::Value *capacity = builder_.CreateGEP(dest, capacityParams);
-
-		builder_.SetInsertPoint(blocks.back().body);
-		llvm::Value *capValCE = NULL;
-		if (init == NULL) {
-			// store i32 kArrayDefaultCapacity, i32* %capacity
-			builder_.CreateStore(llvm::ConstantInt::get(lvInt, kArrayDefaultCapacity), capacity);
-		} else if (init->getASTType() == AST::ARRAY_LITERAL_EXPR) {
-			// store i32 ale->elements.size(), i32* %capacity
-			builder_.CreateStore(llvm::ConstantInt::get(lvInt,
-				static_cast<ArrayLiteralExpr *>(init)->elements.size()), capacity);
-		} else if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-			if (ce->params.size() > 0) {
-				capValCE = generateExpr(ce->params[0]);
-				builder_.SetInsertPoint(blocks.back().body);
-				builder_.CreateStore(capValCE, capacity);
-			}
-		} else {
-			assert(false && "unknown array constructing expression");
-		}
-		builder_.SetInsertPoint(blocks.back().body);
-
-		// %elementSize = getelementptr [Type]* %dest, i32 0, i32 2
-		// %elementSizeTester = getelementptr Type* null, i32 1
-		// %elementSizeValue = ptrtoint Type* %Size to i32
-		// store i32 %elementSizeValue, i32* %elementSize
-		std::vector<llvm::Value *> elementSizeParams;
-		elementSizeParams.push_back(llvm::ConstantInt::get(lvInt, 0));
-		elementSizeParams.push_back(llvm::ConstantInt::get(lvInt, 2));
-		llvm::Value *elementSize = builder_.CreateGEP(dest, elementSizeParams);
-		llvm::Value *elementSizeTester = builder_.CreateGEP(
-				llvm::ConstantPointerNull::get(lvType->getPointerTo()),
-				llvm::ConstantInt::get(lvInt, 2));
-		llvm::Value *elementSizeValue = builder_.CreatePtrToInt(elementSizeTester, lvInt);
-		builder_.CreateStore(elementSizeValue, elementSize);
-
-		// %elements = getelementptr [Type]* %dest, i32 0, i32 3
-		// %capacityValue = load i32* %capacity
-		// %mallocedSize = mul i32 %capacityValue %elementSizeValue
-		// %malloced = call i8* @PRMalloc(i32 %mallocedSize)
-		// %castedMalloced = bitcast i8* %malloced to Type*
-		// store Type* %castedMalloced, Type** %elements
-		std::vector<llvm::Value *> elementsParams;
-		elementsParams.push_back(llvm::ConstantInt::get(lvInt, 0));
-		elementsParams.push_back(llvm::ConstantInt::get(lvInt, 3));
-		llvm::Value *elements = builder_.CreateGEP(dest, elementsParams);
-		llvm::Value *capacityValue = builder_.CreateLoad(capacity);
-		llvm::Value *mallocedSize = builder_.CreateMul(capacityValue, elementSizeValue);
-		llvm::Value *malloced = builder_.CreateCall(lookup("PRMalloc"), mallocedSize);
-		llvm::Value *castedMalloced = builder_.CreateBitCast(malloced, lvType->getPointerTo());
-		builder_.CreateStore(castedMalloced, elements);
-
-		if (init != NULL && init->getASTType() == AST::ARRAY_LITERAL_EXPR) {
-			ArrayLiteralExpr *ale = static_cast<ArrayLiteralExpr *>(init);
-
-			for (int i = 0, iMax = ale->elements.size(); i < iMax; ++i) {
-
-				// %initialized = getelementptr Type* %castedMalloced, i32 i
-				llvm::Value *initialized = builder_.CreateGEP(castedMalloced, llvm::ConstantInt::get(lvInt, i));
-				assert(at->getElemType()->is(ale->elements[i]->type));
-				generateConstructor(initialized, at->getElemType(), ale->elements[i]);
-			}
-		} else if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
-			ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
-			if (ce->params.size() > 0) {
-				assert(capValCE != NULL);
-
-				const std::string curNumStr = getUniqNumStr();
-
-				builder_.SetInsertPoint(blocks.back().body);
-				llvm::Value *counter = builder_.CreateAlloca(
-						getLLVMType(Int_), 0, "arrayLoopCounter" + curNumStr);
-				builder_.CreateStore(llvm::ConstantInt::get(getLLVMType(Int_), 0), counter);
-
-				// arrayLoopCond
-				llvm::Function *func = getEnclosingFunc();
-				llvm::BasicBlock *loopCond =
-					llvm::BasicBlock::Create(context_,
-							"arrayLoopCond" + curNumStr, func);
-				// arrayLoopBody
-				llvm::BasicBlock *loopBody =
-					llvm::BasicBlock::Create(context_,
-							"arrayLoopBody" + curNumStr, func);
-				// arrayLoopAfter
-				llvm::BasicBlock *loopAfter =
-					llvm::BasicBlock::Create(context_,
-							"arrayLoopAfter" + curNumStr, func);
-
-				builder_.SetInsertPoint(blocks.back().body);
-				builder_.CreateBr(loopCond);
-
-				builder_.SetInsertPoint(loopCond);
-				// if (counter < capValCE) { goto arrayLoopBody } else { goto arrayLoopAfter }
-				builder_.CreateCondBr(
-					builder_.CreateICmpSLT(builder_.CreateLoad(counter), capValCE),
-					loopBody,
-					loopAfter);
-
-				builder_.SetInsertPoint(loopBody);
-				blocks.back().body = loopBody;
-
-				llvm::Value *initialized =
-					builder_.CreateGEP(castedMalloced, builder_.CreateLoad(counter));
-
-				if (ce->params.size() == 1) {
-					generateConstructor(initialized, at->getElemType(), NULL);
-				} else if (ce->params.size() == 2) {
-					generateConstructor(initialized, at->getElemType(), ce->params[1]);
-				} else {
-					assert(false && "unknown constructor");
-				}
-
-				// counter += 1
-				builder_.SetInsertPoint(blocks.back().body);
-				builder_.CreateStore(
-					builder_.CreateAdd(builder_.CreateLoad(counter),
-							llvm::ConstantInt::get(getLLVMType(Int_), 1)), counter);
-				builder_.CreateBr(loopCond);
-
-				builder_.SetInsertPoint(loopAfter);
-				blocks.back().body = loopAfter;
-			}
-		} else if (init != NULL) {
-			assert(false && "unkown initializer");
-		}
-
-		return;
 	} else {
 		// [class] TODO: you have to support class there
 		assert(false && "class not supported yet");
@@ -1794,6 +1814,8 @@ void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
 
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateCall(func);
+	builder_.CreateRetVoid();
+	blocks.back().body = llvm::BasicBlock::Create(context_, "gotoAfter" + getUniqNumStr(), getEnclosingFunc());
 
 	return;
 }
@@ -1814,6 +1836,7 @@ void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
 
 	builder_.SetInsertPoint(prevBody);
 	builder_.CreateCall(func);
+	builder_.CreateRetVoid();
 	builder_.SetInsertPoint(blocks.back().body);
 
 
@@ -1838,6 +1861,8 @@ void LLVMCodeGen::Impl::generateGlobalReturnStmt(ReturnStmt *rs) {
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateRetVoid();
 
+	blocks.back().body = llvm::BasicBlock::Create(context_, "globalReturnAfter" + getUniqNumStr(), getEnclosingFunc());
+
 	return;
 }
 
@@ -1855,8 +1880,7 @@ void LLVMCodeGen::Impl::generateFuncReturnStmt(ReturnStmt *rs) {
 	if (from != NULL)
 		builder_.CreateStore(from, funcBlock.retVal);
 	builder_.CreateBr(funcBlock.end);
-	blocks.back().body = llvm::BasicBlock::Create(context_, "returnAfter" + curNumStr, funcBlock.func);
-	// little bit strange name from the viewpoint of English grammar
+	blocks.back().body = llvm::BasicBlock::Create(context_, "funcReturnAfter" + curNumStr, funcBlock.func);
 
 	return;
 }

@@ -2,6 +2,7 @@
 #define PERYAN_AST_PRINTER_H__
 
 #include "AST.h"
+#include "SymbolTable.h"
 
 namespace Peryan {
 
@@ -11,6 +12,7 @@ private:
 	ASTPrinter& operator=(const ASTPrinter&);
 	bool pretty_;
 	int depth_;
+	bool type_;
 	// indent
 	std::string ind() {
 		if (pretty_) {
@@ -26,7 +28,7 @@ private:
 		depth_--;
 	}
 public:
-	ASTPrinter(bool pretty = false) : pretty_(pretty), depth_(0) {}
+	ASTPrinter(bool pretty = false, bool type = false) : pretty_(pretty), depth_(0), type_(type) {}
 
 	std::string toString(AST *ast) {
 		switch (ast->getASTType()) {
@@ -281,27 +283,33 @@ public:
 	}
 
 	std::string toString(Expr *expr) {
+		std::string res;
 		switch (expr->getASTType()) {
-		case AST::IDENTIFIER		: return toString(static_cast<Identifier *>(expr));
-		case AST::LABEL			: return toString(static_cast<Label *>(expr));
-		case AST::BINARY_EXPR		: return toString(static_cast<BinaryExpr *>(expr));
-		case AST::UNARY_EXPR		: return toString(static_cast<UnaryExpr *>(expr));
-		case AST::STR_LITERAL_EXPR	: return toString(static_cast<StrLiteralExpr *>(expr));
-		case AST::INT_LITERAL_EXPR	: return toString(static_cast<IntLiteralExpr *>(expr));
-		case AST::FLOAT_LITERAL_EXPR	: return toString(static_cast<FloatLiteralExpr *>(expr));
-		case AST::CHAR_LITERAL_EXPR	: return toString(static_cast<CharLiteralExpr *>(expr));
-		case AST::BOOL_LITERAL_EXPR	: return toString(static_cast<BoolLiteralExpr *>(expr));
-		case AST::ARRAY_LITERAL_EXPR	: return toString(static_cast<ArrayLiteralExpr *>(expr));
-		case AST::FUNC_CALL_EXPR	: return toString(static_cast<FuncCallExpr *>(expr));
-		case AST::CONSTRUCTOR_EXPR	: return toString(static_cast<ConstructorExpr *>(expr));
-		case AST::SUBSCR_EXPR		: return toString(static_cast<SubscrExpr *>(expr));
-		case AST::MEMBER_EXPR		: return toString(static_cast<MemberExpr *>(expr));
-		case AST::REF_EXPR		: return toString(static_cast<RefExpr *>(expr));
-		case AST::DEREF_EXPR		: return toString(static_cast<DerefExpr *>(expr));
-		case AST::FUNC_EXPR		: return toString(static_cast<FuncExpr *>(expr));
-		case AST::STATIC_MEMBER_EXPR	: return toString(static_cast<StaticMemberExpr *>(expr));
-		default				: return "(Expr)";
+		case AST::IDENTIFIER		: res = toString(static_cast<Identifier *>(expr)); break;
+		case AST::LABEL			: res = toString(static_cast<Label *>(expr)); break;
+		case AST::BINARY_EXPR		: res = toString(static_cast<BinaryExpr *>(expr)); break;
+		case AST::UNARY_EXPR		: res = toString(static_cast<UnaryExpr *>(expr)); break;
+		case AST::STR_LITERAL_EXPR	: res = toString(static_cast<StrLiteralExpr *>(expr)); break;
+		case AST::INT_LITERAL_EXPR	: res = toString(static_cast<IntLiteralExpr *>(expr)); break;
+		case AST::FLOAT_LITERAL_EXPR	: res = toString(static_cast<FloatLiteralExpr *>(expr)); break;
+		case AST::CHAR_LITERAL_EXPR	: res = toString(static_cast<CharLiteralExpr *>(expr)); break;
+		case AST::BOOL_LITERAL_EXPR	: res = toString(static_cast<BoolLiteralExpr *>(expr)); break;
+		case AST::ARRAY_LITERAL_EXPR	: res = toString(static_cast<ArrayLiteralExpr *>(expr)); break;
+		case AST::FUNC_CALL_EXPR	: res = toString(static_cast<FuncCallExpr *>(expr)); break;
+		case AST::CONSTRUCTOR_EXPR	: res = toString(static_cast<ConstructorExpr *>(expr)); break;
+		case AST::SUBSCR_EXPR		: res = toString(static_cast<SubscrExpr *>(expr)); break;
+		case AST::MEMBER_EXPR		: res = toString(static_cast<MemberExpr *>(expr)); break;
+		case AST::REF_EXPR		: res = toString(static_cast<RefExpr *>(expr)); break;
+		case AST::DEREF_EXPR		: res = toString(static_cast<DerefExpr *>(expr)); break;
+		case AST::FUNC_EXPR		: res = toString(static_cast<FuncExpr *>(expr)); break;
+		case AST::STATIC_MEMBER_EXPR	: res = toString(static_cast<StaticMemberExpr *>(expr)); break;
+		default				: res = "(Expr)";
 		}
+
+		if (type_ && expr->type != NULL)
+			res += " :: " + expr->type->getTypeName();
+
+		return res;
 	}
 
 	std::string toString(Identifier *id) {
@@ -463,8 +471,8 @@ public:
 		return ss.str();
 	}
 
-	static void dump(AST *ast) {
-		ASTPrinter printer(true);
+	static void dump(AST *ast, bool type = true) {
+		ASTPrinter printer(true, type);
 		std::cerr<<printer.toString(ast)<<std::endl;
 	}
 };

@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	if (opt.mainFileName.empty() || opt.outputFileName.empty()) {
 		std::cerr<<"Peryan Compiler (C) peryaudo"<<std::endl;
 		std::cerr<<"Usage : peryan <input> <output>"<<std::endl<<std::endl;
-		return -1;
+		return 1;
 	}
 
 	if (opt.verbose) {
@@ -56,14 +56,14 @@ int main(int argc, char *argv[])
 	char *runtimePath = getenv("PERYAN_RUNTIME_PATH");
 	if (runtimePath == NULL) {
 		std::cerr<<"error: please set PERYAN_RUNTIME_PATH"<<std::endl;
-		return -1;
+		return 1;
 	}
 
 	// TODO: rewrite this Windows compatible
 	char *tmpDir = getenv("TMPDIR");
 	if (tmpDir == NULL) {
 		std::cerr<<"error: please set TMPDIR"<<std::endl;
-		return -1;
+		return 1;
 	}
 
 	// Set default including paths
@@ -83,19 +83,19 @@ int main(int argc, char *argv[])
 	} catch (Peryan::LexerError le) {
 		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<le.toString(lexer)<<std::endl;
-		return -1;
+		return 1;
 	} catch (Peryan::ParserError pe) {
 		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<pe.toString(lexer)<<std::endl;
-		return -1;
+		return 1;
 	} catch (Peryan::SemanticsError se) {
 		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<se.toString(lexer)<<std::endl;
-		return -1;
+		return 1;
 	} catch (...) {
 		if (!opt.inhibitWarnings) warnings.print(lexer);
 		std::cerr<<"error: unknown error"<<std::endl;
-		return -1;
+		return 1;
 	}
 
 	if (!opt.inhibitWarnings) warnings.print(lexer);
@@ -117,13 +117,19 @@ int main(int argc, char *argv[])
 		std::stringstream ss;
 		ss<<"llc -filetype=obj -o \""<<tmpDir<<"/tmp.o\" \""<<tmpDir<<"/tmp.ll\"";
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
-		system(ss.str().c_str());
+		if (system(ss.str().c_str())) {
+			std::cerr<<"error: error while compiling LLVM IR"<<std::endl;
+			return 1;
+		}
 	}
 	{
 		std::stringstream ss;
 		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<tmpDir<<"/tmp.o\" \""<<runtimePath<<"/runtime.o\"";
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
-		system(ss.str().c_str());
+		if (system(ss.str().c_str())) {
+			std::cerr<<"error: error while linking"<<std::endl;
+			return 1;
+		}
 	}
 
 	if (opt.verbose) std::cerr<<std::endl<<"compilation finished."<<std::endl;

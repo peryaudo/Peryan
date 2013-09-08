@@ -117,7 +117,7 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 		TypeSpec *ts = new TypeSpec(Token(Token::ID, toType->getTypeName(), from->token.getPosition()));
 		ConstructorExpr *ce = new ConstructorExpr(from->token, ts);
 		ts->type = ce->type = toType->unmodify();
-		ce->params.push_back(from);
+		ce->params.push_back(insertPromoter(from, from->type->unmodify()));
 
 		from = ce;
 	}
