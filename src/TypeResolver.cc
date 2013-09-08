@@ -597,7 +597,6 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 	assert(is != NULL);
 	assert(is->inst != NULL);
 
-
 	FuncType *curFuncType = NULL;
 	{
 		Type *instType = visit(is->inst);
@@ -650,6 +649,7 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 			if (defIt != defaults.end() && *defIt != NULL) {
 				// the default value exists
 				is->params.push_back(*defIt);
+				prmIt = is->params.end() - 1; // be careful that push_back may invalidate iterators
 			} else {
 				throw SemanticsError(is->token.getPosition(),
 						"error: fewer arguments in the function call");

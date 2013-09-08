@@ -261,7 +261,7 @@ void LLVMCodeGen::Impl::generateGlobalDecl(Scope *scope) {
 		assert((*it) != NULL);
 		switch ((*it)->getSymbolType()) {
 		case Symbol::EXTERN_SYMBOL:
-			if ((*it)->getType()->getTypeType() == Type::FUNC_TYPE) {
+			if ((*it)->getType()->unmodify()->getTypeType() == Type::FUNC_TYPE) {
 				generateFuncDecl((*it)->getSymbolName(), (*it)->getType());
 			} else {
 				generateGlobalVarDecl((*it)->getSymbolName(), (*it)->getType(), true);
@@ -511,7 +511,7 @@ llvm::FunctionType *LLVMCodeGen::Impl::getLLVMFuncType(FuncType *ft) {
 void LLVMCodeGen::Impl::generateFuncDecl(const std::string& name, Type *type) {
 	DBG_PRINT(+, generateFuncDecl);
 
-	if (type->getTypeType() == Type::FUNC_TYPE) {
+	if (type->unmodify()->getTypeType() == Type::FUNC_TYPE) {
 		llvm::Function::Create(
 			getLLVMFuncType(static_cast<FuncType *>(type)),
 			llvm::Function::ExternalLinkage, name, &module_);
@@ -569,9 +569,9 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 		}
 	}
 
-	llvm::Value *var = new llvm::GlobalVariable(module_, getLLVMType(type), false,
-				(isExternal ? llvm::GlobalVariable::ExternalLinkage
-					    : llvm::GlobalVariable::CommonLinkage), init, name);
+	new llvm::GlobalVariable(module_, getLLVMType(type), false,
+			(isExternal ? llvm::GlobalVariable::ExternalLinkage
+				    : llvm::GlobalVariable::CommonLinkage), init, name);
 
 
 	DBG_PRINT(-, generateGlobalVarDecl);
@@ -1867,11 +1867,16 @@ void LLVMCodeGen::Impl::generateLabelStmt(LabelStmt *ls) {
 
 	llvm::BasicBlock *body = llvm::BasicBlock::Create(context_, "labelEntry" + getUniqNumStr(), func);
 	
+	llvm::BasicBlock *prevBody = blocks.back().body;
+
 	blocks.back().func = func;
 	blocks.back().body = body;
 	blocks.back().end->moveAfter(body);
 
+	builder_.SetInsertPoint(prevBody);
+	builder_.CreateCall(func);
 	builder_.SetInsertPoint(blocks.back().body);
+
 
 	DBG_PRINT(-, generateLabelStmt);
 	return;

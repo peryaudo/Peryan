@@ -18,6 +18,10 @@ func str(x :: Int) :: String {
 // 	return 0
 // }
 
+func int (x :: Double) :: Int {
+	return Int(x)
+}
+
 extern strmid :: String -> Int -> Int -> String
 
 extern instr :: String -> Int -> String -> Int
@@ -57,17 +61,13 @@ extern redraw :: Int -> Void
 extern pos :: Int -> Int -> Void
 extern color :: Int -> Int -> Int -> Void = -1, -1, -1
 
-extern stick :: Int -> Void
+extern stick :: (ref Int) -> Int -> Int -> Void = , 0, 1
 extern bmpsave :: String -> Void
 extern dialog :: String -> Int -> Void
 extern await :: Int -> Void
-extern boxf :: Int -> Int -> Int -> Int -> Void
+extern boxf :: Int -> Int -> Int -> Int -> Void = 0, 0, -1, -1
 extern font :: String -> Int -> Void
 var msgothic :: String = "MS Gothic"
 var mspgothic :: String = "MS P Gothic"
-
-func int (x :: Double) :: Int {
-	return Int(x)
-}
 
 extern getkey :: (ref Int) -> Int -> Void
