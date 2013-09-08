@@ -209,6 +209,7 @@ void SymbolResolver::visit(GotoStmt *gs, Scope *scope) throw (SemanticsError) {
 	assert(gs != NULL);
 
 	visit(gs->to, scope);
+
 	DBG_PRINT(-, GotoStmt);
 	return;
 }
@@ -218,6 +219,7 @@ void SymbolResolver::visit(GosubStmt *gs, Scope *scope) throw (SemanticsError) {
 	assert(gs != NULL);
 
 	visit(gs->to, scope);
+
 	DBG_PRINT(-, GosubStmt);
 	return;
 }
@@ -345,6 +347,8 @@ void SymbolResolver::visit(Label *label, Scope *scope) throw (SemanticsError) {
 			throw SemanticsError(label->token.getPosition(),
 					"error: unknown label " + label->token.getString());
 		}
+
+		label->symbol = static_cast<LabelSymbol *>(symbol);
 	}
 
 	DBG_PRINT(-, Label);

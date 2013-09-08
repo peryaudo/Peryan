@@ -76,7 +76,7 @@ class TransUnit : public AST {
 public:
 	virtual AST::ASTType getASTType() { return TRANS_UNIT; }
 
-	TransUnit() : AST() {}
+	TransUnit() : AST(), scope(NULL) {}
 	std::vector<Stmt *> stmts;
 
 	GlobalScope *scope;
@@ -89,13 +89,13 @@ public:
 	bool isConst;
 	bool isRef;
 	TypeSpec(bool isConst, bool isRef)
-		: AST(), isConst(isConst), isRef(isRef) {}
+		: AST(), isConst(isConst), isRef(isRef), type(NULL) {}
 
 	TypeSpec(const Token& token)
-		: AST(token), isConst(false), isRef(false) {}
+		: AST(token), isConst(false), isRef(false), type(NULL) {}
 
 	TypeSpec(const Token& token, bool isConst, bool isRef)
-		: AST(token), isConst(isConst), isRef(isRef) {}
+		: AST(token), isConst(isConst), isRef(isRef), type(NULL) {}
 
 	Type *type;
 };
@@ -226,9 +226,8 @@ public:
 
 	Expr *func;
 	std::vector<Expr *> params;
-	FuncCallExpr(const Token& token, Expr *func) : Expr(token), func(func) {}
+	FuncCallExpr(const Token& token, Expr *func) : Expr(token), func(func), partial(false) {}
 
-	Symbol *symbol;
 	bool partial;
 };
 
@@ -316,7 +315,8 @@ public:
 	std::vector<Identifier *> params;
 	TypeSpec *retTypeSpec;
 	CompStmt *body;
-	FuncDefStmt(const Token& token, Identifier *name, CompStmt *body) : Stmt(token), name(name), body(body) {}
+	FuncDefStmt(const Token& token, Identifier *name, CompStmt *body)
+		: Stmt(token), name(name), body(body), symbol(NULL) {}
 
 	std::vector<Expr *> defaults;
 
@@ -330,7 +330,7 @@ public:
 	Identifier *id;
 	Expr *init;
 	VarDefStmt(const Token& token, Identifier *id, Expr *init)
-		: Stmt(token), id(id), init(init) {}
+		: Stmt(token), id(id), init(init), symbol(NULL) {}
 
 	VarSymbol *symbol;
 };
@@ -375,7 +375,7 @@ public:
 	Expr *count;
 	std::vector<Stmt *> stmts;
 	RepeatStmt(const Token& token, Expr *count)
-		: Stmt(token), count(count) {}
+		: Stmt(token), count(count), scope(NULL) {}
 
 	LocalScope *scope;
 };
@@ -384,7 +384,7 @@ class Label : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return LABEL; }
 
-	Label(const Token& token) : Expr(token) {}
+	Label(const Token& token) : Expr(token), symbol(NULL) {}
 
 	LabelSymbol *symbol;
 };
@@ -445,7 +445,7 @@ public:
 	Identifier *id;
 
 	ExternStmt(const Token& token, Identifier *id)
-		: Stmt(token), id(id) {}
+		: Stmt(token), id(id), symbol(NULL) {}
 
 	std::vector<Expr *> defaults;
 
@@ -459,7 +459,7 @@ public:
 	TypeSpec *name;
 
 	NamespaceStmt(const Token& token, TypeSpec *name)
-		: Stmt(token), name(name) {}
+		: Stmt(token), name(name), symbol(NULL) {}
 
 	std::vector<Stmt *> stmts;
 

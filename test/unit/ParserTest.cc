@@ -85,13 +85,13 @@ TEST_F(ParserTest, VariableDeclaration) {
 TEST_F(ParserTest, BasicInstructions) {
 	const std::string source =
 		"mes \"Hello, World.\"\n"
-		"await\n"
+		"await 0\n"
 		"pos 20, 25\n";
 
 	const std::string expected =
 		"(TransUnit"
 			" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"Hello, World.\"))"
-			" (InstStmt (Identifier \"await\"))"
+			" (InstStmt (Identifier \"await\") (IntLiteralExpr 0))"
 			" (InstStmt (Identifier \"pos\") (IntLiteralExpr 20) (IntLiteralExpr 25)))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));

@@ -569,9 +569,10 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 		}
 	}
 
-	new llvm::GlobalVariable(module_, getLLVMType(type), false,
-		(isExternal ? llvm::GlobalVariable::ExternalLinkage
-		 	    : llvm::GlobalVariable::CommonLinkage), init, name);
+	llvm::Value *var = new llvm::GlobalVariable(module_, getLLVMType(type), false,
+				(isExternal ? llvm::GlobalVariable::ExternalLinkage
+					    : llvm::GlobalVariable::CommonLinkage), init, name);
+
 
 	DBG_PRINT(-, generateGlobalVarDecl);
 	return;
@@ -1843,6 +1844,9 @@ void LLVMCodeGen::Impl::generateBreakStmt(BreakStmt *bs) {
 void LLVMCodeGen::Impl::generateGotoStmt(GotoStmt *gs) {
 	DBG_PRINT(+, generateGotoStmt);
 	assert(blocks.back().type == Block::GLOBAL_BLOCK);
+	assert(gs != NULL);
+	assert(gs->to != NULL);
+	assert(gs->to->symbol != NULL);
 
 	llvm::Function  *func = module_.getFunction(gs->to->symbol->getMangledSymbolName());
 	assert(func != NULL);

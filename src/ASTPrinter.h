@@ -14,7 +14,7 @@ private:
 	// indent
 	std::string ind() {
 		if (pretty_) {
-			return std::string("\n") + std::string(depth_, ' ');
+			return std::string("\n") + std::string(depth_ * 2, ' ');
 		} else {
 			return " ";
 		}
@@ -26,7 +26,7 @@ private:
 		depth_--;
 	}
 public:
-	ASTPrinter(bool pretty = false) : pretty_(pretty) {}
+	ASTPrinter(bool pretty = false) : pretty_(pretty), depth_(0) {}
 
 	std::string toString(AST *ast) {
 		switch (ast->getASTType()) {

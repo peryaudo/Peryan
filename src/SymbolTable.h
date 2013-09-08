@@ -534,15 +534,6 @@ public:
 	virtual std::string getScopeName() { return name_; }
 };
 
-// type constraint class for type inference
-// generally it will be *s == *t after unification
-class TypeConst {
-public:
-	Type **s, **t;
-	TypeConst(Type **s, Type **t) : s(s), t(t) {}
-};
-
-
 class SymbolTable {
 private:
 	SymbolTable(const SymbolTable&);
@@ -550,8 +541,6 @@ private:
 
 	GlobalScope *global_;
 
-	// I think it can be rewritten by Union-Find or something
-	std::vector<TypeConst> typeConstSet_;
 public:
 	SymbolTable() {
 		global_ = new GlobalScope();
@@ -567,11 +556,6 @@ public:
 	}
 
 	GlobalScope *getGlobalScope() { return global_; }
-
-	void addTypeConst(Type **s, Type **t) {
-		typeConstSet_.push_back(TypeConst(s, t));
-		return;
-	}
 };
 
 };

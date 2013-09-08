@@ -5,6 +5,7 @@
 #include "SymbolTable.h"
 #include "TypeResolver.h"
 #include "Options.h"
+#include "ASTPrinter.h"
 
 
 //#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
@@ -638,7 +639,7 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 	std::vector<Expr *>::iterator defIt = defaults.begin();
 	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
 
-	for ( ; prmIt != is->params.end() && ftIt != ftEnd; ++prmIt, ++defIt, ++ftIt) {
+	while (prmIt != is->params.end() || ftIt != ftEnd) {
 		if (prmIt != is->params.end() && ftIt == ftEnd) {
 			// given parameters > parameters in the type
 			throw SemanticsError((*prmIt)->token.getPosition(),
@@ -646,7 +647,6 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 
 		} else if (prmIt == is->params.end() && ftIt != ftEnd) {
 			// given parameters < parameters in the type
-
 			if (defIt != defaults.end() && *defIt != NULL) {
 				// the default value exists
 				is->params.push_back(*defIt);
@@ -706,6 +706,10 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 
 			*prmIt = insertPromoter(*prmIt, *ftIt);
 		}
+
+		if (prmIt != is->params.end()) ++prmIt;
+		if (defIt != defaults.end()) ++defIt;
+		if (ftIt != ftEnd) ++ftIt;
 	}
 
 	if (curFuncType->getReturnType() == NULL) {
@@ -1287,61 +1291,59 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 		curFuncType = static_cast<FuncType *>(tmp);
 	}
 
-	for (std::vector<Expr *>::iterator it = fce->params.begin();
-			it != fce->params.end(); ++it) {
-		Type *argType = visit(*it);
+	std::vector<Expr *>::iterator prmIt = fce->params.begin(), prmEnd = fce->params.end();
+	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
+	for (; prmIt != prmEnd && ftIt != ftEnd; ++prmIt, ++ftIt) {
+		Type *argType = visit(*prmIt);
 
-		if (argType == NULL && curFuncType->getCar() == NULL) {
+		if (argType == NULL && *ftIt == NULL) {
 			// you have nothing to do
 			assert(unresolved_);
-		} else if (argType == NULL && curFuncType->getCar() != NULL) {
+			curTypeVar_ = NULL;
+		} else if (argType == NULL && *ftIt != NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
-				addTypeConstraint(curFuncType->getCar()->unmodify(), curTypeVar_);
+				addTypeConstraint((*ftIt)->unmodify(), curTypeVar_);
 				curTypeVar_ = NULL;
 			}
-		} else if (argType != NULL && curFuncType->getCar() == NULL) {
-			addTypeConstraint(argType->unmodify(), &(curFuncType->getCar()));
-			constraints_[&(curFuncType->getCar())].takeLowerBound = false;
+		} else if (argType != NULL && *ftIt == NULL) {
+			addTypeConstraint(argType->unmodify(), &(*ftIt));
+			constraints_[&(*ftIt)].takeLowerBound = false;
 			unresolved_ = true;
 			curTypeVar_ = NULL;
-		} else if (argType != NULL && curFuncType->getCar() != NULL) {
-			if (!canPromote(argType, curFuncType->getCar(), (*it)->token.getPosition())) {
-				throw SemanticsError((*it)->token.getPosition(),
+		} else if (argType != NULL && *ftIt != NULL) {
+			if (!canPromote(argType, *ftIt, (*prmIt)->token.getPosition())) {
+				throw SemanticsError((*prmIt)->token.getPosition(),
 						std::string("error: argument type (")
 						+ argType->getTypeName()
 						+ std::string(") doesn't match to the function's one (")
-						+ curFuncType->getCar()->getTypeName()
+						+ (*ftIt)->getTypeName()
 						+ std::string(")"));
 			}
 
-			*it = insertPromoter(*it, curFuncType->getCar());
-		}
-
-		if (it + 1 != fce->params.end()) {
-			if (curFuncType->getCdr()->getTypeType() != Type::FUNC_TYPE) {
-				throw SemanticsError((*it)->token.getPosition(),
-						"error: too many arguments in the function call");
-			}
-
-			curFuncType = static_cast<FuncType *>(curFuncType->getCdr());
+			*prmIt = insertPromoter(*prmIt, *ftIt);
 		}
 	}
 
-	if (curFuncType->getCdr() == NULL) {
-		unresolved_ = true;
-		unresolvedPos_ = fce->func->token.getPosition();
-		curTypeVar_ = &(curFuncType->getCdr());
-
-		DBG_PRINT(-, FuncCallExpr);
-		return NULL;
-	} else {
-		fce->type = curFuncType->getCdr();
-	}
-
-	if (curFuncType->getCdr()->getTypeType() == Type::FUNC_TYPE) {
+	if (ftIt != ftEnd) {
 		throw SemanticsError(fce->token.getPosition(),
 				"error: fewer arguments in the function call");
+	}
+
+	if (prmIt != prmEnd) {
+		throw SemanticsError((*prmIt)->token.getPosition(),
+				"error: too many arguments in the function call");
+	}
+
+	if (curFuncType->getReturnType() == NULL) {
+		unresolved_ = true;
+		unresolvedPos_ = fce->func->token.getPosition();
+		curTypeVar_ = &(curFuncType->getReturnType());
+
+		DBG_PRINT(-, FuncCallExpr);
+		fce->type = NULL;
+	} else {
+		fce->type = curFuncType->getReturnType();
 	}
 
 	if (fce->type != NULL && fce->type->is(Void_)) {
@@ -1498,7 +1500,7 @@ Type *TypeResolver::visit(MemberExpr **mePtr) throw (SemanticsError) {
 		if (opt_.hspCompat) {
 			// in HSP compatible mode, the member expression means reference to the array element
 			if (curTypeVar_ != NULL && me->type != NULL) {
-				*curTypeVar_ = new ModifierType(false, true, new ArrayType(me->type));
+				*curTypeVar_ = new ArrayType(me->type);
 				curTypeVar_ = NULL;
 				me->type = NULL;
 			} else {

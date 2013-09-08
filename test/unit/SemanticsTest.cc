@@ -194,5 +194,37 @@ TEST_F(SemanticsTest, FunctionTypeInference) {
 	ASSERT_NO_THROW(parse());
 }
 
+TEST_F(SemanticsTest, TooMuchArguments) {
+	const std::string source =
+		"extern stick :: Int -> Void\n"
+		"stick 123, 456\n";
+
+	ssr.setString("main.pr", source);
+
+	ASSERT_THROW(parse(), Peryan::SemanticsError);
+}
+
+TEST_F(SemanticsTest, FewerArguments) {
+	const std::string source = 
+		"extern stick :: Int -> Int -> Void\n"
+		"stick 123\n";
+	
+	ssr.setString("main.pr", source);
+
+	ASSERT_THROW(parse(), Peryan::SemanticsError);
+}
+
+TEST_F(SemanticsTest, TooMuchArgumentsForFuncCall) {
+	const std::string source =
+		"extern printNum :: Int -> Void\n"
+		"extern takeSum :: Int -> Int -> Int\n"
+		"printNum takeSum(1)\n";
+
+	ssr.setString("main.pr", source);
+
+	ASSERT_THROW(parse(), Peryan::SemanticsError);
+
+}
+
 };
 
