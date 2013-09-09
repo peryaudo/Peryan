@@ -18,6 +18,7 @@ public:
 	std::string outputFileName;
 	std::string runtimePath;
 	std::string tmpDir;
+	std::string runtime;
 	Options() : dumpAST(false), verbose(false), hspCompat(false), dumpTokens(false), inhibitWarnings(false) {}
 };
 

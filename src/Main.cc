@@ -43,6 +43,18 @@ int main(int argc, char *argv[])
 				opt.tmpDir = std::string(argv[i + 1]);
 				++i;
 			}
+		} else if (cur == "--runtime") {
+			if (i + 1 >= argc) {
+				std::cerr<<"error: no runtime specified for --runtime"<<std::endl;
+				return 1;
+			} else {
+				opt.runtime = std::string(argv[i + 1]);
+				if (opt.runtime != "win32" && opt.runtime != "unixcl") {
+					std::cerr<<"error: unknown runtime "<<opt.runtime<<std::endl;
+					return 1;
+				}
+				++i;
+			}
 		} else if (cur == "-w") {
 			opt.inhibitWarnings = true;
 		} else if (cur.find("-") != std::string::npos) {
@@ -63,6 +75,10 @@ int main(int argc, char *argv[])
 		std::cerr<<"Peryan Compiler (C) peryaudo"<<std::endl;
 		std::cerr<<"Usage : peryan <input> <output>"<<std::endl<<std::endl;
 		return 1;
+	}
+
+	if (opt.runtime.empty()) {
+		opt.runtime = "unixcl";
 	}
 
 	if (opt.verbose) {
@@ -153,7 +169,11 @@ int main(int argc, char *argv[])
 	}
 	{
 		std::stringstream ss;
-		ss<<"gcc -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/runtime.o\"";
+		if (opt.runtime == "unixcl") {
+			ss<<"gcc -s -w -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/"<<opt.runtime<<".o\"";
+		} else if (opt.runtime == "win32") {
+			ss<<"gcc -s -DWIN32 -mwindows -v -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/"<<opt.runtime<<".o\"";
+		}
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		if (system(ss.str().c_str())) {
 			std::cerr<<"error: error while linking"<<std::endl;

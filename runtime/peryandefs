@@ -2,20 +2,19 @@ extern mes :: String -> Void
 
 extern printNum :: Int -> Void
 
-extern strlen_ :: String -> Int // will be rewritten natively
-
+extern strlen_ :: String -> Int
 func strlen(str :: String) :: Int {
 	return strlen_(str)
+	// return str.length
 }
 
 func str(x :: Int) :: String {
 	return String(x)
 }
 
-// TODO: implement Int(x)
+// TODO: implement overload
 // func int(x:: String) :: Int {
 // 	// return Int(x)
-// 	return 0
 // }
 
 func int (x :: Double) :: Int {
@@ -30,44 +29,56 @@ extern rnd :: Int -> Int
 extern randomize :: Void -> Void
 
 // func sdim(str :: ref String,  length :: String) :: Void {
+//	// TODO: implement string allocation with length
+//	str = String(length)
 // 	return
 // }
 
 extern exec :: String -> Int
-
 extern dirlist :: (ref String) -> String -> Int -> Void
 
 extern notesel :: (ref String) -> Void
-
 extern noteinfo :: Int -> Int
-
 extern noteget :: (ref String) -> Int -> Void
-
 extern noteload :: String -> Void
 
-// will be rewritten as a extern variable
 extern stat :: Int
+
+extern sqrt_ :: Double -> Double
+extern sin_ :: Double -> Double
+extern cos_ :: Double -> Double
+
+func sqrt(x :: Double) :: Double {
+	return sqrt_(x)
+}
+func sin(x :: Double) :: Double {
+	return sin_(x)
+}
+func cos(x :: Double) :: Double {
+	return cos_(x)
+}
+
+extern limitf :: Double -> Double -> Double -> Double
+
 extern mousex :: Int
 extern mousey :: Int
 extern mousew :: Int
 extern ginfo_winx :: Int
 extern ginfo_winy :: Int
-
-extern sqrt :: Double -> Double
-extern sin :: Double -> Double
-extern cos :: Double -> Double
-extern limitf :: Double -> Double -> Double -> Double
 extern redraw :: Int -> Void
 extern pos :: Int -> Int -> Void
 extern color :: Int -> Int -> Int -> Void = -1, -1, -1
-
 extern stick :: (ref Int) -> Int -> Int -> Void = , 0, 1
 extern bmpsave :: String -> Void
 extern dialog :: String -> Int -> Void
 extern await :: Int -> Void
 extern boxf :: Int -> Int -> Int -> Int -> Void = 0, 0, -1, -1
 extern font :: String -> Int -> Void
+
+extern getkey :: (ref Int) -> Int -> Void
+
 var msgothic :: String = "MS Gothic"
 var mspgothic :: String = "MS P Gothic"
 
-extern getkey :: (ref Int) -> Int -> Void
+extern stop :: Void -> Void 
+extern end :: Void -> Void 

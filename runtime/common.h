@@ -1,6 +1,34 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+
 void *PRMalloc(unsigned int size);
 void PRFree(void *ptr);
 void *PRRealloc(void *ptr, int size);
+
+void *PRMalloc(unsigned int size)
+{
+	DBG_PRINT(+-, PRMalloc);
+	return malloc(size);
+}
+
+void PRFree(void *ptr)
+{
+	DBG_PRINT(+, PRMalloc);
+	free(ptr);
+	DBG_PRINT(-, PRMalloc);
+	return;
+}
+
+void *PRRealloc(void *ptr, int size)
+{
+	DBG_PRINT(+-, PRRealloc);
+	return realloc(ptr, size);
+}
+
+int stat = 0;
 
 /* Begin implementation of built-in String */
 
@@ -116,25 +144,26 @@ void PRStringDestructor(struct String *str)
 	DBG_PRINT(-, PRStringDestructor);
 }
 
+int PRStringCompare(struct String *lhs, struct String *rhs)
+{
+	return strcmp(lhs->str, rhs->str);
+}
+
 /* End implementation of built-in String */
+
+int PRIntConstructor(struct String *str)
+{
+	int res;
+	DBG_PRINT(+, PRIntConstructor);
+	sscanf(str->str, "%d", &res);
+	DBG_PRINT(-, PRIntConstructor);
+	return res;
+}
 
 int strlen_(struct String *str)
 {
 	DBG_PRINT(+-, strlen_);
 	return str->length;
-}
-
-int rnd(int maxRange) {
-	static unsigned int x = 123456789;
-	static unsigned int y = 362436069;
-	static unsigned int z = 521288629;
-	static unsigned int w = 88675123;
-	unsigned int t;
-
-	t = x ^ (x << 11);
-	x = y; y = z; z = w;
-	w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
-	return w % maxRange;
 }
 
 struct String *strmid(struct String *str, int start, int length)
@@ -268,5 +297,65 @@ void noteget(struct String** res, int idx)
 
 	DBG_PRINT(-, noteget);
 	return;
+}
+void noteload(struct String *fileName)
+{
+	FILE *fp = NULL;
+	char tmp[512];
+
+	if (noteTarget_ == NULL) {
+		fprintf(stderr, "runtime error: no buffer selected\n");
+		exit(-1);
+	}
+
+	PRStringDestructor(*noteTarget_);
+	*noteTarget_ = PRStringConstructorVoid();
+
+	fp = fopen(fileName->str, "r");
+	if (fp == NULL) {
+		fprintf(stderr, "runtime error: cannot open the file %s\n", fileName->str);
+		exit(-1);
+	}
+
+	while (1) {
+		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)
+			break;
+
+		PRStringAppendCStr(*noteTarget_, tmp);
+	}
+
+	fclose(fp);
+	return;
+}
+
+/*
+ * Array is Peryan's sole polymorphic type so that far closer to type system itself,
+ * so it should be implemented in the code generator
+ *
+ */
+
+int rnd(int maxRange) {
+	static unsigned int x = 123456789;
+	static unsigned int y = 362436069;
+	static unsigned int z = 521288629;
+	static unsigned int w = 88675123;
+	unsigned int t;
+
+	t = x ^ (x << 11);
+	x = y; y = z; z = w;
+	w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
+	return w % maxRange;
+}
+
+double sqrt_(double x) {
+	return sqrt(x);
+}
+
+double sin_(double x) {
+	return sin(x);
+}
+
+double cos_(double x) {
+	return cos(x);
 }
 
