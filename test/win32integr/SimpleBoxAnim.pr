@@ -1,0 +1,14 @@
+
+repeat 2000
+	redraw 0
+
+	color 255, 255, 255
+	boxf
+
+	color 0, 160, 0
+	boxf 100, cnt + 20, 150, cnt + 70
+
+	redraw 1
+
+	wait 1
+loop

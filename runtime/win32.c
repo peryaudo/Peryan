@@ -307,7 +307,7 @@ void end()
 void stop()
 {
 	while (1) {
-		Sleep(5);
+		Sleep(10);
 		ProcessWindowMessages();
 	}
 
@@ -447,5 +447,39 @@ void title(struct String *text)
 {
 	SetWindowText(ctx->hWnd, text->str);
 
+	return;
+}
+
+void wait(int csec)
+{
+	if (csec < 0)
+		AbortWithErrorMessage("runtime error: invalid wait parameter");
+
+	while (csec > 0) {
+		Sleep(10);
+		ProcessWindowMessages();
+		csec--;
+	}
+
+	return;
+}
+
+void await(int msec)
+{
+	if (msec < 10) {
+		if (msec < 0)
+			AbortWithErrorMessage("runtime error: invalid await parameter");
+
+		Sleep(msec);
+		ProcessWindowMessages();
+	} else {
+		while (msec > 0) {
+			Sleep(msec >= 10 ? 10 : msec);
+			ProcessWindowMessages();
+			msec -= 10;
+		}
+	}
+
+	ProcessWindowMessages();
 	return;
 }

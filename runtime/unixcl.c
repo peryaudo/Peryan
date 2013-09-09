@@ -3,10 +3,11 @@
 //#define DBG_PRINT(TYPE, FUNC_NAME) printf("%s%s\n", #TYPE, #FUNC_NAME)
 #define DBG_PRINT(TYPE, FUNC_NAME)
 
+#include <stdlib.h>
+
 #include "common.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
 void *PRMalloc(unsigned int size)
 {

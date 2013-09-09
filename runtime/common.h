@@ -55,9 +55,36 @@ struct String *PRStringConstructorVoid()
 
 struct String *PRStringConstructorInt(int num)
 {
-	char *str[20];
-	DBG_PRINT(+-, PRStringConstructorInt);
-	sprintf((char *)str, "%d", num);
+	char str[20], tmp = 0;
+	int len = 0, isNeg = 0, i = 0, j = 0;
+
+	DBG_PRINT(+, PRStringConstructorInt);
+
+	if (num < 0) {
+		isNeg = 1;
+		num = -num;
+	}
+
+	if (num == 0) {
+		str[len++] = '0';
+	} else {
+		while (num > 0) {
+			str[len++] = (char)(num % 10) + '0';
+			num /= 10;
+		}
+	}
+
+	if (isNeg) str[len++] = '-';
+
+	for (i = 0, j = len - 1; i < j; ++i, --j) {
+		tmp = str[i];
+		str[i] = str[j];
+		str[j] = tmp;
+	}
+
+	str[len] = 0;
+
+	DBG_PRINT(-, PRStringConstructorInt);
 	return PRStringConstructorCStr((char *)str);
 }
 
@@ -162,9 +189,29 @@ int PRStringCompare(struct String *lhs, struct String *rhs)
 
 int PRIntConstructor(struct String *str)
 {
-	int res;
+	int res = 0, isNeg = 0, i = 0;
 	DBG_PRINT(+, PRIntConstructor);
-	sscanf(str->str, "%d", &res);
+
+	if (str->length == 0) {
+		AbortWithErrorMessage("runtime error: invalid Int constructor argument string");
+	}
+
+	if (str->str[0] == '-') {
+		i++;
+		isNeg++;
+	}
+
+	for ( ; i < str->length; ++i) {
+		res *= 10;
+		if (!('0' <= str->str[i] && str->str[i] <= '9')) {
+			AbortWithErrorMessage("runtime error: invalid Int constructor argument string");
+		}
+		res += (str->str[i] - '0');
+	}
+
+	if (isNeg)
+		res = -res;
+
 	DBG_PRINT(-, PRIntConstructor);
 	return res;
 }

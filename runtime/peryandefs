@@ -70,8 +70,9 @@ extern pos :: Int -> Int -> Void
 extern color :: Int -> Int -> Int -> Void = -1, -1, -1
 extern bmpsave :: String -> Void
 extern dialog :: String -> Int -> Void
-extern await :: Int -> Void
-extern boxf :: Int -> Int -> Int -> Int -> Void = 0, 0, -1, -1
+extern wait :: Int -> Void
+extern await :: Int -> Void = 0
+extern boxf :: Int -> Int -> Int -> Int -> Void = 0, 0, ginfo_winx, ginfo_winy
 extern font :: String -> Int -> Void
 
 extern stick :: (ref Int) -> Int -> Int -> Void = , 0, 1
