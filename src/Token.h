@@ -14,6 +14,7 @@ public:
 	typedef enum {
 #define TOKEN(X) X,
 #include "Tokens.def"
+		PLACEHOLDER
 	} Type;
 
 private:
@@ -99,5 +100,6 @@ public:
 	~Token() {}
 };
 
-};
+}
+
 #endif

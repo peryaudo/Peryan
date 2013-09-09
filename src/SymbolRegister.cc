@@ -30,7 +30,7 @@ bool SymbolRegister::isDisallowedIdentifier(const std::string& name) {
 		"Label",
 		"cnt"
 	};
-	for (int i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
+	for (unsigned int i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
 		if (names[i] == name)
 			return true;
 	}

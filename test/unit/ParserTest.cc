@@ -304,4 +304,4 @@ TEST_F(ParserTest, ShorterIf) {
 	ASSERT_EQ(expected, parseAndPrint(source));
 }*/
 
-};
+}

@@ -80,8 +80,14 @@ int main(int argc, char *argv[])
 	}
 
 	if (opt.tmpDir.empty()) {
-		// TODO: rewrite this with Windows compatible style
 		char *tmpDir = getenv("TMPDIR");
+
+		// for Windows
+		if (tmpDir == NULL)
+			tmpDir = getenv("TMP");
+		if (tmpDir == NULL)
+			tmpDir = getenv("TEMP");
+
 		if (tmpDir == NULL) {
 			std::cerr<<"error: please set TMPDIR"<<std::endl;
 			return 1;
@@ -147,7 +153,7 @@ int main(int argc, char *argv[])
 	}
 	{
 		std::stringstream ss;
-		ss<<"clang -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/runtime.o\"";
+		ss<<"gcc -o \""<<opt.outputFileName<<"\" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/runtime.o\"";
 		if (opt.verbose) std::cerr<<ss.str()<<std::endl;
 		if (system(ss.str().c_str())) {
 			std::cerr<<"error: error while linking"<<std::endl;

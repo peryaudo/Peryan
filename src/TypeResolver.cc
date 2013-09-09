@@ -175,7 +175,7 @@ void TypeResolver::initPromotionTable() {
 #define REGISTER_BINARY_PROMOTION(TABLE, TOKEN_TYPES) \
 	for (int iLhs = 1; iLhs < 9; ++iLhs) \
 	for (int iRhs = 1; iRhs < 9; ++iRhs) \
-	for (int iToken = 0; iToken < sizeof(TOKEN_TYPES) / sizeof(TOKEN_TYPES[0]); ++iToken) \
+	for (unsigned int iToken = 0; iToken < sizeof(TOKEN_TYPES) / sizeof(TOKEN_TYPES[0]); ++iToken) \
 		if (TABLE[iLhs][iRhs] != NULL) \
 			binaryPromotionTable[\
 				BinaryPromotionKey(TABLE[iLhs][0], TOKEN_TYPES[iToken], TABLE[0][iRhs])] \
@@ -1601,5 +1601,5 @@ Type *TypeResolver::visit(StaticMemberExpr *sme) throw (SemanticsError) {
 	return sme->type;
 }
 
-};
+}
 

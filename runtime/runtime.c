@@ -78,8 +78,26 @@ int PRIntConstructor(struct String *str)
 
 int exec(struct String *str)
 {
-	DBG_PRINT(+-, exec);
-	return system(str->str);
+	DBG_PRINT(+, exec);
+	int i = 0, res = 0;
+	struct String *tmp = PRStringConstructorCStr(str->str);
+
+	// TODO: dirty hack to make tester run on both Unix and Windows
+#ifndef _WIN32
+	for (i = 0; i < tmp->length; ++i) {
+		if (tmp->str[i] == ' ')
+			break;
+
+		if (tmp->str[i] == '\\')
+			tmp->str[i] = '/';
+	}
+#endif
+
+	res = system(tmp->str);
+	PRStringDestructor(tmp);
+
+	DBG_PRINT(-, exec);
+	return res;
 }
 
 void dirlist(struct String **res, struct String *mask, int mode)

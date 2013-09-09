@@ -466,7 +466,7 @@ public:
 	NamespaceSymbol *symbol;
 };
 
-};
+}
 
 #endif
 

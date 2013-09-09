@@ -35,6 +35,6 @@ public:
 	void visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsError);
 };
 
-};
+}
 
 #endif

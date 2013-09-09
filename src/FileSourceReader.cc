@@ -8,7 +8,7 @@
 
 namespace Peryan {
 
-std::istream *FileSourceReader::open(const std::string& fileName) {
+std::istream *FileSourceReader::open(const std::string& fileName) throw (LexerError) {
 	if (ifstreams.count(fileName)) {
 		return ifstreams[fileName];
 	}
@@ -29,8 +29,9 @@ std::istream *FileSourceReader::open(const std::string& fileName) {
 	}
 
 	if (ifs == NULL) {
-		std::cerr<<"error: cannnot find a file "<<fileName_<<"in include paths"<<std::endl;
-		exit(1);
+		throw LexerError(-1, std::string("error: cannot find a file ")
+					+ fileName_
+					+ "in the include paths");
 	}
 
 	ifstreams[fileName] = ifs;
@@ -47,4 +48,4 @@ void FileSourceReader::close(const std::string& fileName) {
 	return;
 };
 
-};
+}

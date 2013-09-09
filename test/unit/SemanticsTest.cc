@@ -226,5 +226,5 @@ TEST_F(SemanticsTest, TooMuchArgumentsForFuncCall) {
 
 }
 
-};
+}
 

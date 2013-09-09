@@ -69,11 +69,11 @@ private:
 	void readSources() throw (LexerError);
 
 	std::string source_;
-	int p_;
+	unsigned int p_;
 
 	bool isPrevWS_;
 
-	void consume(int n = 1) {
+	void consume(unsigned int n = 1) {
 		if (p_ + n < source_.size()) {
 			p_ += n;
 		} else {
@@ -83,12 +83,12 @@ private:
 		isPrevWS_ = (source_[p_ - 1] == ' ' || source_[p_ - 1] == '\t');
 	}
 
-	char lookahead(int n = 0) {
+	char lookahead(unsigned int n = 0) {
 		return p_ + n < source_.size() ? source_[p_ + n] : 0;
 	}
 
 	std::string readIdentifier();
-	int readIdentifierLength();
+	unsigned int readIdentifierLength();
 	bool isFloatLiteral();
 	double readFloatLiteral();
 	int readHexLiteral() throw (LexerError);
@@ -107,8 +107,6 @@ public:
 	Lexer(SourceReader& fsr, Options& opt, WarningPrinter& wp);
 };
 
-
-
-};
+}
 
 #endif

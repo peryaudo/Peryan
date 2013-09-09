@@ -19,7 +19,7 @@ public:
 	virtual ~LLVMCodeGen();
 };
 
-};
+}
 
 #endif
 

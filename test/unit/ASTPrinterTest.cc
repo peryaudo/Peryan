@@ -23,4 +23,4 @@ TEST(ASTPRinterTest, SimpleTransUnit) {
 
 }
 
-};
+}

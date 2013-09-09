@@ -24,7 +24,7 @@ public:
 	}
 
 	virtual std::string getMainName() { return mainName_; }
-	virtual std::istream *open(const std::string& fileName) { return streams[fileName]; }
+	virtual std::istream *open(const std::string& fileName) throw (LexerError) { return streams[fileName]; }
 	virtual void close(const std::string& fileName) {
 		if (streams.count(fileName)) {
 			delete streams[fileName];
@@ -34,6 +34,6 @@ public:
 	}
 };
 
-};
+}
 
 #endif

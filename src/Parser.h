@@ -82,9 +82,9 @@ private:
 		return;
 	}
 
-	Token lt(int n = 0) throw (LexerError);
+	Token lt(unsigned int n = 0) throw (LexerError);
 
-	Token::Type la(int n = 0) throw (LexerError) {
+	Token::Type la(unsigned int n = 0) throw (LexerError) {
 		return lt(n).getType();
 	}
 
@@ -136,6 +136,6 @@ public:
 	SymbolTable& getSymbolTable() { return symbolTable_; }
 };
 
-};
+}
 
 #endif

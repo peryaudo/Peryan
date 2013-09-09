@@ -14,7 +14,7 @@ public:
 	virtual ~CodeGen() {}
 };
 
-};
+}
 
 #endif
 

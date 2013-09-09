@@ -211,7 +211,7 @@ public:
 		std::stringstream ss;
 		ss<<"(IfStmt "<<toString(is->ifCond)<<ind()<<toString(is->ifThen);
 
-		for (int i = 0; i < is->elseIfCond.size(); ++i)
+		for (unsigned int i = 0; i < is->elseIfCond.size(); ++i)
 			ss<<ind()<<toString(is->elseIfCond[i])<<ind()<<toString(is->elseIfThen[i]);
 
 		if (is->elseThen != NULL)
@@ -477,6 +477,6 @@ public:
 	}
 };
 
-};
+}
 
 #endif

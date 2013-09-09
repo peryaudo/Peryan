@@ -74,7 +74,7 @@ Token Lexer::getNextToken() throw (LexerError) {
 
 	// identifier might conflict with keywords and punctuators
 	// so we should know the length
-	const int identifierLength = readIdentifierLength();
+	const unsigned int identifierLength = readIdentifierLength();
 
 	// match keywords and punctuator tokens
 	for (std::vector<std::pair<std::string, Token::Type> >::iterator it = keywords.begin();
@@ -176,7 +176,7 @@ Token Lexer::getNextToken() throw (LexerError) {
 	throw LexerError(getPosition(), "error: invalid character");
 }
 
-int Lexer::readIdentifierLength() {
+unsigned int Lexer::readIdentifierLength() {
 	int len = 0;
 	if ('0' <= lookahead(0) && lookahead(0) <= '9')
 		return 0;
@@ -341,8 +341,8 @@ void Lexer::readSources() throw (LexerError) {
 		stream.line++;
 
 		if (line.find("#import") == 0) {
-			const int start = line.find("\"");
-			const int finish = line.find("\"", start + 1);
+			const size_t start = line.find("\"");
+			const size_t finish = line.find("\"", start + 1);
 
 			if (start == std::string::npos || finish == std::string::npos) {
 				throw LexerError(-1, "error: invalid import directive");
@@ -360,8 +360,8 @@ void Lexer::readSources() throw (LexerError) {
 				//source_ += "\n";
 			}
 		} else if (line.find("#include") == 0) {
-			const int start = line.find("\"");
-			const int finish = line.find("\"", start + 1);
+			const size_t start = line.find("\"");
+			const size_t finish = line.find("\"", start + 1);
 
 			if (start == std::string::npos || finish == std::string::npos) {
 				throw LexerError(-1, "error: invalid include directive");
@@ -417,7 +417,7 @@ std::string Lexer::getPrettyPrint(Position pos, std::string message) const {
 
 	int tabs = 0;
 	std::string line;
-	for (Position i = lastTerm + 1; i < source_.size() && source_[i] != '\n'; ++i) {
+	for (Position i = lastTerm + 1; i < static_cast<int>(source_.size()) && source_[i] != '\n'; ++i) {
 		line += source_[i];
 		if (source_[i] == '\t')
 			tabs++;
@@ -439,4 +439,5 @@ std::string LexerError::toString(const Lexer& lexer)
 		return lexer.getPrettyPrint(position_, message_);
 	}
 }
-};
+
+}

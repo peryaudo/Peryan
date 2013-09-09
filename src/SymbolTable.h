@@ -560,6 +560,6 @@ public:
 	GlobalScope *getGlobalScope() { return global_; }
 };
 
-};
+}
 
 #endif

@@ -15,8 +15,8 @@
 
 //#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<" "<<lt().toString()<<std::endl
 //#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #TYPE #FUNC_NAME)
-//#define DBG_PRINT(TYPE, FUNC_NAME) if (*(#TYPE) == '+') \
-//	std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #TYPE #FUNC_NAME)
+/* #define DBG_PRINT(TYPE, FUNC_NAME) if (*(#TYPE) == '+') \
+	std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #TYPE #FUNC_NAME) */
 
 
 #ifndef DBG_PRINT
@@ -28,7 +28,7 @@ namespace Peryan {
 std::string ParserError::toString(const Lexer& lexer) {
 	return lexer.getPrettyPrint(position_, message_);
 }
-Token Parser::lt(int n/* = 0 */) throw (LexerError) {
+Token Parser::lt(unsigned int n/* = 0 */) throw (LexerError) {
 	if (markers_.size() > 0) {
 		n += markers_.back();
 	}
@@ -1359,5 +1359,5 @@ NamespaceStmt *Parser::parseNamespaceStmt() throw (LexerError, ParserError) {
 }
 
 
-};
+}
 

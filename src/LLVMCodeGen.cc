@@ -1936,5 +1936,5 @@ llvm::Value *LLVMCodeGen::Impl::lookup(const std::string& str) {
 	return NULL;
 }
 
-};
+}
 

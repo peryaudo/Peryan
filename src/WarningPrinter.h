@@ -23,6 +23,6 @@ public:
 	void print(Lexer& lexer);
 };
 
-};
+}
 
 #endif

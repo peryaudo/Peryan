@@ -22,7 +22,7 @@ public:
 	LexerTest() : ssr("main.pr"), lexer(ssr, opt, wp) {
 	}
 
-	void lexAndCompare(const char *expected[], int len) {
+	void lexAndCompare(const char *expected[], unsigned int len) {
 		std::vector<Peryan::Token> tokens;
 
 		while (true) {
@@ -35,7 +35,7 @@ public:
 
 		ASSERT_TRUE(len == tokens.size());
 
-		for (int i = 0; i < len; ++i) {
+		for (unsigned int i = 0; i < len; ++i) {
 			std::stringstream ss;
 			ss<<i<<": ";
 			ASSERT_EQ(ss.str() + std::string(expected[i]), ss.str() + tokens[i].toString());
@@ -151,4 +151,4 @@ TEST_F(LexerTest, PrettyPrint) {
 
 }
 
-};
+}

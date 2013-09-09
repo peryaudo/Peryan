@@ -501,8 +501,8 @@ Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) throw (SemanticsError) {
 				+ std::string("\""));
 	}
 
-	assert(symbol->getSymbolType() == Symbol::BUILTIN_TYPE_SYMBOL
-	    || symbol->getSymbolType() == Symbol::NAMESPACE_SYMBOL && "class not supported yet");
+	assert((symbol->getSymbolType() == Symbol::BUILTIN_TYPE_SYMBOL
+	    || symbol->getSymbolType() == Symbol::NAMESPACE_SYMBOL) && "class not supported yet");
 
 	if (symbol->getSymbolType() == Symbol::BUILTIN_TYPE_SYMBOL) {
 		BuiltInTypeSymbol *bts = static_cast<BuiltInTypeSymbol *>(symbol);
@@ -591,5 +591,5 @@ Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) throw (SemanticsE
 	return mts->type;
 }
 
-};
+}
 

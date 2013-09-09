@@ -15,4 +15,4 @@ void WarningPrinter::print(Lexer& lexer) {
 	return;
 }
 
-};
+}

@@ -25,7 +25,7 @@ repeat total
 
 	var cur = ""
 
-	cur = "../../src/peryan --runtime-path ../../runtime " + fileName + " compiled/" + baseName
+	cur = "..\\..\\src\\peryan --runtime-path ../../runtime " + fileName + " compiled/" + baseName
 	ret = exec(cur)
 	if ret != 0 {
 		mes "\e[31m[          ]\e[0m Error while executing: " + cur
@@ -33,7 +33,7 @@ repeat total
 	}
 
 	if succeeded {
-		cur = "compiled/" + baseName + " > " + "actual/" + baseName + ".txt"
+		cur = "compiled\\" + baseName + " > " + "actual/" + baseName + ".txt"
 		ret = exec(cur)
 		if ret != 0 {
 			mes "\e[31m[          ]\e[0m Error while executing: " + cur
