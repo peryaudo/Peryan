@@ -5,7 +5,39 @@
 
 #include "common.h"
 
-extern void PeryanMain();
+#include <stdio.h>
+#include <stdlib.h>
+
+void *PRMalloc(unsigned int size)
+{
+	DBG_PRINT(+-, PRMalloc);
+	return malloc(size);
+}
+
+void PRFree(void *ptr)
+{
+	DBG_PRINT(+, PRMalloc);
+	free(ptr);
+	DBG_PRINT(-, PRMalloc);
+	return;
+}
+
+void *PRRealloc(void *ptr, int size)
+{
+	DBG_PRINT(+-, PRRealloc);
+	return realloc(ptr, size);
+}
+
+
+void AbortWithErrorMessage(const char *format, ...) {
+	va_list arg;
+	va_start(arg, format);
+	vfprintf(stderr, format, arg);
+	fprintf(stderr, "\n");
+	va_end(arg);
+	exit(1);
+	return;
+}
 
 /* Main function (will be separated to each platform) */
 int main(int argc, char *argv[])
@@ -100,4 +132,35 @@ void dirlist(struct String **res, struct String *mask, int mode)
 	DBG_PRINT(-, dirlist);
 	return;
 }
+
+void noteload(struct String *fileName)
+{
+	FILE *fp = NULL;
+	char tmp[512];
+
+	if (noteTarget_ == NULL) {
+		AbortWithErrorMessage("runtime error: no buffer selected");
+		exit(-1);
+	}
+
+	PRStringDestructor(*noteTarget_);
+	*noteTarget_ = PRStringConstructorVoid();
+
+	fp = fopen(fileName->str, "r");
+	if (fp == NULL) {
+		AbortWithErrorMessage("runtime error: cannot open the file %s", fileName->str);
+		exit(-1);
+	}
+
+	while (1) {
+		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)
+			break;
+
+		PRStringAppendCStr(*noteTarget_, tmp);
+	}
+
+	fclose(fp);
+	return;
+}
+
 

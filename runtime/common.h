@@ -1,32 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <math.h>
 #include <assert.h>
+
+/* aims it will be the last dependency on C standard library */
+#include <stdarg.h>
+
+extern void PeryanMain();
 
 void *PRMalloc(unsigned int size);
 void PRFree(void *ptr);
 void *PRRealloc(void *ptr, int size);
 
-void *PRMalloc(unsigned int size)
-{
-	DBG_PRINT(+-, PRMalloc);
-	return malloc(size);
-}
-
-void PRFree(void *ptr)
-{
-	DBG_PRINT(+, PRMalloc);
-	free(ptr);
-	DBG_PRINT(-, PRMalloc);
-	return;
-}
-
-void *PRRealloc(void *ptr, int size)
-{
-	DBG_PRINT(+-, PRRealloc);
-	return realloc(ptr, size);
-}
+void AbortWithErrorMessage(const char *format, ...);
 
 int stat = 0;
 
@@ -40,17 +24,24 @@ struct String {
 
 struct String *PRStringConstructorCStr(char *cStr)
 {
+	int i = 0;
 	struct String *res = NULL;
 	DBG_PRINT(+, PRStringConstructorCStr);
 
 	res = PRMalloc(sizeof(struct String));
+	if (res == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
 
-	res->length = strlen(cStr);
+	for (res->length = 0; cStr[res->length] != 0; )
+		res->length++;
 
 	res->capacity = res->length + 1;
 
 	res->str = PRMalloc(res->capacity);
-	strcpy(res->str, cStr);
+	if (res->str == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
+
+	for (i = 0; (res->str[i] = cStr[i]) != 0; ++i) ;
 
 	DBG_PRINT(-, PRStringConstructorCStr);
 	return res;
@@ -72,17 +63,23 @@ struct String *PRStringConstructorInt(int num)
 
 struct String *PRStringConcatenate(struct String *lhs, struct String *rhs)
 {
+	int i = 0;
 	struct String *res = NULL;
 	DBG_PRINT(+, PRStringConcatenate);
 
 	res = PRMalloc(sizeof(struct String));
+	if (res == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
 
 	res->length = lhs->length + rhs->length;
 	res->capacity = res->length + 1;
 
 	res->str = PRMalloc(res->capacity);
-	strcpy(res->str, lhs->str);
-	strcpy(res->str + lhs->length, rhs->str);
+	if (res->str == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
+
+	for (i = 0; (res->str[i] = lhs->str[i]) != 0; ++i) ;
+	for (i = 0; (res->str[i + lhs->length] = rhs->str[i]) != 0; ++i) ;
 
 	DBG_PRINT(-, PRStringConcatenate);
 	return res;
@@ -93,7 +90,9 @@ void PRStringAppendCStr(struct String *lhs, const char *rhs) {
 	int i = 0;
 
 	DBG_PRINT(+, PRStringAppendCStr);
-	rhsLength = strlen(rhs);
+
+	for (rhsLength = 0; rhs[rhsLength] != 0; )
+		rhsLength++;
 
 	while(!(lhs->length + rhsLength < lhs->capacity)) {
 		lhs->capacity *= 2;
@@ -146,7 +145,17 @@ void PRStringDestructor(struct String *str)
 
 int PRStringCompare(struct String *lhs, struct String *rhs)
 {
-	return strcmp(lhs->str, rhs->str);
+	int sameLen = 0;
+	while (lhs->str[sameLen] != 0 && lhs->str[sameLen] == rhs->str[sameLen])
+		++sameLen;
+
+	if (lhs->str[sameLen] == rhs->str[sameLen]) {
+		return 0;
+	} else if (lhs->str[sameLen] > rhs->str[sameLen]) {
+		return 1;
+	} else { // lhs->str[sameLen] < rhs->str[sameLen])
+		return -1;
+	}
 }
 
 /* End implementation of built-in String */
@@ -172,11 +181,15 @@ struct String *strmid(struct String *str, int start, int length)
 	struct String *res = NULL;
 
 	res = PRMalloc(sizeof(struct String));
+	if (res == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
 
 	res->length = length;
 	res->capacity = res->length + 1;
 
 	res->str = PRMalloc(res->capacity);
+	if (res->str == NULL)
+		AbortWithErrorMessage("runtime error: failed to allocate memory");
 	for (i = 0; i < length; ++i) {
 		res->str[i] = str->str[start + i];
 	}
@@ -226,7 +239,7 @@ int noteinfo(int option)
 	int res = 0;
 
 	if (noteTarget_ == NULL) {
-		fprintf(stderr, "runtime error: no buffer selected\n");
+		AbortWithErrorMessage("runtime error: no buffer selected");
 		exit(-1);
 	}
 
@@ -248,7 +261,7 @@ int noteinfo(int option)
 	} else if (option == 1) {
 		return (*noteTarget_)->length;
 	} else {
-		fprintf(stderr, "runtime error: unknown noteinfo option %d\n", option);
+		AbortWithErrorMessage("runtime error: unknown noteinfo option %d", option);
 		exit(-1);
 	}
 }
@@ -260,7 +273,7 @@ void noteget(struct String** res, int idx)
 
 	DBG_PRINT(+, noteget);
 	if (noteTarget_ == NULL) {
-		fprintf(stderr, "runtime error: no buffer selected\n");
+		AbortWithErrorMessage("runtime error: no buffer selected");
 		exit(-1);
 	}
 
@@ -281,7 +294,7 @@ void noteget(struct String** res, int idx)
 	}
 
 	if (begin == -1) {
-		fprintf(stderr, "runtime error: invalid index %d for noteget\n", idx);
+		AbortWithErrorMessage("runtime error: invalid index %d for noteget", idx);
 		exit(-1);
 	}
 	if (end == -1)
@@ -296,35 +309,6 @@ void noteget(struct String** res, int idx)
 	PRStringAppend(*res, &tmp);
 
 	DBG_PRINT(-, noteget);
-	return;
-}
-void noteload(struct String *fileName)
-{
-	FILE *fp = NULL;
-	char tmp[512];
-
-	if (noteTarget_ == NULL) {
-		fprintf(stderr, "runtime error: no buffer selected\n");
-		exit(-1);
-	}
-
-	PRStringDestructor(*noteTarget_);
-	*noteTarget_ = PRStringConstructorVoid();
-
-	fp = fopen(fileName->str, "r");
-	if (fp == NULL) {
-		fprintf(stderr, "runtime error: cannot open the file %s\n", fileName->str);
-		exit(-1);
-	}
-
-	while (1) {
-		if (fgets(tmp, sizeof(tmp) / sizeof(tmp[0]), fp) == NULL)
-			break;
-
-		PRStringAppendCStr(*noteTarget_, tmp);
-	}
-
-	fclose(fp);
 	return;
 }
 

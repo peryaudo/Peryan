@@ -1,0 +1,8 @@
+title "several Hello Worlds"
+
+var total = 20
+
+repeat total 
+	color 200 * cnt / total, 200 * cnt / total, 200 * cnt / total
+	mes "Hello, World!"
+loop
