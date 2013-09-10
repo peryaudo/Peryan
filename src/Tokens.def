@@ -10,6 +10,10 @@
 #define KEYWORD(X,Y) TOKEN(KW_ ## X)
 #endif
 
+#ifndef DIRECTIVE
+#define DIRECTIVE(X,Y) TOKEN(DR_ ## X)
+#endif
+
 // Tokens
 TOKEN(UNKNOWN)
 TOKEN(ID)
@@ -100,6 +104,8 @@ KEYWORD(RETURN, "return")
 KEYWORD(EXTERN, "extern")
 
 KEYWORD(PARTIAL, "partial")
+
+DIRECTIVE(RUNTIME, "#runtime")
 
 #undef TOKEN
 #undef NONTOKEN

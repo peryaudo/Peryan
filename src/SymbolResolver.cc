@@ -327,6 +327,7 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) throw (SemanticsError) 
 				wp_.add(id->token.getPosition(),
 					"warning: implicit global variable declaration is deprecated");
 				VarSymbol *varSymbol = new VarSymbol(id->getString(), 0);
+				varSymbol->isImplicit = true;
 				bool res = symbolTable_.getGlobalScope()->define(varSymbol);
 				assert(res == false);
 				symbol = varSymbol;

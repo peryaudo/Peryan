@@ -331,10 +331,13 @@ class VarSymbol : public Symbol {
 public:
 	virtual SymbolType getSymbolType() { return VAR_SYMBOL; }
 
+	// implicitly declared variable symbol
+	bool isImplicit;
+
 	VarSymbol(const std::string& name, Position position)
-		: Symbol(name, position) {}
+		: Symbol(name, position), isImplicit(false) {}
 	VarSymbol(const std::string& name, Type *type, Position position)
-		: Symbol(name, type, position) {}
+		: Symbol(name, type, position), isImplicit(false) {}
 };
 
 class LabelSymbol : public Symbol {

@@ -125,6 +125,16 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 			return std::vector<Stmt *>(1, parseExternStmt());
 		} else if (la(0) == Token::KW_NAMESPACE) {
 			return std::vector<Stmt *>(1, parseNamespaceStmt());
+		} else if (la(0) == Token::DR_RUNTIME) {
+			consume();
+
+			if (la(0) != Token::STRING || la(1) == Token::TERM) {
+				throw ParserError(getPosition(), "error: invalid runtime directive");
+			}
+			options_.runtime = lt(0).getString();
+			consume(2);
+
+			return parseStmt(isTopLevel, withoutTerm);
 		}
 	}
 

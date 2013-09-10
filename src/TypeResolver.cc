@@ -428,6 +428,24 @@ void TypeResolver::visit(TransUnit *tu) throw (SemanticsError) {
 				"error: cannot resolve the type of the expression, variable or function");
 	}
 
+	{
+		// insert VarDefStmt for implicitly declared variables
+		std::vector<Stmt *> varDefs;
+		for (GlobalScope::iterator it = tu->scope->begin(); it != tu->scope->end(); ++it) {
+			if ((*it)->getSymbolType() == Symbol::VAR_SYMBOL
+				&& static_cast<VarSymbol *>(*it)->isImplicit) {
+				VarDefStmt *vds =
+					new VarDefStmt(Token(Token::KW_VAR, 0),
+						new Identifier(Token(Token::ID, (*it)->getSymbolName(), 0)),
+						NULL);
+				vds->symbol = static_cast<VarSymbol *>(*it);
+				vds->id->type = (*it)->getType();
+				varDefs.push_back(vds);
+			}
+		}
+		tu->stmts.insert(tu->stmts.begin(), varDefs.begin(), varDefs.end());
+	}
+
 	DBG_PRINT(-, TransUnit);
 	return;
 }
