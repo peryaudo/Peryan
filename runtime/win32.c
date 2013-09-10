@@ -71,7 +71,7 @@ int ginfo_mesy = 0;
 int ginfo_r = 0;
 int ginfo_g = 0;
 int ginfo_b = 0;
-int mousex = 0, mousey = 0, mousew = 0;
+int mousex = 0, mousey = 0, mousez = 0, mousew = 0;
 
 struct WinPeryanContext {
 	HWND hWnd;
@@ -85,6 +85,9 @@ struct WinPeryanContext {
 	HBITMAP hPrevRedrawBitmap;
 
 	int redraw;
+	int prevStick;
+
+	HFONT hFont;
 };
 
 static struct WinPeryanContext *ctx = NULL;
@@ -103,6 +106,9 @@ void InitializeWinPeryanContext()
 	ctx->hPrevRedrawBitmap = NULL;
 
 	ctx->redraw = 1;
+	ctx->prevStick = 0;
+
+	ctx->hFont = NULL;
 
 	return;
 }
@@ -234,6 +240,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		EndPaint(ctx->hWnd, &ps);
 		break;
 
+	case WM_MOUSEWHEEL:
+		mousez = LOWORD(wParam);
+		mousew = HIWORD(wParam);
+		break;
+
+	case WM_MOUSEMOVE:
+		mousex = LOWORD(lParam);
+		mousey = HIWORD(lParam);
+		break;
+
 	default:
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
@@ -345,16 +361,16 @@ void mes(struct String *str)
 	LONG res = 0;
 	DBG_PRINT(+, mes);
 
+	if (ctx->hFont != NULL)
+		SelectObject(GetCurrentDC(), ctx->hFont);
+
 	SetTextColor(GetCurrentDC(), RGB(ginfo_r, ginfo_g, ginfo_b));
 	res = TabbedTextOut(GetCurrentDC(), ginfo_cx, ginfo_cy, str->str, str->length, 0, NULL, 0);
 	
-	ginfo_mesx = res & 0xFFFF;
-	ginfo_mesy = (res & 0xFFFF0000) >> 16;
+	ginfo_mesx = LOWORD(res);
+	ginfo_mesy = HIWORD(res);
 
 	ginfo_cy += ginfo_mesy;
-
-	RECT rect;
-	rect.top = 0; rect.left = 0; rect.right = ginfo_winx; rect.bottom = ginfo_winy;
 
 	RefreshMainDC();
 
@@ -483,3 +499,75 @@ void await(int msec)
 	ProcessWindowMessages();
 	return;
 }
+
+void stick(int *res, int nonTrigger, int checkWindowFocus)
+{
+	/* TODO: rewrite in defined constants... */
+	int keys[] = {37, 38, 39, 40, 32, 13, 17, 27, 1, 2, 9};
+	int curStick = 0;
+	unsigned int i = 0;
+
+	*res = 0;
+
+	if (checkWindowFocus && GetActiveWindow() == NULL)
+		return;
+
+	for (i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
+		/* the LSB of GetAsyncKeyState, which is documented in MSDN, is useless in the case */
+		if (GetAsyncKeyState(keys[i]) & 0x8000) {
+			curStick = 1 << i;
+
+			/* not previously pressed or non-triggered */
+			if (!(ctx->prevStick & (1 << i)) || (nonTrigger & (1 << i)))
+				*res = 1 << i;
+		}
+	}
+	ctx->prevStick = curStick;
+
+	return;
+}
+
+void getkey(int *res, int keyCode)
+{
+	*res = ((GetAsyncKeyState(keyCode) & 0x8000) ? 1 : 0);
+	return;
+}
+
+void font(struct String *fontName, int size, int style)
+{
+	int i = 0, iMax = 0;
+	LOGFONT lf;
+	ZeroMemory(&lf, sizeof(lf));
+
+	if (ctx->hFont != NULL) {
+		DeleteObject(ctx->hFont);
+		ctx->hFont = NULL;
+	}
+
+	lf.lfHeight = -size;
+	lf.lfWidth = lf.lfEscapement = lf.lfOrientation = 0;
+
+	lf.lfWeight	= (style & (1 << 0) ? FW_BOLD : FW_NORMAL);
+	lf.lfItalic	= (style & (1 << 1) ? TRUE : FALSE);
+	lf.lfUnderline	= (style & (1 << 2) ? TRUE : FALSE);
+	lf.lfStrikeOut	= (style & (1 << 3) ? TRUE : FALSE);
+
+	lf.lfCharSet = DEFAULT_CHARSET;
+	lf.lfOutPrecision = lf.lfClipPrecision = 0;
+
+	lf.lfQuality	= (style & (1 << 4) ? ANTIALIASED_QUALITY : DEFAULT_QUALITY);
+
+	lf.lfPitchAndFamily = 0;
+
+	iMax = LF_FACESIZE - 1 > fontName->length ? fontName->length : LF_FACESIZE - 1;
+	for (i = 0; i < iMax; ++i)
+		lf.lfFaceName[i] = fontName->str[i];
+	lf.lfFaceName[iMax] = 0;
+
+	ctx->hFont = CreateFontIndirect(&lf);
+	if(ctx->hFont == NULL)
+		AbortWithErrorMessage("runtime error: cannot create font");
+
+	return;
+}
+

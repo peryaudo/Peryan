@@ -62,6 +62,7 @@ extern limitf :: Double -> Double -> Double -> Double
 
 extern mousex :: Int
 extern mousey :: Int
+extern mousez :: Int
 extern mousew :: Int
 extern ginfo_winx :: Int
 extern ginfo_winy :: Int
