@@ -8,7 +8,7 @@
 
 namespace Peryan {
 
-std::istream *FileSourceReader::open(const std::string& fileName) throw (LexerError) {
+std::istream *FileSourceReader::open(const std::string& fileName) {
 	if (ifstreams.count(fileName)) {
 		return ifstreams[fileName];
 	}

@@ -27,7 +27,7 @@ void Lexer::initializeKeywords() {
 }
 
 
-Token Lexer::getNextToken() throw (LexerError) {
+Token Lexer::getNextToken() {
 	if (breadcrumbs_.size() == 0) {
 		readSources();
 	}
@@ -201,7 +201,7 @@ std::string Lexer::readIdentifier() {
 	return identifier;
 }
 
-std::string Lexer::readCharOrStringLiteral(char terminator) throw (LexerError) {
+std::string Lexer::readCharOrStringLiteral(char terminator) {
 	std::string str;
 	consume();
 	Position begPos = getPosition();
@@ -229,7 +229,7 @@ std::string Lexer::readCharOrStringLiteral(char terminator) throw (LexerError) {
 	return str;
 }
 
-int Lexer::readHexLiteral() throw (LexerError) {
+int Lexer::readHexLiteral() {
 	int num = 0;
 
 	bool nothing = true;
@@ -272,7 +272,7 @@ int Lexer::readDecimalLiteral() {
 	return num;
 }
 
-int Lexer::readBinaryLiteral() throw (LexerError) {
+int Lexer::readBinaryLiteral() {
 	int num = 0;
 	bool nothing = true;
 	while ('0' == lookahead() || lookahead() == '1') {
@@ -304,7 +304,7 @@ double Lexer::readFloatLiteral() {
 	return integer + static_cast<double>(fractional) / fracLength;
 }
 
-void Lexer::readSources() throw (LexerError) {
+void Lexer::readSources() {
 	std::set<std::string> imported;
 	imported.insert(sr_.getMainName());
 

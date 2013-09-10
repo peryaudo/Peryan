@@ -58,6 +58,10 @@ func cos(x :: Double) :: Double {
 	return cos_(x)
 }
 
+extern ginfo_r :: Int
+extern ginfo_g :: Int
+extern ginfo_b :: Int
+
 extern limitf :: Double -> Double -> Double -> Double
 
 extern mousex :: Int

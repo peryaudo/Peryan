@@ -392,7 +392,7 @@ double sqrt_(double num) {
 	return res;
 }
 
-double M_PI = 3.14159265358979323846;
+/* double M_PI = 3.14159265358979323846; */
 
 double cos_(double x) {
 	return cos(x);

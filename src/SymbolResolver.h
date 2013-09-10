@@ -21,42 +21,42 @@ public:
 	SymbolResolver(SymbolTable& symbolTable, Options& options, WarningPrinter& wp)
 		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
-	void visit(TransUnit *tu) throw (SemanticsError);
+	void visit(TransUnit *tu);
 
-	void visit(Stmt *stmt, Scope *scope) throw (SemanticsError);
-	void visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError);
-	void visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError);
-	void visit(InstStmt *is, Scope *scope) throw (SemanticsError);
-	void visit(AssignStmt *as, Scope *scope) throw (SemanticsError);
-	void visit(CompStmt *cs, Scope *scope) throw (SemanticsError);
-	void visit(IfStmt *is, Scope *scope) throw (SemanticsError);
-	void visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError);
-	void visit(GotoStmt *gs, Scope *scope) throw (SemanticsError);
-	void visit(GosubStmt *gs, Scope *scope) throw (SemanticsError);
-	void visit(ReturnStmt *rs, Scope *scope) throw (SemanticsError);
-	void visit(ExternStmt *es, Scope *scope) throw (SemanticsError);
-	void visit(NamespaceStmt *ns, Scope *Scope) throw (SemanticsError);
-	void visit(Expr *expr, Scope *scope) throw (SemanticsError);
-	void visit(Identifier *id, Scope *scope) throw (SemanticsError);
-	void visit(Label *label, Scope *scope) throw (SemanticsError);
-	void visit(BinaryExpr *be, Scope *scope) throw (SemanticsError);
-	void visit(UnaryExpr *ue, Scope *scope) throw (SemanticsError);
-	void visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsError);
-	void visit(StrLiteralExpr *lit, Scope *scope) throw (SemanticsError);
-	void visit(CharLiteralExpr *lit, Scope *scope) throw (SemanticsError);
-	void visit(FloatLiteralExpr *lit, Scope *scope) throw (SemanticsError);
-	void visit(BoolLiteralExpr *lit, Scope *scope) throw (SemanticsError);
-	void visit(FuncCallExpr *fce, Scope *scope) throw (SemanticsError);
-	void visit(ConstructorExpr *fce, Scope *scope) throw (SemanticsError);
-	void visit(SubscrExpr *se, Scope *scope) throw (SemanticsError);
+	void visit(Stmt *stmt, Scope *scope);
+	void visit(FuncDefStmt *fds, Scope *scope);
+	void visit(VarDefStmt *vds, Scope *scope);
+	void visit(InstStmt *is, Scope *scope);
+	void visit(AssignStmt *as, Scope *scope);
+	void visit(CompStmt *cs, Scope *scope);
+	void visit(IfStmt *is, Scope *scope);
+	void visit(RepeatStmt *rs, Scope *scope);
+	void visit(GotoStmt *gs, Scope *scope);
+	void visit(GosubStmt *gs, Scope *scope);
+	void visit(ReturnStmt *rs, Scope *scope);
+	void visit(ExternStmt *es, Scope *scope);
+	void visit(NamespaceStmt *ns, Scope *Scope);
+	void visit(Expr *expr, Scope *scope);
+	void visit(Identifier *id, Scope *scope);
+	void visit(Label *label, Scope *scope);
+	void visit(BinaryExpr *be, Scope *scope);
+	void visit(UnaryExpr *ue, Scope *scope);
+	void visit(IntLiteralExpr *lit, Scope *scope);
+	void visit(StrLiteralExpr *lit, Scope *scope);
+	void visit(CharLiteralExpr *lit, Scope *scope);
+	void visit(FloatLiteralExpr *lit, Scope *scope);
+	void visit(BoolLiteralExpr *lit, Scope *scope);
+	void visit(FuncCallExpr *fce, Scope *scope);
+	void visit(ConstructorExpr *fce, Scope *scope);
+	void visit(SubscrExpr *se, Scope *scope);
 
 	// always disallow implicit variable declaration in these situation
-	void visit(MemberExpr *me, Scope *scope) throw (SemanticsError);
-	void visit(StaticMemberExpr *sme, Scope *scope) throw (SemanticsError);
-	Type *visit(TypeSpec *ts, Scope *scope) throw (SemanticsError);
-	ArrayType *visit(ArrayTypeSpec *ts, Scope *scope) throw (SemanticsError);
-	FuncType *visit(FuncTypeSpec *fs, Scope *scope) throw (SemanticsError);
-	Type *visit(MemberTypeSpec *mts, Scope *scope) throw (SemanticsError);
+	void visit(MemberExpr *me, Scope *scope);
+	void visit(StaticMemberExpr *sme, Scope *scope);
+	Type *visit(TypeSpec *ts, Scope *scope);
+	ArrayType *visit(ArrayTypeSpec *ts, Scope *scope);
+	FuncType *visit(FuncTypeSpec *fs, Scope *scope);
+	Type *visit(MemberTypeSpec *mts, Scope *scope);
 };
 
 };

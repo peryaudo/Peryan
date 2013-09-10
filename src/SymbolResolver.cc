@@ -15,7 +15,7 @@
 
 namespace Peryan {
 
-void SymbolResolver::visit(TransUnit *tu) throw (SemanticsError) {
+void SymbolResolver::visit(TransUnit *tu) {
 	DBG_PRINT(+, TransUnit);
 	assert(tu != NULL);
 
@@ -29,7 +29,7 @@ void SymbolResolver::visit(TransUnit *tu) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(Stmt *stmt, Scope *scope) {
 	DBG_PRINT(+, Stmt);
 	assert(stmt != NULL);
 
@@ -53,7 +53,7 @@ void SymbolResolver::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) {
 	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
 
@@ -105,7 +105,7 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 	return;
 }
 
-void SymbolResolver::visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(VarDefStmt *vds, Scope *scope) {
 	DBG_PRINT(+, VarDefStmt);
 	assert(vds != NULL);
 
@@ -118,7 +118,7 @@ void SymbolResolver::visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError)
 	return;
 }
 
-void SymbolResolver::visit(InstStmt *is, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(InstStmt *is, Scope *scope) {
 	DBG_PRINT(+, InstStmt);
 	assert(is != NULL);
 
@@ -134,7 +134,7 @@ void SymbolResolver::visit(InstStmt *is, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(AssignStmt *as, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(AssignStmt *as, Scope *scope) {
 	DBG_PRINT(+, AssignStmt);
 	assert(as != NULL);
 
@@ -147,7 +147,7 @@ void SymbolResolver::visit(AssignStmt *as, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(CompStmt *cs, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(CompStmt *cs, Scope *scope) {
 	DBG_PRINT(+, CompStmt);
 	assert(cs != NULL);
 
@@ -162,7 +162,7 @@ void SymbolResolver::visit(CompStmt *cs, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(IfStmt *is, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(IfStmt *is, Scope *scope) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
@@ -181,7 +181,7 @@ void SymbolResolver::visit(IfStmt *is, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(RepeatStmt *rs, Scope *scope) {
 	DBG_PRINT(+, RepeatStmt);
 	assert(rs != NULL);
 
@@ -200,7 +200,7 @@ void SymbolResolver::visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(GotoStmt *gs, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(GotoStmt *gs, Scope *scope) {
 	DBG_PRINT(+, GotoStmt);
 	assert(gs != NULL);
 
@@ -210,7 +210,7 @@ void SymbolResolver::visit(GotoStmt *gs, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(GosubStmt *gs, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(GosubStmt *gs, Scope *scope) {
 	DBG_PRINT(+, GosubStmt);
 	assert(gs != NULL);
 
@@ -220,7 +220,7 @@ void SymbolResolver::visit(GosubStmt *gs, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(ReturnStmt *rs, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(ReturnStmt *rs, Scope *scope) {
 	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
 
@@ -231,7 +231,7 @@ void SymbolResolver::visit(ReturnStmt *rs, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(ExternStmt *es, Scope *scope) {
 	DBG_PRINT(+, ExternStmt);
 	assert(es != NULL);
 	assert(es->id != NULL);
@@ -258,13 +258,13 @@ void SymbolResolver::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) 
 	DBG_PRINT(+, ExternStmt);
 }
 
-void SymbolResolver::visit(NamespaceStmt *ns, Scope *Scope) throw (SemanticsError) {
+void SymbolResolver::visit(NamespaceStmt *ns, Scope *Scope) {
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
 		visit(*it, ns->symbol);
 }
 
 
-void SymbolResolver::visit(Expr *expr, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(Expr *expr, Scope *scope) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
 
@@ -291,7 +291,7 @@ void SymbolResolver::visit(Expr *expr, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(Identifier *id, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(Identifier *id, Scope *scope) {
 	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->type == NULL);
@@ -343,7 +343,7 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(Label *label, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(Label *label, Scope *scope) {
 	DBG_PRINT(+, Label);
 	assert(label != NULL);
 	assert(scope != NULL);
@@ -362,7 +362,7 @@ void SymbolResolver::visit(Label *label, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(BinaryExpr *be, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(BinaryExpr *be, Scope *scope) {
 	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
@@ -375,7 +375,7 @@ void SymbolResolver::visit(BinaryExpr *be, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) {
 	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
@@ -385,38 +385,38 @@ void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+, IntLiteralExpr);
 	assert(lit != NULL);
 	DBG_PRINT(-, IntLiteralExpr);
 	return;
 }
 
-void SymbolResolver::visit(StrLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(StrLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(CharLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(CharLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(FuncCallExpr *fce, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(FuncCallExpr *fce, Scope *scope) {
 	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 	assert(fce->func != NULL);
@@ -432,7 +432,7 @@ void SymbolResolver::visit(FuncCallExpr *fce, Scope *scope) throw (SemanticsErro
 	return;
 }
 
-void SymbolResolver::visit(ConstructorExpr *ce, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(ConstructorExpr *ce, Scope *scope) {
 	DBG_PRINT(+, ConstructorExpr);
 	assert(ce != NULL);
 
@@ -447,7 +447,7 @@ void SymbolResolver::visit(ConstructorExpr *ce, Scope *scope) throw (SemanticsEr
 	return;
 }
 
-void SymbolResolver::visit(SubscrExpr *se, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(SubscrExpr *se, Scope *scope) {
 	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
@@ -458,7 +458,7 @@ void SymbolResolver::visit(SubscrExpr *se, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(MemberExpr *me, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(MemberExpr *me, Scope *scope) {
 	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
@@ -473,7 +473,7 @@ void SymbolResolver::visit(MemberExpr *me, Scope *scope) throw (SemanticsError) 
 	return;
 }
 
-void SymbolResolver::visit(StaticMemberExpr *sme, Scope *scope) throw (SemanticsError) {
+void SymbolResolver::visit(StaticMemberExpr *sme, Scope *scope) {
 	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 
@@ -483,7 +483,7 @@ void SymbolResolver::visit(StaticMemberExpr *sme, Scope *scope) throw (Semantics
 	return;
 }
 
-Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) throw (SemanticsError) {
+Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) {
 	DBG_PRINT(+, TypeSpec);
 	assert(ts != NULL);
 
@@ -528,7 +528,7 @@ Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) throw (SemanticsError) {
 	return ts->type;
 }
 
-ArrayType *SymbolResolver::visit(ArrayTypeSpec *ats, Scope *scope) throw (SemanticsError) {
+ArrayType *SymbolResolver::visit(ArrayTypeSpec *ats, Scope *scope) {
 	DBG_PRINT(+, ArrayTypeSpec);
 	assert(ats != NULL);
 
@@ -544,7 +544,7 @@ ArrayType *SymbolResolver::visit(ArrayTypeSpec *ats, Scope *scope) throw (Semant
 	return at;
 }
 
-FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) throw (SemanticsError) {
+FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) {
 	DBG_PRINT(+, FuncTypeSpec);
 	assert(fts != NULL);
 
@@ -560,7 +560,7 @@ FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) throw (Semantic
 	return ft;
 }
 
-Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) throw (SemanticsError) {
+Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) {
 	DBG_PRINT(+, MemberTypeSpec);
 	assert(mts != NULL);
 

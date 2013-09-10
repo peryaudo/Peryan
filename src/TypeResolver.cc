@@ -367,7 +367,7 @@ void TypeResolver::addTypeConstraint(Type *constraint, TypeVar typeVar) {
 	return;
 }
 
-void TypeResolver::visit(TransUnit *tu) throw (SemanticsError) {
+void TypeResolver::visit(TransUnit *tu) {
 	DBG_PRINT(+, TransUnit);
 	assert(tu != NULL);
 
@@ -450,7 +450,7 @@ void TypeResolver::visit(TransUnit *tu) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(Stmt *stmt) throw (SemanticsError) {
+void TypeResolver::visit(Stmt *stmt) {
 	DBG_PRINT(+, Stmt);
 	assert(stmt != NULL);
 
@@ -473,7 +473,7 @@ void TypeResolver::visit(Stmt *stmt) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(FuncDefStmt *fds) throw (SemanticsError) {
+void TypeResolver::visit(FuncDefStmt *fds) {
 	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
 	assert(fds->symbol != NULL);
@@ -518,7 +518,7 @@ void TypeResolver::visit(FuncDefStmt *fds) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(VarDefStmt *vds) throw (SemanticsError) {
+void TypeResolver::visit(VarDefStmt *vds) {
 	DBG_PRINT(+, VarDefStmt);
 	assert(vds != NULL);
 	assert(vds->id != NULL);
@@ -609,7 +609,7 @@ void TypeResolver::visit(VarDefStmt *vds) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
+void TypeResolver::visit(InstStmt *is) {
 	DBG_PRINT(+, InstStmt);
 	assert(is != NULL);
 	assert(is->inst != NULL);
@@ -741,7 +741,7 @@ void TypeResolver::visit(InstStmt *is) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(AssignStmt *as) throw (SemanticsError) {
+void TypeResolver::visit(AssignStmt *as) {
 	DBG_PRINT(+, AssignStmt);
 	assert(as != NULL);
 
@@ -847,7 +847,7 @@ void TypeResolver::visit(AssignStmt *as) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(CompStmt *cs) throw (SemanticsError) {
+void TypeResolver::visit(CompStmt *cs) {
 	DBG_PRINT(+, CompStmt);
 	assert(cs != NULL);
 
@@ -860,7 +860,7 @@ void TypeResolver::visit(CompStmt *cs) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(NamespaceStmt *ns) throw (SemanticsError) {
+void TypeResolver::visit(NamespaceStmt *ns) {
 	DBG_PRINT(+, NamespaceStmt);
 	assert(ns != NULL);
 
@@ -873,7 +873,7 @@ void TypeResolver::visit(NamespaceStmt *ns) throw (SemanticsError) {
 
 }
 
-void TypeResolver::visit(IfStmt *is) throw (SemanticsError) {
+void TypeResolver::visit(IfStmt *is) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
@@ -920,7 +920,7 @@ void TypeResolver::visit(IfStmt *is) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(RepeatStmt *rs) throw (SemanticsError) {
+void TypeResolver::visit(RepeatStmt *rs) {
 	DBG_PRINT(+, RepeatStmt);
 	assert(rs != NULL);
 
@@ -948,7 +948,7 @@ void TypeResolver::visit(RepeatStmt *rs) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(GotoStmt *gs) throw (SemanticsError) {
+void TypeResolver::visit(GotoStmt *gs) {
 	DBG_PRINT(+, GotoStmt);
 	assert(gs != NULL);
 
@@ -956,7 +956,7 @@ void TypeResolver::visit(GotoStmt *gs) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(GosubStmt *gs) throw (SemanticsError) {
+void TypeResolver::visit(GosubStmt *gs) {
 	DBG_PRINT(+, GosubStmt);
 	assert(gs != NULL);
 
@@ -964,7 +964,7 @@ void TypeResolver::visit(GosubStmt *gs) throw (SemanticsError) {
 	return;
 }
 
-void TypeResolver::visit(ReturnStmt *rs) throw (SemanticsError) {
+void TypeResolver::visit(ReturnStmt *rs) {
 	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
 
@@ -1022,7 +1022,7 @@ void TypeResolver::visit(ReturnStmt *rs) throw (SemanticsError) {
 	return;
 }
 
-Type *TypeResolver::visit(Expr *& expr) throw (SemanticsError) {
+Type *TypeResolver::visit(Expr *& expr) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
 
@@ -1053,21 +1053,21 @@ Type *TypeResolver::visit(Expr *& expr) throw (SemanticsError) {
 	return type;
 }
 
-Type *TypeResolver::visit(DerefExpr *de) throw (SemanticsError) {
+Type *TypeResolver::visit(DerefExpr *de) {
 	DBG_PRINT(+, DerefExpr);
 	visit(de->derefered);
 	DBG_PRINT(-, DerefExpr);
 	return de->type;
 }
 
-Type *TypeResolver::visit(RefExpr *re) throw (SemanticsError) {
+Type *TypeResolver::visit(RefExpr *re) {
 	DBG_PRINT(+, RefExpr);
 	visit(re->refered);
 	DBG_PRINT(-, RefExpr);
 	return re->type;
 }
 
-Type *TypeResolver::visit(Identifier *id) throw (SemanticsError) {
+Type *TypeResolver::visit(Identifier *id) {
 	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->symbol != NULL);
@@ -1100,7 +1100,7 @@ Type *TypeResolver::visit(Identifier *id) throw (SemanticsError) {
 	return id->type;
 }
 
-Type *TypeResolver::visit(Label *label) throw (SemanticsError) {
+Type *TypeResolver::visit(Label *label) {
 	DBG_PRINT(+, Label);
 	assert(label != NULL);
 
@@ -1114,7 +1114,7 @@ Type *TypeResolver::visit(Label *label) throw (SemanticsError) {
 	return label->type;
 }
 
-Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
+Type *TypeResolver::visit(BinaryExpr *be) {
 	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
@@ -1166,7 +1166,7 @@ Type *TypeResolver::visit(BinaryExpr *be) throw (SemanticsError) {
 
 }
 
-Type *TypeResolver::visit(UnaryExpr *ue) throw (SemanticsError) {
+Type *TypeResolver::visit(UnaryExpr *ue) {
 	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
@@ -1201,7 +1201,7 @@ Type *TypeResolver::visit(UnaryExpr *ue) throw (SemanticsError) {
 	return NULL;
 }
 
-Type *TypeResolver::visit(IntLiteralExpr *lit) throw (SemanticsError) {
+Type *TypeResolver::visit(IntLiteralExpr *lit) {
 	DBG_PRINT(+-, IntLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
@@ -1209,7 +1209,7 @@ Type *TypeResolver::visit(IntLiteralExpr *lit) throw (SemanticsError) {
 	return lit->type;
 }
 
-Type *TypeResolver::visit(StrLiteralExpr *lit) throw (SemanticsError) {
+Type *TypeResolver::visit(StrLiteralExpr *lit) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
@@ -1217,7 +1217,7 @@ Type *TypeResolver::visit(StrLiteralExpr *lit) throw (SemanticsError) {
 	return lit->type;
 }
 
-Type *TypeResolver::visit(CharLiteralExpr *lit) throw (SemanticsError) {
+Type *TypeResolver::visit(CharLiteralExpr *lit) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
@@ -1225,7 +1225,7 @@ Type *TypeResolver::visit(CharLiteralExpr *lit) throw (SemanticsError) {
 	return lit->type;
 }
 
-Type *TypeResolver::visit(FloatLiteralExpr *lit) throw (SemanticsError) {
+Type *TypeResolver::visit(FloatLiteralExpr *lit) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
@@ -1233,7 +1233,7 @@ Type *TypeResolver::visit(FloatLiteralExpr *lit) throw (SemanticsError) {
 	return lit->type;
 }
 
-Type *TypeResolver::visit(BoolLiteralExpr *lit) throw (SemanticsError) {
+Type *TypeResolver::visit(BoolLiteralExpr *lit) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
 
@@ -1242,7 +1242,7 @@ Type *TypeResolver::visit(BoolLiteralExpr *lit) throw (SemanticsError) {
 	return lit->type;
 }
 
-Type *TypeResolver::visit(ArrayLiteralExpr *ale) throw (SemanticsError) {
+Type *TypeResolver::visit(ArrayLiteralExpr *ale) {
 	DBG_PRINT(+, ArrayLiteralExpr);
 	assert(ale != NULL);
 
@@ -1288,7 +1288,7 @@ Type *TypeResolver::visit(ArrayLiteralExpr *ale) throw (SemanticsError) {
 	return ale->type = new ModifierType(true, false, new ArrayType(elemType));
 }
 
-Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
+Type *TypeResolver::visit(FuncCallExpr *fce) {
 	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 
@@ -1371,7 +1371,7 @@ Type *TypeResolver::visit(FuncCallExpr *fce) throw (SemanticsError) {
 	return fce->type;
 }
 
-Type *TypeResolver::visit(ConstructorExpr **cePtr) throw (SemanticsError) {
+Type *TypeResolver::visit(ConstructorExpr **cePtr) {
 	DBG_PRINT(+, ConstructorExpr);
 	ConstructorExpr *ce = *cePtr;
 	assert(ce != NULL);
@@ -1452,7 +1452,7 @@ Type *TypeResolver::visit(ConstructorExpr **cePtr) throw (SemanticsError) {
 	return ce->type;
 }
 
-Type *TypeResolver::visit(SubscrExpr *se) throw (SemanticsError) {
+Type *TypeResolver::visit(SubscrExpr *se) {
 	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
@@ -1506,7 +1506,7 @@ Type *TypeResolver::visit(SubscrExpr *se) throw (SemanticsError) {
 	return se->type;
 }
 
-Type *TypeResolver::visit(MemberExpr **mePtr) throw (SemanticsError) {
+Type *TypeResolver::visit(MemberExpr **mePtr) {
 	DBG_PRINT(+, MemberExpr);
 	MemberExpr *&me = *mePtr;
 	assert(me != NULL);
@@ -1581,7 +1581,7 @@ Type *TypeResolver::visit(MemberExpr **mePtr) throw (SemanticsError) {
 	return me->type;
 }
 
-Type *TypeResolver::visit(StaticMemberExpr *sme) throw (SemanticsError) {
+Type *TypeResolver::visit(StaticMemberExpr *sme) {
 	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 

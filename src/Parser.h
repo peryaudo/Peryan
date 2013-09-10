@@ -82,48 +82,48 @@ private:
 		return;
 	}
 
-	Token lt(unsigned int n = 0) throw (LexerError);
+	Token lt(unsigned int n = 0);
 
-	Token::Type la(unsigned int n = 0) throw (LexerError) {
+	Token::Type la(unsigned int n = 0) {
 		return lt(n).getType();
 	}
 
-	Position getPosition() throw (LexerError) { return lt().getPosition(); }
+	Position getPosition() { return lt().getPosition(); }
 
-	TransUnit *parseTransUnit() throw (LexerError, ParserError);
+	TransUnit *parseTransUnit();
 
-	Expr *parseExpr(bool allowTopEql = true) throw (LexerError, ParserError);
+	Expr *parseExpr(bool allowTopEql = true);
 
-	Identifier *parseIdentifier() throw (LexerError, ParserError);
-	bool speculateTypeSpec() throw (LexerError);
-	TypeSpec *parseTypeSpec() throw (LexerError, ParserError);
-	Label *parseLabel() throw (LexerError, ParserError);
+	Identifier *parseIdentifier();
+	bool speculateTypeSpec();
+	TypeSpec *parseTypeSpec();
+	Label *parseLabel();
 
-	Expr *parseXorExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseOrExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseAndExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseEqlExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseRelExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseShiftExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseAddExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseMultExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseUnaryExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parsePostfixExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parsePrimaryExpr(bool allowTopEql = true) throw (LexerError, ParserError);
-	Expr *parseArrayLiteralExpr() throw (LexerError, ParserError);
-	Expr *parseFuncExpr() throw (LexerError, ParserError);
+	Expr *parseXorExpr(bool allowTopEql = true);
+	Expr *parseOrExpr(bool allowTopEql = true);
+	Expr *parseAndExpr(bool allowTopEql = true);
+	Expr *parseEqlExpr(bool allowTopEql = true);
+	Expr *parseRelExpr(bool allowTopEql = true);
+	Expr *parseShiftExpr(bool allowTopEql = true);
+	Expr *parseAddExpr(bool allowTopEql = true);
+	Expr *parseMultExpr(bool allowTopEql = true);
+	Expr *parseUnaryExpr(bool allowTopEql = true);
+	Expr *parsePostfixExpr(bool allowTopEql = true);
+	Expr *parsePrimaryExpr(bool allowTopEql = true);
+	Expr *parseArrayLiteralExpr();
+	Expr *parseFuncExpr();
 
-	std::vector<Stmt *> parseStmt(bool isTopLevel = false, bool withoutTerm = false) throw (LexerError, ParserError);
-	FuncDefStmt *parseFuncDefStmt() throw (LexerError, ParserError);
-	std::vector<Stmt *> parseVarDefStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	CompStmt *parseCompStmt() throw (LexerError, ParserError);
-	IfStmt *parseIfStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	RepeatStmt *parseRepeatStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	LabelStmt *parseLabelStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	Stmt *parseGotoGosubStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	Stmt *parseInstOrAssignStmt(bool withoutTerm = false) throw (LexerError, ParserError);
-	ExternStmt *parseExternStmt() throw (LexerError, ParserError);
-	NamespaceStmt *parseNamespaceStmt() throw (LexerError, ParserError);
+	std::vector<Stmt *> parseStmt(bool isTopLevel = false, bool withoutTerm = false);
+	FuncDefStmt *parseFuncDefStmt();
+	std::vector<Stmt *> parseVarDefStmt(bool withoutTerm = false);
+	CompStmt *parseCompStmt();
+	IfStmt *parseIfStmt(bool withoutTerm = false);
+	RepeatStmt *parseRepeatStmt(bool withoutTerm = false);
+	LabelStmt *parseLabelStmt(bool withoutTerm = false);
+	Stmt *parseGotoGosubStmt(bool withoutTerm = false);
+	Stmt *parseInstOrAssignStmt(bool withoutTerm = false);
+	ExternStmt *parseExternStmt();
+	NamespaceStmt *parseNamespaceStmt();
 
 public:
 	Parser(Lexer& lexer, Options& options, WarningPrinter& wp)

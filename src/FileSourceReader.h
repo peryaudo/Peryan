@@ -22,7 +22,7 @@ public:
 	FileSourceReader(Options& options) : options_(options), mainFileName_(options.mainFileName) {}
 
 	virtual std::string getMainName() { return mainFileName_; }
-	virtual std::istream *open(const std::string& fileName) throw (LexerError);
+	virtual std::istream *open(const std::string& fileName);
 	virtual void close(const std::string& fileName);
 };
 

@@ -66,7 +66,7 @@ private:
 
 	void initializeKeywords();
 
-	void readSources() throw (LexerError);
+	void readSources();
 
 	std::string source_;
 	unsigned int p_;
@@ -91,17 +91,17 @@ private:
 	unsigned int readIdentifierLength();
 	bool isFloatLiteral();
 	double readFloatLiteral();
-	int readHexLiteral() throw (LexerError);
+	int readHexLiteral();
 	int readDecimalLiteral();
-	int readBinaryLiteral() throw (LexerError);
-	std::string readCharOrStringLiteral(char terminator) throw (LexerError);
+	int readBinaryLiteral();
+	std::string readCharOrStringLiteral(char terminator);
 
 	void getline(std::istream& is, std::string& str);
 
 public:
 	std::string getPrettyPrint(Position pos, std::string message = std::string()) const;
 
-	Token getNextToken() throw (LexerError);
+	Token getNextToken();
 	Position getPosition() { return p_; }
 
 	Lexer(SourceReader& fsr, Options& opt, WarningPrinter& wp);

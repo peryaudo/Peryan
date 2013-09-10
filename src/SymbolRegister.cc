@@ -37,7 +37,7 @@ bool SymbolRegister::isDisallowedIdentifier(const std::string& name) {
 	return false;
 }
 
-void SymbolRegister::visit(TransUnit *tu) throw (SemanticsError) {
+void SymbolRegister::visit(TransUnit *tu) {
 	assert(tu != NULL);
 
 	GlobalScope *scope = symbolTable_.getGlobalScope();
@@ -51,7 +51,7 @@ void SymbolRegister::visit(TransUnit *tu) throw (SemanticsError) {
 	return;
 }
 
-void SymbolRegister::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(Stmt *stmt, Scope *scope) {
 	assert(stmt != NULL);
 
 	switch (stmt->getASTType()) {
@@ -68,7 +68,7 @@ void SymbolRegister::visit(Stmt *stmt, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) {
 	assert(fds != NULL);
 
 	const std::string name = fds->name->getString();
@@ -112,7 +112,7 @@ void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError
 	return;
 }
 
-void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) {
 	const std::string name = ns->name->token.getString();
 	if (isDisallowedIdentifier(name)) {
 		throw SemanticsError(ns->name->token.getPosition(),
@@ -135,7 +135,7 @@ void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsErro
 	return;
 }
 
-void SymbolRegister::visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(VarDefStmt *vds, Scope *scope) {
 	assert(vds != NULL);
 
 	if (isDisallowedIdentifier(vds->id->getString())) {
@@ -157,7 +157,7 @@ void SymbolRegister::visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError)
 	return;
 }
 
-void SymbolRegister::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(ExternStmt *es, Scope *scope) {
 	assert(es != NULL);
 
 	if (isDisallowedIdentifier(es->id->getString())) {
@@ -176,7 +176,7 @@ void SymbolRegister::visit(ExternStmt *es, Scope *scope) throw (SemanticsError) 
 	es->id->symbol = externSymbol;
 }
 
-void SymbolRegister::visit(CompStmt *cs, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(CompStmt *cs, Scope *scope) {
 	assert(cs != NULL);
 	assert(cs->token.getType() != Token::UNKNOWN);
 
@@ -189,7 +189,7 @@ void SymbolRegister::visit(CompStmt *cs, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolRegister::visit(LabelStmt *ls, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(LabelStmt *ls, Scope *scope) {
 	assert(ls != NULL);
 
 	if (options_.hspCompat) {
@@ -223,7 +223,7 @@ void SymbolRegister::visit(LabelStmt *ls, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolRegister::visit(IfStmt *is, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(IfStmt *is, Scope *scope) {
 	assert(is != NULL);
 
 	visit(is->ifThen, scope);
@@ -239,7 +239,7 @@ void SymbolRegister::visit(IfStmt *is, Scope *scope) throw (SemanticsError) {
 	return;
 }
 
-void SymbolRegister::visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError) {
+void SymbolRegister::visit(RepeatStmt *rs, Scope *scope) {
 	assert(rs != NULL);
 	assert(rs->token.getType() != Token::UNKNOWN);
 

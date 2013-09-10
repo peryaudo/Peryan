@@ -23,16 +23,16 @@ public:
 		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
 	bool isDisallowedIdentifier(const std::string& name);
-	void visit(TransUnit *tu) throw (SemanticsError);
-	void visit(Stmt *stmt, Scope *scope) throw (SemanticsError);
-	void visit(FuncDefStmt *fds, Scope *scope) throw (SemanticsError);
-	void visit(VarDefStmt *vds, Scope *scope) throw (SemanticsError);
-	void visit(CompStmt *cs, Scope *scope) throw (SemanticsError);
-	void visit(IfStmt *is, Scope *scope) throw (SemanticsError);
-	void visit(RepeatStmt *rs, Scope *scope) throw (SemanticsError);
-	void visit(LabelStmt *ls, Scope *scope) throw (SemanticsError);
-	void visit(ExternStmt *ls, Scope *scope) throw (SemanticsError);
-	void visit(NamespaceStmt *ns, Scope *scope) throw (SemanticsError);
+	void visit(TransUnit *tu);
+	void visit(Stmt *stmt, Scope *scope);
+	void visit(FuncDefStmt *fds, Scope *scope);
+	void visit(VarDefStmt *vds, Scope *scope);
+	void visit(CompStmt *cs, Scope *scope);
+	void visit(IfStmt *is, Scope *scope);
+	void visit(RepeatStmt *rs, Scope *scope);
+	void visit(LabelStmt *ls, Scope *scope);
+	void visit(ExternStmt *ls, Scope *scope);
+	void visit(NamespaceStmt *ns, Scope *scope);
 };
 
 }

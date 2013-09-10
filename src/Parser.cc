@@ -28,7 +28,7 @@ namespace Peryan {
 std::string ParserError::toString(const Lexer& lexer) {
 	return lexer.getPrettyPrint(position_, message_);
 }
-Token Parser::lt(unsigned int n/* = 0 */) throw (LexerError) {
+Token Parser::lt(unsigned int n/* = 0 */) {
 	if (markers_.size() > 0) {
 		n += markers_.back();
 	}
@@ -71,7 +71,7 @@ void Parser::parse() throw (LexerError, ParserError, SemanticsError) {
 }
 
 // TranslationUnit : { TopLevelStatement }
-TransUnit *Parser::parseTransUnit() throw (LexerError, ParserError) {
+TransUnit *Parser::parseTransUnit() {
 	DBG_PRINT(+, parseTransUnit);
 
 	TransUnit *transUnit = new TransUnit();
@@ -106,7 +106,7 @@ TransUnit *Parser::parseTransUnit() throw (LexerError, ParserError) {
 // 	         | "swbreak"  (":" | TERM) //*
 // 	         | "break"  (":" | TERM)
 // 	         ;
-std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (LexerError, ParserError) {
+std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) {
 	DBG_PRINT(+, parseStmt);
 
 	if (!withoutTerm)
@@ -221,7 +221,7 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) throw (
 
 // FunctionDefinition : "func" IDENTIFIER  "(" ParameterDeclarationList? {= default } ")"
 // 					[ "::" TypeSpecifier ] CompoundStatement TERM ;
-FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
+FuncDefStmt *Parser::parseFuncDefStmt() {
 	DBG_PRINT(+, parseFuncDefStmt);
 	assert(la() == Token::KW_FUNC);
 
@@ -300,7 +300,7 @@ FuncDefStmt *Parser::parseFuncDefStmt() throw (LexerError, ParserError) {
 }
 
 // ExternStmt : "extern" ID "::" TypeSpec {"=" default parameters } (":" | TERM)
-ExternStmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
+ExternStmt *Parser::parseExternStmt() {
 	DBG_PRINT(+, parseExternStmt);
 	assert(la() == Token::KW_EXTERN);
 
@@ -351,7 +351,7 @@ ExternStmt *Parser::parseExternStmt() throw (LexerError, ParserError) {
 
 // JumpStatement : "goto" Label (":" | TERM)
 // 	         | "gosub" Label (":" | TERM)
-Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) throw (LexerError, ParserError) {
+Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseGotoGosubStmt);
 	assert(la() == Token::KW_GOTO || la() == Token::KW_GOSUB);
 
@@ -381,7 +381,7 @@ Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) throw (LexerError, ParserErro
 }
 
 // Identifier : (ID | "Int" | "String" | "Char" | "Float" | "Double" | "Bool") ;
-Identifier *Parser::parseIdentifier() throw (LexerError, ParserError) {
+Identifier *Parser::parseIdentifier() {
 	DBG_PRINT(+, parseIdentifier);
 	assert(la() == Token::ID);
 
@@ -402,7 +402,7 @@ Identifier *Parser::parseIdentifier() throw (LexerError, ParserError) {
 }
 
 // Label : "*" ID ;
-Label *Parser::parseLabel() throw (LexerError, ParserError) {
+Label *Parser::parseLabel() {
 	DBG_PRINT(+, parseLabel);
 	assert(la() == Token::STAR);
 
@@ -421,7 +421,7 @@ Label *Parser::parseLabel() throw (LexerError, ParserError) {
 }
 
 // CompoundStatement : "{" { Statement } "}" ;
-CompStmt *Parser::parseCompStmt() throw (LexerError, ParserError) {
+CompStmt *Parser::parseCompStmt() {
 	DBG_PRINT(+, parseCompStmt);
 	assert(la() == Token::LBRACE);
 
@@ -449,7 +449,7 @@ CompStmt *Parser::parseCompStmt() throw (LexerError, ParserError) {
 }
 
 // LabelStatement : Label TERM ;
-LabelStmt *Parser::parseLabelStmt(bool withoutTerm) throw (LexerError, ParserError) {
+LabelStmt *Parser::parseLabelStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseLabelStmt);
 	assert(la() == Token::STAR);
 
@@ -469,7 +469,7 @@ LabelStmt *Parser::parseLabelStmt(bool withoutTerm) throw (LexerError, ParserErr
 
 //VariableDefinition : "var" IDENTIFIER [ "::" TypeSpecifier ] [ "=" Expression ]
 //	{ "," IDENTIFIER [ "::" TypeSpecifier ] [ "=" Expression ] } (":" | TERM) ;
-std::vector<Stmt *> Parser::parseVarDefStmt(bool withoutTerm) throw (LexerError, ParserError) {
+std::vector<Stmt *> Parser::parseVarDefStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseVarDefStmt);
 	assert(la() == Token::KW_VAR);
 
@@ -521,7 +521,7 @@ std::vector<Stmt *> Parser::parseVarDefStmt(bool withoutTerm) throw (LexerError,
 //	 		| TYPE_ID )
 // 		;
 
-bool Parser::speculateTypeSpec() throw (LexerError) {
+bool Parser::speculateTypeSpec() {
 	mark();
 
 	bool isSuccess = true;
@@ -535,7 +535,7 @@ bool Parser::speculateTypeSpec() throw (LexerError) {
 	return isSuccess;
 }
 
-TypeSpec *Parser::parseTypeSpec() throw (LexerError, ParserError) {
+TypeSpec *Parser::parseTypeSpec() {
 	DBG_PRINT(+, parseTypeSpec);
 
 	bool isConst = false, isRef = false;
@@ -627,7 +627,7 @@ TypeSpec *Parser::parseTypeSpec() throw (LexerError, ParserError) {
 //	       | "if" Expression ":" StatementWithoutTerm { ":" StatementWithoutTerm }
 //		 [":" "else" ":" StatementWithoutTerm { ":" StatementWithoutTerm } ] TERM ; //*
 
-IfStmt *Parser::parseIfStmt(bool withoutTerm) throw (LexerError, ParserError) {
+IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseIfStmt);
 
 	assert(la() == Token::KW_IF);
@@ -731,7 +731,7 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) throw (LexerError, ParserError) {
 }
 
 // RepeatStatement : "repeat" { Expression } (":" | TERM) { Statement } "loop" (":" | TERM) ;
-RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) throw (LexerError, ParserError) {
+RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseRepeatStmt);
 	assert(la() == Token::KW_REPEAT);
 
@@ -788,7 +788,7 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) throw (LexerError, ParserE
 // AssignmentStatement' : AssignmentOperator [ Expression ] (":" | TERM) ;
 // AssignmentOperator : "=" | "++" | "--" | "+=" | "-=" | "*=" | "/=" ;
 
-Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) throw (LexerError, ParserError) {
+Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) {
 	DBG_PRINT(+, parseInstOrAssignStmt);
 
 	Token topToken = lt();
@@ -864,14 +864,14 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) throw (LexerError, ParserE
 }
 
 // Expression : XorExpression ;
-Expr *Parser::parseExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseExpr(bool allowTopEql) {
 	DBG_PRINT(+-, parseExpr);
 	return parseXorExpr(allowTopEql);
 }
 
 // XorExpression : OrExpression { "^" OrExpression } ; 
 // Associativity: Left-to-right
-Expr *Parser::parseXorExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseXorExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseXorExpr);
 
 	Expr *lhs = parseOrExpr(allowTopEql);
@@ -891,7 +891,7 @@ Expr *Parser::parseXorExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // OrExpression : AndExpression { "|" AndExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseOrExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseOrExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseOrExpr);
 
 	Expr *lhs = parseAndExpr(allowTopEql);
@@ -911,7 +911,7 @@ Expr *Parser::parseOrExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // AndExpression : EqualityExpression { "&" EqualityExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseAndExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseAndExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseAndExpr);
 
 	Expr *lhs = parseEqlExpr(allowTopEql);
@@ -931,7 +931,7 @@ Expr *Parser::parseAndExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // EqualityExpression : RelationalExpression { ("=" | "==" | "!=" | "!") RelationalExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseEqlExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseEqlExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseEqlExpr);
 
 	Expr *lhs = parseRelExpr(allowTopEql);
@@ -956,7 +956,7 @@ Expr *Parser::parseEqlExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // RelationalExpression : ShiftExpression [ ("<" | "<=" | ">" | ">=" ) ShiftExpression ] ;
 // Associativity: Left-to-right
-Expr *Parser::parseRelExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseRelExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseRelExpr);
 
 	Expr *lhs = parseShiftExpr(allowTopEql);
@@ -977,7 +977,7 @@ Expr *Parser::parseRelExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // ShiftExpression : AdditiveExpression { ("<<" | ">>" ) AdditiveExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseShiftExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseShiftExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseShiftExpr);
 
 	Expr *lhs = parseAddExpr(allowTopEql);
@@ -997,7 +997,7 @@ Expr *Parser::parseShiftExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // AdditiveExpression: MultiplicativeExpression { ("+" | "-") MultiplicativeExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseAddExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseAddExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseAddExpr);
 
 	Expr *lhs = parseMultExpr(allowTopEql);
@@ -1017,7 +1017,7 @@ Expr *Parser::parseAddExpr(bool allowTopEql) throw (LexerError, ParserError) {
 
 // MultiplicativeExpression : UnaryExpression { ("*" | "/" | "%") UnaryExpression } ;
 // Associativity: Left-to-right
-Expr *Parser::parseMultExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseMultExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseMultExpr);
 
 	Expr *lhs = parseUnaryExpr(allowTopEql);
@@ -1039,7 +1039,7 @@ Expr *Parser::parseMultExpr(bool allowTopEql) throw (LexerError, ParserError) {
 // 		   | PostfixExpression
 // 		   ;
 // Associativity: Right-to-left
-Expr *Parser::parseUnaryExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parseUnaryExpr(bool allowTopEql) {
 	DBG_PRINT(+, parseUnaryExpr);
 
 	if (la() == Token::EXCL || la() == Token::PLUS || la() == Token::MINUS) {
@@ -1056,7 +1056,7 @@ Expr *Parser::parseUnaryExpr(bool allowTopEql) throw (LexerError, ParserError) {
 // PostfixExpression : (PrimaryExpression | {"partial"} FunctionExpression)
 // 		{ '[' Expression ']' | '(' Expression ')' | '.' IDENTIFIER } ;
 // Associativity: Left-to-right
-Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parsePostfixExpr(bool allowTopEql) {
 	DBG_PRINT(+, parsePostfixExpr);
 
 	Expr *expr = NULL;
@@ -1178,7 +1178,7 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) throw (LexerError, ParserError)
 }
 
 // FunctionExpression: "func" "(" ParameterDeclarationList? ")" [ "::" TypeSpecifier ] CompoundStatement ; //*
-Expr *Parser::parseFuncExpr() throw (LexerError, ParserError) {
+Expr *Parser::parseFuncExpr() {
 	assert(la() == Token::KW_FUNC);
 	Token token = lt();
 	consume();
@@ -1240,7 +1240,7 @@ Expr *Parser::parseFuncExpr() throw (LexerError, ParserError) {
 // 		     | IDENTIFIER
 // 		     | Label
 // 		     ;
-Expr *Parser::parsePrimaryExpr(bool allowTopEql) throw (LexerError, ParserError) {
+Expr *Parser::parsePrimaryExpr(bool allowTopEql) {
 	DBG_PRINT(+, parsePrimaryExpr);
 
 	Expr *expr = NULL;
@@ -1298,7 +1298,7 @@ Expr *Parser::parsePrimaryExpr(bool allowTopEql) throw (LexerError, ParserError)
 	return expr;
 }
 
-Expr *Parser::parseArrayLiteralExpr() throw (LexerError, ParserError) {
+Expr *Parser::parseArrayLiteralExpr() {
 	DBG_PRINT(+, parseArrayLiteralExpr);
 	assert(la() == Token::LBRACK);
 
@@ -1324,7 +1324,7 @@ Expr *Parser::parseArrayLiteralExpr() throw (LexerError, ParserError) {
 	return ale;
 }
 
-NamespaceStmt *Parser::parseNamespaceStmt() throw (LexerError, ParserError) {
+NamespaceStmt *Parser::parseNamespaceStmt() {
 	DBG_PRINT(+, parseNamespaceStmt);
 
 	assert(la() == Token::KW_NAMESPACE);
