@@ -1,0 +1,22 @@
+
+var x :: Int = 200, y :: Int = 200
+
+repeat
+	redraw 0
+	color 255, 255, 255
+	boxf
+
+	var pressed :: Int = 0, d :: const Int = 1
+	stick pressed, 1 | 2 | 4 | 8
+
+	if (pressed & 1) > 0 : x -= d
+	if (pressed & 2) > 0 : y -= d
+	if (pressed & 4) > 0 : x += d
+	if (pressed & 8) > 0 : y += d
+
+	color 0, 160, 0
+	boxf x, y, x + 50, y + 50
+	redraw 1
+	await 0
+loop
+
