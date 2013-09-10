@@ -129,7 +129,7 @@ public:
 	Parser(Lexer& lexer, Options& options, WarningPrinter& wp)
 		: lexer_(lexer), transUnit_(NULL), symbolTable_(), options_(options), wp_(wp) {};
 
-	void parse() throw (LexerError, ParserError, SemanticsError);
+	void parse();
 
 	TransUnit *getTransUnit() { return transUnit_; }
 

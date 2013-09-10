@@ -44,7 +44,7 @@ Token Parser::lt(unsigned int n/* = 0 */) {
 	return tokens_[n];
 }
 
-void Parser::parse() throw (LexerError, ParserError, SemanticsError) {
+void Parser::parse() {
 	if (options_.verbose) std::cerr<<"parsing...";
 	transUnit_ = parseTransUnit();
 	if (options_.verbose) std::cerr<<"ok."<<std::endl;

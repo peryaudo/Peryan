@@ -22,7 +22,7 @@ public:
 	ParserTest() : ssr("main.pr"), wp(), lexer(ssr, opt, wp), parser(lexer, opt, wp) {
 	}
 
-	std::string parseAndPrint(std::string str) throw (Peryan::ParserError, Peryan::SemanticsError) {
+	std::string parseAndPrint(std::string str) {
 		ssr.setString("main.pr", str);
 
 		using namespace Peryan;
