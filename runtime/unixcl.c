@@ -4,9 +4,13 @@
 #define DBG_PRINT(TYPE, FUNC_NAME)
 
 #include <stdlib.h>
+#include <assert.h>
+
+void AbortWithErrorMessage(const char *format, ...);
 
 #include "common.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 
 void *PRMalloc(unsigned int size)

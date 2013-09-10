@@ -1,16 +1,10 @@
 #include <math.h>
-#include <assert.h>
-
-/* aims it will be the last dependency on C standard library */
-#include <stdarg.h>
 
 extern void PeryanMain();
 
 void *PRMalloc(unsigned int size);
 void PRFree(void *ptr);
 void *PRRealloc(void *ptr, int size);
-
-void AbortWithErrorMessage(const char *format, ...);
 
 int stat = 0;
 
@@ -308,7 +302,7 @@ int noteinfo(int option)
 	} else if (option == 1) {
 		return (*noteTarget_)->length;
 	} else {
-		AbortWithErrorMessage("runtime error: unknown noteinfo option %d", option);
+		AbortWithErrorMessage("runtime error: unknown noteinfo option");
 		exit(-1);
 	}
 }
@@ -341,7 +335,7 @@ void noteget(struct String** res, int idx)
 	}
 
 	if (begin == -1) {
-		AbortWithErrorMessage("runtime error: invalid index %d for noteget", idx);
+		AbortWithErrorMessage("runtime error: invalid index for noteget");
 		exit(-1);
 	}
 	if (end == -1)
@@ -378,15 +372,33 @@ int rnd(int maxRange) {
 	return w % maxRange;
 }
 
-double sqrt_(double x) {
-	return sqrt(x);
+#define SQRT_ITER (res *= (1.5 - (numHalf * res * res)))
+double sqrt_(double num) {
+	/* based on http://www.riken.jp/brict/Ijiri/study/fastsqrt.html */
+	double numHalf;
+	long long int tmp;
+	double res;
+
+	numHalf =  0.5 * num;
+	tmp = 0x5FE6EB50C7B537AAl - ((*((long long int *)(&num))) >> 1);
+	res = *((double *)(&tmp));
+
+	SQRT_ITER;
+	SQRT_ITER;
+	SQRT_ITER;
+
+	res *= num;
+
+	return res;
+}
+
+double M_PI = 3.14159265358979323846;
+
+double cos_(double x) {
+	return cos(x);
 }
 
 double sin_(double x) {
 	return sin(x);
-}
-
-double cos_(double x) {
-	return cos(x);
 }
 

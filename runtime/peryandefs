@@ -68,9 +68,9 @@ extern ginfo_winx :: Int
 extern ginfo_winy :: Int
 extern redraw :: Int -> Void
 extern pos :: Int -> Int -> Void
-extern color :: Int -> Int -> Int -> Void = -1, -1, -1
+extern color :: Int -> Int -> Int -> Void = ginfo_r, ginfo_g, ginfo_b
 extern bmpsave :: String -> Void
-extern dialog :: String -> Int -> Void
+extern dialog :: String -> Int -> String -> Void = , , ""
 extern wait :: Int -> Void
 extern await :: Int -> Void = 0
 extern boxf :: Int -> Int -> Int -> Int -> Void = 0, 0, ginfo_winx, ginfo_winy

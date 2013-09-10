@@ -7,10 +7,9 @@
 #include <assert.h>
 #include <windows.h>
 
-#include "common.h"
+void AbortWithErrorMessage(const char *message);
 
-/* for vsnprintf (want to remove in the future) */
-#include <stdio.h>
+#include "common.h"
 
 void *PRMalloc(unsigned int size)
 {
@@ -257,16 +256,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-void AbortWithErrorMessage(const char *format, ...)
+void AbortWithErrorMessage(const char *message)
 {
-	va_list arg;
-	char msg[2048];
-
-	va_start(arg, format);
-	vsnprintf(msg, sizeof(msg) / sizeof(msg[0]), format, arg);
-	va_end(arg);
-
-	MessageBox(NULL, msg, PERYAN_VERSION, MB_OK | MB_ICONWARNING);
+	MessageBox(NULL, message, PERYAN_VERSION, MB_OK | MB_ICONWARNING);
 	ExitProcess(1);
 
 	return;
@@ -570,4 +562,16 @@ void font(struct String *fontName, int size, int style)
 
 	return;
 }
+
+void bmpsave(struct String *fileName)
+{
+	/* outline:
+	 * create BITMAPFILEHEADER 
+	 * set proper values
+	 * write them in the order: BITMAPFILEHEADER BITMAPINFOHEADER [ppvBits of CreateDIBSection]
+	 */
+	assert(!"no windows runtime implementation");
+	return;
+}
+
 
