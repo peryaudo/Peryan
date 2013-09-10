@@ -492,8 +492,8 @@ llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
 		return getLLVMFuncType(static_cast<FuncType *>(type))->getPointerTo();
 	} else {
 		assert(false && "unknown type"); //unsupported
-		return NULL;
 	}
+	return NULL;
 }
 
 llvm::FunctionType *LLVMCodeGen::Impl::getLLVMFuncType(FuncType *ft) {

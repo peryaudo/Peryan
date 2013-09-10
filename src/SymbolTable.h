@@ -245,7 +245,7 @@ public:
 
 	virtual ScopeType getScopeType() { return SCOPE; }
 
-	virtual std::string getScopeName() { assert(false); }
+	virtual std::string getScopeName() = 0;
 
 	virtual Scope *getEnclosingScope() { return enclosing_; }
 	virtual Scope *getParentScope() { return getEnclosingScope(); }
