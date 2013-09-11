@@ -20,9 +20,12 @@ void *PRMalloc(unsigned int size)
 	DBG_PRINT(+, PRMalloc);
 
 	hHeap = GetProcessHeap();
-	assert(hHeap != NULL);
+	if (hHeap == NULL)
+		AbortWithErrorMessage("runtime error: GetProcessHeap failed");
 
-	res = HeapAlloc(hHeap, HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY, size);
+	res = HeapAlloc(hHeap, /* HEAP_GENERATE_EXCEPTIONS | */HEAP_ZERO_MEMORY, size);
+	if (res == NULL)
+		AbortWithErrorMessage("runtime error: HeapAlloc failed");
 
 	DBG_PRINT(-, PRMalloc);
 	return res;
@@ -35,7 +38,8 @@ void PRFree(void *ptr)
 	DBG_PRINT(+, PRMalloc);
 
 	hHeap = GetProcessHeap();
-	assert(hHeap != NULL);
+	if (hHeap == NULL)
+		AbortWithErrorMessage("runtime error: GetProcessHeap failed");
 
 	HeapFree(hHeap, 0, ptr);
 
@@ -48,12 +52,17 @@ void *PRRealloc(void *ptr, int size)
 	HANDLE hHeap = NULL;
 	LPVOID res = NULL;
 
+	assert(ptr != NULL);
+
 	DBG_PRINT(+, PRMalloc);
 
 	hHeap = GetProcessHeap();
-	assert(hHeap != NULL);
+	if (hHeap == NULL)
+		AbortWithErrorMessage("runtime error: cannot GetProcessHeap failed");
 
-	res = HeapReAlloc(hHeap, HEAP_GENERATE_EXCEPTIONS | HEAP_ZERO_MEMORY, ptr, size);
+	res = HeapReAlloc(hHeap, /*HEAP_GENERATE_EXCEPTIONS | */HEAP_ZERO_MEMORY, ptr, size);
+	if (res == NULL)
+		AbortWithErrorMessage("runtime error: HeapReAlloc failed");
 
 	DBG_PRINT(-, PRMalloc);
 	return res;
@@ -88,13 +97,19 @@ struct WinPeryanContext {
 	int prevStick;
 
 	HFONT hFont;
+
+	int isWindowBufferInitialized;
 };
 
 static struct WinPeryanContext *ctx = NULL;
 
 void InitializeWinPeryanContext()
 {
-	ctx = PRMalloc(sizeof(struct WinPeryanContext *));
+	if (ctx != NULL)
+		return;
+
+	ctx = PRMalloc(sizeof(struct WinPeryanContext));
+
 	ctx->hWnd = NULL;
 
 	ctx->hBufferDC = NULL;
@@ -110,11 +125,16 @@ void InitializeWinPeryanContext()
 
 	ctx->hFont = NULL;
 
+	ctx->isWindowBufferInitialized = 0;
+
 	return;
 }
 
 void FinalizeWinPeryanContext()
 {
+	if (ctx == NULL)
+		return;
+
 	if (ctx->hBufferDC != NULL) {
 		assert(ctx->hBufferBitmap);
 		assert(ctx->hPrevBufferBitmap);
@@ -143,6 +163,7 @@ void FinalizeWinPeryanContext()
 
 	PRFree(ctx);
 	ctx = NULL;
+
 	return;
 }
 
@@ -157,13 +178,14 @@ void InitializeWindowBuffer()
 	ZeroMemory(&bmih, sizeof(bmih));
 	ZeroMemory(&rect, sizeof(rect));
 
-
 	hMainDC = GetDC(ctx->hWnd);
 	if (hMainDC == NULL)
 		AbortWithErrorMessage("runtime error: cannot obtain device context");
 
 	ctx->hBufferDC = CreateCompatibleDC(hMainDC);
 	ctx->hRedrawDC = CreateCompatibleDC(hMainDC);
+	if (ctx->hBufferDC == NULL || ctx->hRedrawDC == NULL)
+		AbortWithErrorMessage("runtime error: CreateCompatibleDC failed");
 
 	ReleaseDC(ctx->hWnd, hMainDC);
 
@@ -188,6 +210,8 @@ void InitializeWindowBuffer()
 	rect.bottom = ginfo_winy;
 	FillRect(ctx->hBufferDC, &rect, GetStockObject(WHITE_BRUSH));
 	FillRect(ctx->hRedrawDC, &rect, GetStockObject(WHITE_BRUSH));
+
+	ctx->isWindowBufferInitialized = 1;
 
 	return;
 }
@@ -334,6 +358,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	InitializeWindow(hInstance);
 
+	while (!(ctx->isWindowBufferInitialized)) {
+		ProcessWindowMessages();
+		Sleep(0);
+	}
+
 	PeryanMain();
 
 	stop();
@@ -432,9 +461,9 @@ void redraw(int mode) {
 
 void color(int r, int g, int b)
 {
-	if (r != -1) ginfo_r = r;
-	if (g != -1) ginfo_g = g;
-	if (b != -1) ginfo_b = b;
+	ginfo_r = r;
+	ginfo_g = g;
+	ginfo_b = b;
 	return;
 }
 
