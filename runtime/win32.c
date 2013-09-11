@@ -3,8 +3,9 @@
 /* #define DBG_PRINT(TYPE, FUNC_NAME) printf("%s%s\n", #TYPE, #FUNC_NAME) */
 #define DBG_PRINT(TYPE, FUNC_NAME)
 
+// #include <assert.h>
+#define assert(X)
 
-#include <assert.h>
 #include <windows.h>
 
 void AbortWithErrorMessage(const char *message);
@@ -140,7 +141,7 @@ void FinalizeWinPeryanContext()
 		ctx->hPrevRedrawBitmap = NULL;
 	}
 
-	free(ctx);
+	PRFree(ctx);
 	ctx = NULL;
 	return;
 }

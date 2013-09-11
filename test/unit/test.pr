@@ -1,2 +1,0 @@
-extern hoge :: Int -> Int
-var hage :: Int = 3

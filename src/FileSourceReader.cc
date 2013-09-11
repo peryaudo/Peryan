@@ -31,7 +31,7 @@ std::istream *FileSourceReader::open(const std::string& fileName) {
 	if (ifs == NULL) {
 		throw LexerError(-1, std::string("error: cannot find a file ")
 					+ fileName_
-					+ "in the include paths");
+					+ " in the include paths");
 	}
 
 	ifstreams[fileName] = ifs;
