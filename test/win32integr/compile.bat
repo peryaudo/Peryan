@@ -5,3 +5,4 @@
 %1\peryan SimpleBoxAnim.pr SimpleBoxAnim.exe
 %1\peryan Stick.pr Stick.exe 
 %1\peryan Fonts.pr Fonts.exe
+%1\peryan Pset.pr Pset.exe

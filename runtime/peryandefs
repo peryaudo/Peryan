@@ -90,3 +90,7 @@ extern stop :: Void -> Void
 extern end :: Void -> Void 
 
 extern title :: String -> Void
+
+extern pget :: Int -> Int -> Void
+extern pset :: Int -> Int -> Void
+

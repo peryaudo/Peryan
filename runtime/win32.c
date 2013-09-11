@@ -210,6 +210,9 @@ void ProcessWindowMessages()
 
 void RefreshMainDC() {
 	RECT rect;
+	if (ctx->redraw == 0)
+		return;
+
 	rect.top = rect.left = 0;
 	rect.right = ginfo_winx;
 	rect.bottom = ginfo_winy;
@@ -409,6 +412,7 @@ void redraw(int mode) {
 		BitBlt(ctx->hBufferDC, 0, 0, ginfo_winx, ginfo_winy, ctx->hRedrawDC, 0, 0, SRCCOPY);
 
 		/* copy buffer dc to main dc */
+		ctx->redraw = 1;
 		RefreshMainDC();
 
 	} else if (ctx->redraw == 1 && mode == 0) {
@@ -417,6 +421,7 @@ void redraw(int mode) {
 
 	} else if (ctx->redraw == 1 && mode == 1) {
 		/* copy buffer dc to main dc */
+		ctx->redraw = 1;
 		RefreshMainDC();
 	}
 
@@ -575,4 +580,20 @@ void bmpsave(struct String *fileName)
 	return;
 }
 
+void pset(int x, int y)
+{
+	/* should be rewritten with direct DIB access for speed */
+	SetPixel(GetCurrentDC(), x, y, RGB(ginfo_r, ginfo_g, ginfo_b));
+	RefreshMainDC();
+	return;
+}
 
+void pget(int x, int y)
+{
+	COLORREF res;
+	res = GetPixel(GetCurrentDC(), x, y);
+	ginfo_r = GetRValue(res);
+	ginfo_g = GetGValue(res);
+	ginfo_b = GetBValue(res);
+	return;
+}

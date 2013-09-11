@@ -1,0 +1,57 @@
+title "Ulam Spiral"
+
+var steps = 300
+
+var side = steps * 2 - 1
+
+var total = side * side
+
+var curX = steps
+var curY = steps
+
+var dx :: [Int] = [1, 0, -1, 0]
+var dy :: [Int] = [0, -1, 0, 1]
+
+var mode :: Int = 3
+var nextCorner :: Int = 1
+var curLength :: Int = 1
+var first :: Bool = true
+
+var table = [Bool](total + 1, true)
+
+table[0] = false
+table[1] = false
+
+color 0, 0, 0
+
+redraw 0
+repeat total + 1
+	if cnt = 0 : continue
+
+	if table[cnt] {
+		var cnt_ = cnt
+		var cur = cnt_ * 2
+		repeat
+			cur += cnt_
+			if !(cur <= total) : break
+			table[cur] = false
+		loop
+
+		pset curX, curY
+	}
+	if (cnt == nextCorner) {
+		mode = (mode + 1) % 4
+		if first {
+			nextCorner += curLength
+			first = false
+		} else {
+			nextCorner += curLength
+			curLength++
+			first = true
+		}
+	}
+
+	curX += dx[mode]
+	curY += dy[mode]
+loop
+redraw 1
