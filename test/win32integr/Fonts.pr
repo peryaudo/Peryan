@@ -1,0 +1,8 @@
+font msgothic, 70
+mes "巨大なゴシック体"
+
+font msgothic, 24, 2
+mes "24ポイント、イタリックです"
+
+font msmincho, 14
+mes "小さい明朝体"
