@@ -1,0 +1,9 @@
+var a :: const Int = 4
+var b :: Int = 1
+var c :: ref Int = b
+
+var d = [b, c, a]
+
+repeat 3
+	mes String(d[cnt])
+loop
