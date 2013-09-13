@@ -89,10 +89,10 @@ int main(int argc, char *argv[])
 		std::cerr<<"Usage : peryan [options] [-o <output>] <input>"<<std::endl<<std::endl;
 
 		std::cerr<<"Options :"<<std::endl;
-		std::cerr<<" -o\t\t\tSpecify the output file name"<<std::endl;
-		std::cerr<<" --runtime-path\t\tSpecify the runtime directory"<<std::endl;
+		std::cerr<<" -o <output>\t\tSpecify the output file name"<<std::endl;
+		std::cerr<<" --runtime-path <dir>\tSpecify the runtime directory"<<std::endl;
 		// std::cerr<<" --runtime (unixcl|win32)\t\tSpecify the runtime to link"<<std::endl;
-		std::cerr<<" --tmp-dir\t\tSpecify a temporary directory"<<std::endl;
+		std::cerr<<" --tmp-dir <dir>\tSpecify a temporary directory"<<std::endl;
 		std::cerr<<" --verbose, -v\t\tDisplay the internal progress of the compiler"<<std::endl;
 		std::cerr<<" --hsp-compatible, -hsp\tEnable HSP compatible behaviors"<<std::endl;
 		std::cerr<<" --dump-ast\t\tDump the abstruct syntax tree generated internally (for debug)"<<std::endl;
