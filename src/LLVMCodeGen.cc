@@ -1132,7 +1132,7 @@ void LLVMCodeGen::Impl::generatePrimitiveTypeConstructor(llvm::Value *dest, Type
 				builder_.SetInsertPoint(blocks.back().body);
 				src = builder_.CreateTrunc(prm, getLLVMType(to));
 			} else if ((from->is(Char_) || from->is(Int_)) && (to->is(Bool_))) {
-				// integer to Bool
+				// integer to Bool (prm != 0 ? true : false)
 				builder_.SetInsertPoint(blocks.back().body);
 				src = builder_.CreateICmpNE(prm, llvm::ConstantInt::get(getLLVMType(from), 0));
 			} else if ((from->is(Float_) || from->is(Double_))
