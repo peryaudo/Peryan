@@ -684,25 +684,21 @@ void LLVMCodeGen::Impl::generateFuncDefStmt(FuncDefStmt *fds) {
 		assert(curType->getTypeType() == Type::BUILTIN_TYPE
 			|| curType->getTypeType() == Type::MODIFIER_TYPE); // class not yet supported
 
-		if (curType->getTypeType() == Type::BUILTIN_TYPE) {
-			const std::string name = (*idItr)->symbol->getMangledSymbolName();
-			const std::string originalName =
-				(*idItr)->symbol->getMangledSymbolName() + std::string(".original");
+		const std::string name = (*idItr)->symbol->getMangledSymbolName();
+		const std::string originalName =
+			(*idItr)->symbol->getMangledSymbolName() + std::string(".original");
 
-			(*llvmItr).setName(originalName);
+		(*llvmItr).setName(originalName);
 
-			builder_.SetInsertPoint(blocks.back().body);
+		builder_.SetInsertPoint(blocks.back().body);
 
-			llvm::AllocaInst *allocaInst  = builder_.CreateAlloca(
-					getLLVMType(curType), 0, name);
+		llvm::AllocaInst *allocaInst  = builder_.CreateAlloca(
+				getLLVMType(curType), 0, name);
 
-			llvm::Value *from = lookup(originalName);
-			assert(from != NULL);
-			builder_.CreateStore(from, allocaInst);
+		llvm::Value *from = lookup(originalName);
+		assert(from != NULL);
 
-		} else if (curType->getTypeType() == Type::MODIFIER_TYPE) {
-			(*llvmItr).setName((*idItr)->symbol->getMangledSymbolName());
-		}
+		builder_.CreateStore(from, allocaInst);
 	}
 
 	assert(idItr == idItrEnd && llvmItr == llvmItrEnd);
@@ -772,6 +768,12 @@ llvm::Value *LLVMCodeGen::Impl::generateIdentifier(Identifier *id) {
 		from = lookup(id->symbol->getMangledSymbolName());
 	}
 	assert(from != NULL);
+
+	if (id->symbol->getType()->getTypeType() == Type::MODIFIER_TYPE
+		&& static_cast<ModifierType *>(id->symbol->getType())->isRef()) {
+		builder_.SetInsertPoint(blocks.back().body);
+		from = builder_.CreateLoad(from);
+	}
 
 	return from;
 }
@@ -1446,6 +1448,8 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 			builder_.SetInsertPoint(blocks.back().body);
 			llvm::Value *src = generateExpr(init);
 			builder_.CreateStore(src, dest);
+
+			return;
 		} else {
 			type = mt->getElemType();
 		}
