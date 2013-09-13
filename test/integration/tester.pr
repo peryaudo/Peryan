@@ -3,7 +3,7 @@ mes "\e[32m[==========]\e[0m Running testcases under test/integration/cases/"
 
 
 var dirs :: String
-dirlist dirs, "cases/*.pr", 0
+dirlist dirs, "../../../../test/integration/cases/*.pr", 0
 notesel dirs
 
 var total = noteinfo(0)
@@ -13,7 +13,7 @@ repeat total
 	var fileName :: String
 	noteget fileName, cnt 
 
-	var baseName = strmid(fileName, strlen("cases/"), strlen(fileName) - 3 - strlen("cases/"))
+	var baseName = strmid(fileName, strlen("../../../../test/integration/cases/"), strlen(fileName) - 3 - strlen("../../../../test/integration/cases/"))
 
 
 	mes "\e[32m[----------]\e[0m"
@@ -25,7 +25,7 @@ repeat total
 
 	var cur = ""
 
-	cur = "..\\..\\src\\peryan --runtime-path ../../runtime " + fileName + " compiled/" + baseName
+	cur = "..\\..\\bin\\peryan --runtime-path ../../bin " + fileName + " compiled/" + baseName
 	ret = exec(cur)
 	if ret != 0 {
 		mes "\e[31m[          ]\e[0m Error while executing: " + cur
@@ -48,7 +48,7 @@ repeat total
 
 		var expected :: String
 		notesel expected
-		noteload "expected/" + baseName + ".txt"
+		noteload "../../../../test/integration/expected/" + baseName + ".txt"
 
 		if expected != actual {
 			mes "Error: assertion failed:"

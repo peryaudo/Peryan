@@ -1,14 +1,10 @@
 all:
-	cd src; make
-	cd test; make
-	cd runtime; make
+	cd build/unix; make all
+
+test:
+	cd build/unix; make test
 
 clean:
-	cd src; make clean
-	cd test; make clean
-	cd runtime; make clean
-
-test: all
-	cd test; make test
+	cd build/unix; make clean
 
 .PHONY: all test clean
