@@ -1126,17 +1126,21 @@ void LLVMCodeGen::Impl::generatePrimitiveTypeConstructor(llvm::Value *dest, Type
 			Type *from = ce->params[0]->type->unmodify();
 			Type *to = ce->type;
 			if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
-				&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+				&& (to->is(Char_) || to->is(Int_))) {
 
 				// integer to integer
 				builder_.SetInsertPoint(blocks.back().body);
 				src = builder_.CreateTrunc(prm, getLLVMType(to));
+			} else if ((from->is(Char_) || from->is(Int_)) && (to->is(Bool_))) {
+				// integer to Bool
+				builder_.SetInsertPoint(blocks.back().body);
+				src = builder_.CreateICmpNE(prm, llvm::ConstantInt::get(getLLVMType(from), 0));
 			} else if ((from->is(Float_) || from->is(Double_))
-					&& (to->is(Bool_) || to->is(Char_) || to->is(Int_))) {
+					&& (to->is(Char_) || to->is(Int_))) {
 				// real to integer
 				builder_.SetInsertPoint(blocks.back().body);
 				src = builder_.CreateFPToSI(prm, getLLVMType(to));
-			} else if ((from->is(Bool_) || from->is(Char_) || from->is(Int_))
+			} else if ((from->is(Char_) || from->is(Int_))
 					&& (to->is(Float_) || to->is(Double_))) {
 				// integer to real 
 				src = builder_.CreateSIToFP(prm, getLLVMType(to));

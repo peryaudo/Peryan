@@ -1,0 +1,5 @@
+if Bool(4) {
+	mes "valid"
+} else {
+	mes "invalid"
+}
