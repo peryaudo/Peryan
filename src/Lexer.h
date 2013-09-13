@@ -95,6 +95,7 @@ private:
 	int readDecimalLiteral();
 	int readBinaryLiteral();
 	std::string readCharOrStringLiteral(char terminator);
+	std::string readHereDocument();
 
 	void getline(std::istream& is, std::string& str);
 

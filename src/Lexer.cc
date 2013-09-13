@@ -69,8 +69,11 @@ Token Lexer::getNextToken() {
 		}
 	}
 
-
 	const Position curPos = getPosition();
+
+	if (lookahead(0) == '{' && lookahead(1) == '\"') {
+		return Token(Token::STRING, readHereDocument(), curPos);
+	}
 
 	// identifier might conflict with keywords and punctuators
 	// so we should know the length
@@ -203,11 +206,11 @@ std::string Lexer::readIdentifier() {
 
 std::string Lexer::readCharOrStringLiteral(char terminator) {
 	std::string str;
-	consume();
 	Position begPos = getPosition();
+	consume();
 	while (lookahead() != terminator) {
-		if (lookahead() == 0) {
-			throw LexerError(begPos, "error: literal should be closed");
+		if (lookahead() == '\r' || lookahead() == '\n' || lookahead() == 0) {
+			throw LexerError(begPos, "error: string literal should be closed");
 		}
 		if (lookahead() == '\\') {
 			switch (lookahead(1)) {
@@ -226,6 +229,34 @@ std::string Lexer::readCharOrStringLiteral(char terminator) {
 		}
 	}
 	consume();
+	return str;
+}
+
+std::string Lexer::readHereDocument() {
+	std::string str;
+	Position begPos = getPosition();
+	consume(2);
+	while (lookahead(0) != '\"' || lookahead(1) != '}') {
+		if (lookahead() == 0) {
+			throw LexerError(begPos, "error: string literal should be closed");
+		}
+		if (lookahead() == '\\') {
+			switch (lookahead(1)) {
+			case 't': str += '\t'; break;
+			case 'n': str += '\n'; break;
+			case 'r': str += '\r'; break;
+			case 'e': str += '\x1b'; break;
+			case '\\': str += '\\'; break;
+			case '\"': str += '\"'; break;
+			default : str += lookahead(1); break;
+			}
+			consume(2);
+		} else {
+			str += lookahead();
+			consume();
+		}
+	}
+	consume(2);
 	return str;
 }
 
