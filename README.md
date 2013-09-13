@@ -39,17 +39,21 @@ Peryanは、これらの目標を達成することにより、高い実用性�
 
 ## 処理系のコンパイル
 
-処理系はSTLのみを利用するC++で書かれており、コンパイルにはLLVMが必要です。
-ただし、Peryanによって実行ファイルを出力する場合にはClangも必要です。
+現在、PeryanはPOSIX環境とWindowsをサポートしており、それぞれMac OS XとWindows 8の環境で開発されています。
+
+処理系はSTLのみを利用するC++で書かれており、コンパイルにはLLVM 3.3が必要です。
+Linuxでは各ディストリビューションのパッケージマネージャ、OSXではbrew install llvmで事前にLLVMをインストールする必要があります。
 
     make
     make test
 
-## PeryanによるPeryanプログラムのコンパイル
+Windowsでは現状Visual C++ 2012によるコンパイルのみサポートしています。詳しくはbuild/win32を御覧ください。
 
-    cd src
+## PeryanによるPeryanプログラムのコンパイル (POSIX)
+
+    cd build/unix
     make
-    PERYAN_RUNTIME_PATH=../runtime ./peryan ../test/integration/cases/Sieve.pr sieve
+    ./bin/peryan --runtime-path . ../../test/integration/cases/Sieve.pr -o sieve
     ./sieve
 
 ## 文法概観
@@ -61,15 +65,29 @@ Peryanは、これらの目標を達成することにより、高い実用性�
     	return 0
     }
 
+ただし型推論により以下のように型宣言を省略することもできます。
+
+    func myAbs (x) {
+    	if x > 0 {
+    		return x
+    	} else {
+    		return -x
+    	}
+    }
+    mes String(myAbs(-1234))
+
 ### 変数定義
 
     var thisIsVariable :: Int = 123
 
-ただし型推論の有効な範囲内で型名を省略することができます。
+同様に、型推論の有効な範囲内で型宣言を省略することができます。
+
+    var thisIsVariable = 123
 
 ## 今後の展望
 
-Peryanではオブジェクト指向など多くの機能が未だ実装されずに残っています。
+Peryanはオブジェクト指向などをはじめとして主要機能の多くが未だ実装されておらず、開発の最初期段階にあります。
+
 今後実装される予定の物には以下のものがあります。
 また、詳細なドキュメントも今後用意される予定です。
 
