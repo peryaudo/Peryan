@@ -25,7 +25,7 @@ repeat total
 
 	var cur = ""
 
-	cur = "..\\..\\bin\\peryan --runtime-path ../../bin " + fileName + " compiled/" + baseName
+	cur = "..\\..\\bin\\peryan --runtime-path ../../bin " + fileName + " -o compiled/" + baseName
 	ret = exec(cur)
 	if ret != 0 {
 		mes "\e[31m[          ]\e[0m Error while executing: " + cur

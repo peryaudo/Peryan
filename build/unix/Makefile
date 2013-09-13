@@ -93,6 +93,6 @@ $(BINDIR)/peryandefs: $(PERYAN_RUNTIME_SRCDIR)/peryandefs
 $(PERYAN_INTEGRATION_TEST_TARGET): $(PERYAN_INTEGRATION_TEST_SRCDIR)/tester.pr \
 						 $(PERYAN_TARGET) $(BINDIR)/unixcl.o $(BINDIR)/peryandefs
 	mkdir -p $(TEST_BINDIR)
-	$(PERYAN_TARGET) --runtime-path $(BINDIR) $< $@
+	$(PERYAN_TARGET) --runtime-path $(BINDIR) $< -o $@
 
 .PHONY: all test clean

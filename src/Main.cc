@@ -63,24 +63,52 @@ int main(int argc, char *argv[])
 			}
 		}*/ else if (cur == "-w") {
 			opt.inhibitWarnings = true;
+		} else if(cur == "-o") {
+			if (i + 1 >= argc) {
+				std::cerr<<"error: no runtime specified for -o"<<std::endl;
+				return 1;
+			} else {
+				opt.outputFileName = std::string(argv[i + 1]);
+				++i;
+			}
 		} else if (cur.find("-") != std::string::npos) {
 			std::cerr<<"error: unknown option "<<cur<<std::endl;
 			return 1;
 		} else {
 			if (opt.mainFileName.empty()) {
 				opt.mainFileName = cur;
-			} else if (opt.outputFileName.empty()) {
-				opt.outputFileName = cur;
 			} else {
-				std::cerr<<"warning: unknown argument"<<std::endl;
+				std::cerr<<"error: unknown argument "<<cur<<std::endl;
+				return 1;
 			}
 		}
 	}
 
-	if (opt.mainFileName.empty() || opt.outputFileName.empty()) {
+	if (opt.mainFileName.empty()) {
 		std::cerr<<"Peryan Compiler (C) peryaudo"<<std::endl;
-		std::cerr<<"Usage : peryan <input> <output>"<<std::endl<<std::endl;
+		std::cerr<<"Usage : peryan [options] [-o <output>] <input>"<<std::endl<<std::endl;
+
+		std::cerr<<"Options :"<<std::endl;
+		std::cerr<<" -o\t\t\tSpecify the output file name"<<std::endl;
+		std::cerr<<" --runtime-path\t\tSpecify the runtime directory"<<std::endl;
+		// std::cerr<<" --runtime (unixcl|win32)\t\tSpecify the runtime to link"<<std::endl;
+		std::cerr<<" --tmp-dir\t\tSpecify a temporary directory"<<std::endl;
+		std::cerr<<" --verbose, -v\t\tDisplay the internal progress of the compiler"<<std::endl;
+		std::cerr<<" --hsp-compatible, -hsp\tEnable HSP compatible behaviors"<<std::endl;
+		std::cerr<<" --dump-ast\t\tDump the abstruct syntax tree generated internally (for debug)"<<std::endl;
+		std::cerr<<" --dump-tokens\t\tDump the tokens generated internally (for debug)"<<std::endl;
+
+		std::cerr<<std::endl;
+
 		return 1;
+	}
+
+	if (opt.outputFileName.empty()) {
+#ifdef _WIN32
+		opt.outputFileName = "a.exe";
+#else
+		opt.outputFileName = "a.out";
+#endif
 	}
 
 	if (opt.runtime.empty()) {
