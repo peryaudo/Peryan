@@ -1,18 +1,5 @@
-func abs(x :: Int) :: Int {
-	if  x > 0 {
-		return x
-	} else {
-		return -x
-	}
+if (true & false) | (false & true) {
+	mes "failed"
 }
 
-var curX :: Int = 0
-var curY :: Int = 0
-var steps :: Int = 0
-var mode :: Int = 0
-
-if ((curX != curY) & (abs(curX - steps) = abs(curY - steps))) | ((mode = 0) & ((curX + 1) = curY)) {
-	mes "complex if"
-} else {
-	mes "complex if"
-}
+mes "complex if"

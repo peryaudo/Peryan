@@ -76,7 +76,7 @@ $(OBJDIR)/%.o: $(PERYAN_SRCDIR)/%.cc
 $(OBJDIR)/LLVMCodeGen.o:
 	mkdir -p $(OBJDIR)
 	mkdir -p $(DEPDIR)
-	$(CXX) $(CXXFLAGS) `llvm-config --cxxflags` $(CPPFLAGS) -c -o $@ $(PERYAN_SRCDIR)/LLVMCodeGen.cc
+	$(CXX) $(CXXFLAGS) `llvm-config --cxxflags` $(CPPFLAGS) -c -o $@ $(PERYAN_SRCDIR)/LLVMCodeGen.cc -MMD -MF $(DEPDIR)/LLVMCodeGen.d
 
 $(TEST_OBJDIR)/gtest-all.o : $(addprefix $(PERYAN_UNIT_TEST_SRCDIR)/, gtest/gtest-all.cc gtest/gtest.h)
 	mkdir -p $(TEST_OBJDIR)

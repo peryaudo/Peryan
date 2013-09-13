@@ -785,25 +785,41 @@ llvm::Value *LLVMCodeGen::Impl::generateBinaryExpr(BinaryExpr *be) {
 			(be->token.getType() == Token::AMP || be->token.getType() == Token::PIPE)) {
 		std::string numStr = getUniqNumStr();
 		llvm::Function *func = getEnclosingFunc();
+
+		// block where you evaluate left hand side
 		llvm::BasicBlock *logicLhs = blocks.back().body;
+
+		// block where you evaluate right hand side
 		llvm::BasicBlock *logicRhs = llvm::BasicBlock::Create(context_,
 							"logicRhs" + numStr, func);
+
+		// block where you reach after the evaluation
 		llvm::BasicBlock *logicAfter = llvm::BasicBlock::Create(context_,
 							"logicAfter" + numStr, func);
 
 		const bool isAnd = (be->token.getType() == Token::AMP);
 
-		builder_.SetInsertPoint(logicLhs);
+		blocks.back().body = logicLhs;
 		llvm::Value *lhs = generateExpr(be->lhs);
+
+		// current block might be changed after the evaluation
+		logicLhs = blocks.back().body;
+		builder_.SetInsertPoint(logicLhs);
 
 		builder_.CreateCondBr(
 			builder_.CreateICmpEQ(lhs, llvm::ConstantInt::get(getLLVMType(Bool_), (isAnd ? 1 : 0))),
 			logicRhs,
 			logicAfter);
 
+
 		builder_.SetInsertPoint(logicRhs);
 		blocks.back().body = logicRhs;
 		llvm::Value *rhs = generateExpr(be->rhs);
+
+		// current block might be changed after the evaluation
+		logicRhs = blocks.back().body;
+		builder_.SetInsertPoint(logicRhs);
+
 		builder_.CreateBr(logicAfter);
 
 		builder_.SetInsertPoint(logicAfter);
