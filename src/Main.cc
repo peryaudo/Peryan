@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 	if (!opt.inhibitWarnings) warnings.print(lexer);
 
 	if (opt.dumpAST) {
-		Peryan::ASTPrinter printer(/* pretty = */ true);
+		Peryan::ASTPrinter printer(/* pretty = */true, /* type = */true);
 		std::cerr<<printer.toString(parser.getTransUnit())<<std::endl;
 	}
 

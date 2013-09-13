@@ -46,6 +46,7 @@ public:
 	void visit(CharLiteralExpr *lit, Scope *scope);
 	void visit(FloatLiteralExpr *lit, Scope *scope);
 	void visit(BoolLiteralExpr *lit, Scope *scope);
+	void visit(ArrayLiteralExpr *ale, Scope *scope);
 	void visit(FuncCallExpr *fce, Scope *scope);
 	void visit(ConstructorExpr *fce, Scope *scope);
 	void visit(SubscrExpr *se, Scope *scope);

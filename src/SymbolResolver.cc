@@ -279,6 +279,7 @@ void SymbolResolver::visit(Expr *expr, Scope *scope) {
 	case AST::FLOAT_LITERAL_EXPR	: visit(static_cast<FloatLiteralExpr *>(expr), scope); break;
 	case AST::CHAR_LITERAL_EXPR	: visit(static_cast<CharLiteralExpr *>(expr), scope); break;
 	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr), scope); break;
+	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr), scope); break;
 	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr), scope); break;
 	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr), scope); break;
 	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr), scope); break;
@@ -413,6 +414,16 @@ void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) {
 void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
+	return;
+}
+
+void SymbolResolver::visit(ArrayLiteralExpr *ale, Scope *scope) {
+	DBG_PRINT(+, ArrayLiteralExpr);
+
+	for (std::vector<Expr *>::iterator it = ale->elements.begin(); it != ale->elements.end(); ++it)
+		visit(*it, scope);
+
+	DBG_PRINT(-, ArrayLiteralExpr);
 	return;
 }
 
