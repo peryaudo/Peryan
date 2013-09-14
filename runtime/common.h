@@ -179,6 +179,11 @@ int PRStringCompare(struct String *lhs, struct String *rhs)
 	}
 }
 
+int PRStringLength(struct String *str)
+{
+	return str->length;
+}
+
 /* End implementation of built-in String */
 
 int PRIntConstructor(struct String *str)
@@ -208,12 +213,6 @@ int PRIntConstructor(struct String *str)
 
 	DBG_PRINT(-, PRIntConstructor);
 	return res;
-}
-
-int strlen_(struct String *str)
-{
-	DBG_PRINT(+-, strlen_);
-	return str->length;
 }
 
 struct String *strmid(struct String *str, int start, int length)

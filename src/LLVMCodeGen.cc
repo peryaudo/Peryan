@@ -135,6 +135,7 @@ private:
 	llvm::Value *generateFuncCallExpr(FuncCallExpr *fce);
 	llvm::Value *generateConstructorExpr(ConstructorExpr *ce);
 	llvm::Value *generateSubscrExpr(SubscrExpr *se);
+	llvm::Value *generateMemberExpr(MemberExpr *me);
 
 
 	void generateConstructor(llvm::Value *dest, Type *type, Expr *init);
@@ -233,6 +234,7 @@ void LLVMCodeGen::Impl::registerRuntimeFunctions() {
 	generateFuncDecl("PRStringConcatenate", new FuncType(String_, new FuncType(String_, String_)));
 	generateFuncDecl("PRStringDestructor", new FuncType(String_, Void_));
 	generateFuncDecl("PRStringCompare", new FuncType(String_, new FuncType(String_, Int_)));
+	generateFuncDecl("PRStringLength", new FuncType(String_, Int_));
 	
 	return;
 }
@@ -739,7 +741,7 @@ llvm::Value *LLVMCodeGen::Impl::generateExpr(Expr *expr) {
 	case AST::FUNC_CALL_EXPR	: return generateFuncCallExpr(static_cast<FuncCallExpr *>(expr));
 	case AST::CONSTRUCTOR_EXPR	: return generateConstructorExpr(static_cast<ConstructorExpr *>(expr));
 	case AST::SUBSCR_EXPR		: return generateSubscrExpr(static_cast<SubscrExpr *>(expr));
-	case AST::MEMBER_EXPR		: /*return generateMemberExpr(static_cast<MemberExpr *>(expr));*/ assert(false && "member expression not supported yet");
+	case AST::MEMBER_EXPR		: return generateMemberExpr(static_cast<MemberExpr *>(expr));
 	case AST::REF_EXPR		: assert(false && "cannnot generate ref expr!");
 	case AST::DEREF_EXPR		: return generateDerefExpr(static_cast<DerefExpr *>(expr));
 
@@ -1296,7 +1298,6 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
 	lengthParams.push_back(llvm::ConstantInt::get(lvInt, 0));
 	llvm::Value *length = builder_.CreateGEP(dest, lengthParams);
-	builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
 
 	// %capacity = getelementptr [Type]* %dest, i32 0, i32 1
 	std::vector<llvm::Value *> capacityParams;
@@ -1307,18 +1308,23 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	builder_.SetInsertPoint(blocks.back().body);
 	llvm::Value *capValCE = NULL;
 	if (init == NULL) {
+		builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
 		// store i32 kArrayDefaultCapacity, i32* %capacity
 		builder_.CreateStore(llvm::ConstantInt::get(lvInt, kArrayDefaultCapacity), capacity);
 	} else if (init->getASTType() == AST::ARRAY_LITERAL_EXPR) {
+		const unsigned int aleLen = static_cast<ArrayLiteralExpr *>(init)->elements.size();
+		builder_.CreateStore(llvm::ConstantInt::get(lvInt, aleLen), length);
 		// store i32 ale->elements.size(), i32* %capacity
-		builder_.CreateStore(llvm::ConstantInt::get(lvInt,
-			static_cast<ArrayLiteralExpr *>(init)->elements.size()), capacity);
+		builder_.CreateStore(llvm::ConstantInt::get(lvInt, aleLen), capacity);
 	} else if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
 		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
 		if (ce->params.size() > 0) {
 			capValCE = generateExpr(ce->params[0]);
 			builder_.SetInsertPoint(blocks.back().body);
 			builder_.CreateStore(capValCE, capacity);
+		} else {
+			builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
+			builder_.CreateStore(llvm::ConstantInt::get(lvInt, kArrayDefaultCapacity), capacity);
 		}
 	} else {
 		assert(false && "unknown array constructing expression");
@@ -1938,6 +1944,49 @@ llvm::Value *LLVMCodeGen::Impl::generateSubscrExpr(SubscrExpr *se) {
 
 
 	return element;
+}
+
+llvm::Value *LLVMCodeGen::Impl::generateMemberExpr(MemberExpr *me) {
+	assert(me != NULL);
+	assert(me->receiver != NULL);
+	assert(me->member != NULL);
+	assert(me->receiver->type != NULL);
+
+	if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE && me->member->getString() == "length") {
+		// [Type].length :: const ref Int
+
+		// 0: int length
+		// 1: int capacity
+		// 2: int elementSize
+		// 3: Type* elements for [ Type ] (if Type = Int, then i32*)
+
+		builder_.SetInsertPoint(blocks.back().body);
+		llvm::Value *array = generateExpr(me->receiver);
+
+		std::vector<llvm::Value *> params;
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		llvm::Value *length = builder_.CreateGEP(array, params);
+		return length;
+
+	} else if (me->receiver->type->unmodify()->is(String_) && me->member->getString() == "length") {
+		// String.length :: const ref Int
+		
+		builder_.SetInsertPoint(blocks.back().body);
+
+		llvm::Value *stringPtr = generateExpr(me->receiver);
+		llvm::Value *string = builder_.CreateLoad(stringPtr);
+
+		std::vector<llvm::Value *> params;
+		params.push_back(string);
+
+		llvm::Function *func = module_.getFunction("PRStringLength");
+		assert(func != NULL);
+
+		return builder_.CreateCall(func, params);
+	} else {
+		assert(false && "class not supported yet");
+	}
 }
 
 llvm::Value *LLVMCodeGen::Impl::lookup(const std::string& str) {

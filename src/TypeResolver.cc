@@ -1467,7 +1467,7 @@ Type *TypeResolver::visit(SubscrExpr *se) {
 	}
 
 	if (arrayType->unmodify()->getTypeType() != Type::ARRAY_TYPE)
-		throw SemanticsError(se->token.getPosition(), "error: giving subscript to non-array");
+		throw SemanticsError(se->token.getPosition(), "error: giving subscript to non-array type");
 
 	bool isConst = false;
 	bool isRef = false;
@@ -1538,13 +1538,23 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 			+ me->receiver->type->getTypeName() + ")");
 	}
 
-	assert(me->receiver->type->getTypeType() != Type::CLASS_TYPE && "class not supported");
+	if (me->receiver->type->getTypeType() != Type::MODIFIER_TYPE || !(static_cast<ModifierType *>(me->receiver->type)->isRef())) {
+		Type *unmodified = me->receiver->type;
+		bool isConst = false;
+		if (unmodified->getTypeType() == Type::MODIFIER_TYPE) {
+			isConst = static_cast<ModifierType *>(unmodified)->isConst();
+			unmodified = static_cast<ModifierType *>(unmodified)->getElemType();
+		}
+		me->receiver = insertPromoter(me->receiver, new ModifierType(isConst, true, unmodified));
+	}
+
+	assert(me->receiver->type->unmodify()->getTypeType() != Type::CLASS_TYPE && "class not supported");
 
 	assert(me->member->getASTType() == AST::IDENTIFIER);
 
 	if (me->receiver->type->unmodify()->is(String_)) {
 		if (me->member->getString() == "length") {
-			me->type = new ModifierType(true, true, Int_);
+			me->type = new ModifierType(true, false, Int_);
 		} else {
 			throw SemanticsError(me->token.getPosition(),
 				std::string("error: invalid member ") + me->member->getString()

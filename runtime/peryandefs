@@ -2,10 +2,8 @@ extern mes :: String -> Void
 
 extern printNum :: Int -> Void
 
-extern strlen_ :: String -> Int
 func strlen(str :: String) :: Int {
-	return strlen_(str)
-	// return str.length
+	return str.length
 }
 
 func str(x :: Int) :: String {
