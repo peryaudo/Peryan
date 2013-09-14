@@ -1,4 +1,4 @@
-CTEST_XX = clang++
+CTEST_XX = g++
 
 ifeq ($(OS),Windows_NT)
 	EXEEXT = .exe
@@ -8,7 +8,7 @@ else
 	LIBS = `llvm-config --libs`
 endif
 
-CXXFLAGS = -Wall -O3
+CXXFLAGS = -Wall -coverage
 CPPFLAGS = 
 LDFLAGS = `llvm-config --ldflags`
 
@@ -42,6 +42,11 @@ all: $(TARGETS)
 test: $(PERYAN_UNIT_TEST_TARGET) $(PERYAN_INTEGRATION_TEST_TARGET)
 	$(PERYAN_UNIT_TEST_TARGET)
 	cd $(TEST_BINDIR); rm -rf actual; rm -rf compiled; mkdir actual; mkdir compiled; ./peryan_integration_test$(EXEEXT);
+	mkdir -p test/coverage/
+	lcov -c -d ./obj -b . -o test/coverage/peryan.info --rc lcov_branch_coverage=1
+	lcov --remove test/coverage/peryan.info "/usr/*" -o test/coverage/peryan.info --rc lcov_branch_coverage=1
+	genhtml test/coverage/peryan.info --branch-coverage -o test/coverage/ --rc lcov_branch_coverage=1
+
 
 DEPS = $(addprefix $(DEPDIR)/, $(patsubst %.cc, %.d, $(PERYAN_SRCS))) \
        $(addprefix $(DEPDIR)/, $(patsubst %.cc, %.d, $(PERYAN_UNIT_TEST_SRCS)))
@@ -61,7 +66,7 @@ $(PERYAN_UNIT_TEST_TARGET): $(PERYAN_UNIT_TEST_OBJS)
 
 $(BINDIR)/unixcl.o: $(addprefix $(PERYAN_RUNTIME_SRCDIR)/, unixcl.c common.h)
 	mkdir -p $(BINDIR)
-	gcc -O3 -Wall -c $< -o $@
+	gcc -Wall -c $< -o $@
 
 $(TEST_OBJDIR)/%.o: $(PERYAN_UNIT_TEST_SRCDIR)/%.cc
 	mkdir -p $(TEST_OBJDIR)
