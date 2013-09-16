@@ -142,6 +142,8 @@ private:
 	void generatePrimitiveTypeConstructor(llvm::Value *dest, Type *type, Expr *init);
 	void generateStringConstructor(llvm::Value *dest, Type *type, Expr *init);
 	void generateArrayConstructor(llvm::Value *dest, Type *type, Expr *init);
+	void generateArrayResize(llvm::Value *array, llvm::Value *size,
+			bool checkLength = true, bool runConstructor = true);
 
 	llvm::Value *lookup(const std::string& str);
 public:
@@ -1438,6 +1440,106 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	return;
 }
 
+void LLVMCodeGen::Impl::generateArrayResize(llvm::Value *array, llvm::Value *size,
+		bool checkLength, bool runConstructor) {
+	assert(false && "array resize not implemented");
+
+	assert(!runConstructor ? !checkLength : true);
+
+	// 0: int length
+	// 1: int capacity
+	// 2: int elementSize
+	// 3: Type* elements for [ Type ] (if Type = Int, then i32*)
+
+	// Overview of the following array resize is like this:
+	// if (length <= size) {
+	// 	mallocedSize = size * elementSize
+	// 	elements = PRRealloc(elements, mallocedSize);
+	//	for (i = length; i < size; ++i)
+	// 		construct(elements[i]);
+	//	capacity = size;
+	//	length = size;
+	// } else {
+	//	for (i = size; i < length; ++i)
+	//		destruct(elements[i]);
+	//	length = size
+	// }
+
+	llvm::Function *func = getEnclosingFunc();
+	const std::string curNumStr = getUniqNumStr();
+
+	llvm::Value *length = NULL;
+	{
+		builder_.SetInsertPoint(blocks.back().body);
+
+		std::vector<llvm::Value *> params;
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		llvm::Value *lengthPtr = builder_.CreateGEP(array, params);
+		length = builder_.CreateLoad(lengthPtr);
+	}
+
+	llvm::BasicBlock *resizeExpand = llvm::BasicBlock::Create(context_, "resizeExpand" + curNumStr, func);
+
+	llvm::BasicBlock *resizeShrink = NULL;
+	if (checkLength)
+		resizeShrink = llvm::BasicBlock::Create(context_, "resizeShrink" + curNumStr, func);
+
+	llvm::BasicBlock *resizeAfter = llvm::BasicBlock::Create(context_, "resizeAfter" + curNumStr, func);
+
+	builder_.SetInsertPoint(blocks.back().body);
+	if (checkLength) {
+		llvm::Value *cond = builder_.CreateICmpSLE(length, size);
+		builder_.CreateCondBr(cond, resizeExpand, resizeShrink);
+	} else {
+		builder_.CreateBr(resizeExpand);
+	}
+
+	blocks.back().body = resizeExpand;
+	builder_.SetInsertPoint(resizeExpand);
+
+	llvm::Value *elementSize = NULL;
+	{
+		std::vector<llvm::Value *> params;
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 2));
+		llvm::Value *elementSizePtr = builder_.CreateGEP(array, params);
+		elementSize = builder_.CreateLoad(elementSizePtr);
+	}
+
+	llvm::Value *mallocedSize = builder_.CreateMul(size, elementSize);
+
+	llvm::Value *elementsPtr = NULL, *elements = NULL;
+	{
+		std::vector<llvm::Value *> params;
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 3));
+		elementsPtr = builder_.CreateGEP(array, params);
+		elements = builder_.CreateLoad(elementsPtr);
+	}
+
+	{
+		llvm::Function *func = module_.getFunction("PRRealloc");
+		assert(func != NULL);
+		std::vector<llvm::Value *> params;
+		params.push_back(builder_.CreateBitCast(elements, llvm::Type::getInt8Ty(context_)->getPointerTo()));
+		params.push_back(mallocedSize);
+
+		elements = builder_.CreateBitCast(builder_.CreateCall(func, params), elements->getType());
+
+		builder_.CreateStore(elements, elementsPtr);
+	}
+
+	if (runConstructor) {
+		//llvm::BasicBlock *
+	}
+
+	// TODO!!!STUB!!!!
+
+	blocks.back().body = resizeAfter;
+	return;
+}
+
 // initialize allocated variable dest with init
 // TODO: to run copy constructor
 // TODO: to run copy constructor and destructor on assignment
@@ -1493,8 +1595,21 @@ void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 	} else if (is->inst->getASTType() == AST::STATIC_MEMBER_EXPR) {
 		StaticMemberExpr *sme = static_cast<StaticMemberExpr *>(is->inst);
 		symbol = sme->member->symbol;
+	} else if (is->inst->getASTType() == AST::MEMBER_EXPR) {
+		// it is not the best to write it there
+		MemberExpr *me = static_cast<MemberExpr *>(is->inst);
+		if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE
+				&& me->member->getString() == "resize" && is->params.size() == 1) {
+			llvm::Value *array = generateExpr(me->receiver);
+			llvm::Value *nextSize = generateExpr(is->params[0]);
+			generateArrayResize(array, nextSize);
+			return;
+		} else {
+			assert(false && "unknow member instruction (class not supported yet)");
+		}
 	} else {
-		assert(false && "member instruction not supported yet!");
+		assert(false && "unknown instruction (function object not supported yet)");
+
 	}
 	assert(symbol != NULL);
 
@@ -1708,6 +1823,7 @@ void LLVMCodeGen::Impl::generateRepeatStmt(RepeatStmt *rs) {
 	builder_.SetInsertPoint(blocks.back().body);
 	builder_.CreateBr(repeatInit);
 
+	// it is block for repeat counter
 	{
 		Block block(Block::COMP_BLOCK);
 		block.body = repeatInit;
@@ -1718,8 +1834,6 @@ void LLVMCodeGen::Impl::generateRepeatStmt(RepeatStmt *rs) {
 	}
 
 	llvm::Value *cntMax = rs->count != NULL ? generateExpr(rs->count) : NULL;
-
-	// TODO: add "isDisallowedIdentifier" in SymbolRegister
 
 	Symbol *cntSymbol = rs->scope->resolve("cnt", rs->token.getPosition());
 	assert(cntSymbol != NULL);
@@ -1952,38 +2066,45 @@ llvm::Value *LLVMCodeGen::Impl::generateMemberExpr(MemberExpr *me) {
 	assert(me->member != NULL);
 	assert(me->receiver->type != NULL);
 
-	if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE && me->member->getString() == "length") {
-		// [Type].length :: const ref Int
+	if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE) {
+		if (me->member->getString() == "length") {
+			// [Type].length :: const ref Int
 
-		// 0: int length
-		// 1: int capacity
-		// 2: int elementSize
-		// 3: Type* elements for [ Type ] (if Type = Int, then i32*)
+			// 0: int length
+			// 1: int capacity
+			// 2: int elementSize
+			// 3: Type* elements for [ Type ] (if Type = Int, then i32*)
 
-		builder_.SetInsertPoint(blocks.back().body);
-		llvm::Value *array = generateExpr(me->receiver);
+			builder_.SetInsertPoint(blocks.back().body);
+			llvm::Value *array = generateExpr(me->receiver);
 
-		std::vector<llvm::Value *> params;
-		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
-		params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
-		llvm::Value *length = builder_.CreateGEP(array, params);
-		return length;
+			std::vector<llvm::Value *> params;
+			params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+			params.push_back(llvm::ConstantInt::get(getLLVMType(Int_), 0));
+			llvm::Value *length = builder_.CreateGEP(array, params);
+			return length;
+		} else {
+			assert(false && "the member for Array is not impelmented yet");
+		}
+	} else if (me->receiver->type->unmodify()->is(String_)) {
+		if (me->member->getString() == "length") {
+			// String.length :: const ref Int
+			
+			builder_.SetInsertPoint(blocks.back().body);
 
-	} else if (me->receiver->type->unmodify()->is(String_) && me->member->getString() == "length") {
-		// String.length :: const ref Int
-		
-		builder_.SetInsertPoint(blocks.back().body);
+			llvm::Value *stringPtr = generateExpr(me->receiver);
+			llvm::Value *string = builder_.CreateLoad(stringPtr);
 
-		llvm::Value *stringPtr = generateExpr(me->receiver);
-		llvm::Value *string = builder_.CreateLoad(stringPtr);
+			std::vector<llvm::Value *> params;
+			params.push_back(string);
 
-		std::vector<llvm::Value *> params;
-		params.push_back(string);
+			llvm::Function *func = module_.getFunction("PRStringLength");
+			assert(func != NULL);
 
-		llvm::Function *func = module_.getFunction("PRStringLength");
-		assert(func != NULL);
-
-		return builder_.CreateCall(func, params);
+			return builder_.CreateCall(func, params);
+		} else {
+			assert(false && "the member for String is not implemented yet");
+		}
 	} else {
 		assert(false && "class not supported yet");
 	}

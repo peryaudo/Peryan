@@ -1557,12 +1557,14 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 			me->type = new ModifierType(true, false, Int_);
 		} else {
 			throw SemanticsError(me->token.getPosition(),
-				std::string("error: invalid member ") + me->member->getString()
-				+ " for type " + me->receiver->type->getTypeName());
+				std::string("error: invalid member \"") + me->member->getString()
+				+ "\" for type " + me->receiver->type->getTypeName());
 		}
 	} else if (me->receiver->type->unmodify()->getTypeType() == Type::ARRAY_TYPE) {
 		if (me->member->getString() == "length") {
 			me->type = new ModifierType(true, true, Int_);
+		} else if (me->member->getString() == "resize") {
+			me->type = new FuncType(Int_, Void_);
 		} else {
 			if (opt_.hspCompat) {
 				// rewrite the whole expression as an array reference
@@ -1580,8 +1582,8 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 				return rewritten->type;
 			} else {
 				throw SemanticsError(me->token.getPosition(),
-					std::string("error: invalid member ") + me->member->getString()
-					+ " for type " + me->receiver->type->getTypeName());
+					std::string("error: invalid member \"") + me->member->getString()
+					+ "\" for type " + me->receiver->type->getTypeName());
 			}
 		}
 	}
