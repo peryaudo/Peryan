@@ -21,31 +21,37 @@ void SymbolResolver::visit(TransUnit *tu) {
 
 	Scope *scope = tu->scope;
 
+	scopes.push(scope);
+
 	for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-		visit(*it, scope);
+		visit(*it);
 	}
+
+	scopes.pop();
+
+	assert(scopes.empty());
 
 	DBG_PRINT(-, TransUnit);
 	return;
 }
 
-void SymbolResolver::visit(Stmt *stmt, Scope *scope) {
+void SymbolResolver::visit(Stmt *stmt) {
 	DBG_PRINT(+, Stmt);
 	assert(stmt != NULL);
 
 	switch (stmt->getASTType()) {
-	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt), scope); break;
-	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt), scope); break;
-	case AST::INST_STMT		: visit(static_cast<InstStmt *>(stmt), scope); break;
-	case AST::ASSIGN_STMT		: visit(static_cast<AssignStmt *>(stmt), scope); break;
-	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt), scope); break;
-	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt), scope); break;
-	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt), scope); break;
-	case AST::GOTO_STMT		: visit(static_cast<GotoStmt *>(stmt), scope); break;
-	case AST::GOSUB_STMT		: visit(static_cast<GosubStmt*>(stmt), scope); break;
-	case AST::RETURN_STMT		: visit(static_cast<ReturnStmt *>(stmt), scope); break;
-	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt), scope); break;
-	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt), scope); break;
+	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt)); break;
+	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt)); break;
+	case AST::INST_STMT		: visit(static_cast<InstStmt *>(stmt)); break;
+	case AST::ASSIGN_STMT		: visit(static_cast<AssignStmt *>(stmt)); break;
+	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt)); break;
+	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt)); break;
+	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt)); break;
+	case AST::GOTO_STMT		: visit(static_cast<GotoStmt *>(stmt)); break;
+	case AST::GOSUB_STMT		: visit(static_cast<GosubStmt*>(stmt)); break;
+	case AST::RETURN_STMT		: visit(static_cast<ReturnStmt *>(stmt)); break;
+	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt)); break;
+	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt)); break;
 	default				: ;
 	}
 
@@ -53,14 +59,14 @@ void SymbolResolver::visit(Stmt *stmt, Scope *scope) {
 	return;
 }
 
-void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) {
+void SymbolResolver::visit(FuncDefStmt *fds) {
 	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
 
-	scope = fds->symbol;
+	scopes.push(fds->symbol);
 
 	if (fds->retTypeSpec != NULL) {
-		visit(fds->retTypeSpec, scope);
+		visit(fds->retTypeSpec);
 	}
 
 	Type *curType = (fds->retTypeSpec != NULL ? fds->retTypeSpec->type : NULL);
@@ -74,13 +80,13 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) {
 
 	for (std::vector<Expr *>::iterator it = fds->defaults.begin(); it != fds->defaults.end(); ++it) {
 		if (*it != NULL)
-			visit(*it, scope);
+			visit(*it);
 	}
 
 	if (fds->params.size() > 0) {
 		for (std::vector<Identifier *>::reverse_iterator it = fds->params.rbegin();
 				it != fds->params.rend(); ++it) {
-			visit(*it, scope);
+			visit(*it);
 
 			if ((*it)->type != NULL && (*it)->type->getTypeType() == Type::NAMESPACE_TYPE) {
 				throw SemanticsError(fds->token.getPosition(),
@@ -95,148 +101,156 @@ void SymbolResolver::visit(FuncDefStmt *fds, Scope *scope) {
 		curType = new FuncType(symbolTable_.Void_, curType);
 	}
 
-	visit(fds->body, scope);
+	visit(fds->body);
 
 	fds->symbol->setType(curType);
 
 	fds->symbol->defaults = &(fds->defaults);
 
+	scopes.pop();
+
 	DBG_PRINT(-, FuncDefStmt);
 	return;
 }
 
-void SymbolResolver::visit(VarDefStmt *vds, Scope *scope) {
+void SymbolResolver::visit(VarDefStmt *vds) {
 	DBG_PRINT(+, VarDefStmt);
 	assert(vds != NULL);
 
-	visit(vds->id, scope);
+	visit(vds->id);
 
 	if (vds->init != NULL)
-		visit(vds->init, scope);
+		visit(vds->init);
 
 	DBG_PRINT(-, VarDefStmt);
 	return;
 }
 
-void SymbolResolver::visit(InstStmt *is, Scope *scope) {
+void SymbolResolver::visit(InstStmt *is) {
 	DBG_PRINT(+, InstStmt);
 	assert(is != NULL);
 
-	visit(is->inst, scope);
+	visit(is->inst);
 
 	for (std::vector<Expr *>::iterator it = is->params.begin();
 			it != is->params.end(); ++it) {
 		if (*it != NULL)
-			visit(*it, scope);
+			visit(*it);
 	}
 
 	DBG_PRINT(-, InstStmt);
 	return;
 }
 
-void SymbolResolver::visit(AssignStmt *as, Scope *scope) {
+void SymbolResolver::visit(AssignStmt *as) {
 	DBG_PRINT(+, AssignStmt);
 	assert(as != NULL);
 
-	visit(as->lhs, scope);
+	visit(as->lhs);
 
 	if (as->rhs != NULL)
-		visit(as->rhs, scope);
+		visit(as->rhs);
 
 	DBG_PRINT(-, AssignStmt);
 	return;
 }
 
-void SymbolResolver::visit(CompStmt *cs, Scope *scope) {
+void SymbolResolver::visit(CompStmt *cs) {
 	DBG_PRINT(+, CompStmt);
 	assert(cs != NULL);
 
-	scope = cs->scope;
+	scopes.push(cs->scope);
 
 	for (std::vector<Stmt *>::iterator it = cs->stmts.begin();
 			it != cs->stmts.end(); ++it) {
-		visit((*it), scope);
+		visit(*it);
 	}
+
+	scopes.pop();
 
 	DBG_PRINT(-, CompStmt);
 	return;
 }
 
-void SymbolResolver::visit(IfStmt *is, Scope *scope) {
+void SymbolResolver::visit(IfStmt *is) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
-	visit(is->ifCond, scope);
-	visit(is->ifThen, scope);
+	visit(is->ifCond);
+	visit(is->ifThen);
 
 	for (int i = 0, len = is->elseIfCond.size(); i < len; ++i) {
-		visit(is->elseIfCond[i], scope);
-		visit(is->elseIfThen[i], scope);
+		visit(is->elseIfCond[i]);
+		visit(is->elseIfThen[i]);
 	}
 
 	if (is->elseThen != NULL)
-		visit(is->elseThen, scope);
+		visit(is->elseThen);
 
 	DBG_PRINT(-, IfStmt);
 	return;
 }
 
-void SymbolResolver::visit(RepeatStmt *rs, Scope *scope) {
+void SymbolResolver::visit(RepeatStmt *rs) {
 	DBG_PRINT(+, RepeatStmt);
 	assert(rs != NULL);
 
 	if (rs->count != NULL) {
-		visit(rs->count, scope);
+		visit(rs->count);
 	}
 
 	rs->scope->define(new VarSymbol("cnt", symbolTable_.Int_, rs->token.getPosition()));
 
+	scopes.push(rs->scope);
+
 	for (std::vector<Stmt *>::iterator it = rs->stmts.begin();
 			it != rs->stmts.end(); ++it) {
-		visit(*it, rs->scope);
+		visit(*it);
 	}
+
+	scopes.pop();
 
 	DBG_PRINT(-, RepeatStmt);
 	return;
 }
 
-void SymbolResolver::visit(GotoStmt *gs, Scope *scope) {
+void SymbolResolver::visit(GotoStmt *gs) {
 	DBG_PRINT(+, GotoStmt);
 	assert(gs != NULL);
 
-	visit(gs->to, scope);
+	visit(gs->to);
 
 	DBG_PRINT(-, GotoStmt);
 	return;
 }
 
-void SymbolResolver::visit(GosubStmt *gs, Scope *scope) {
+void SymbolResolver::visit(GosubStmt *gs) {
 	DBG_PRINT(+, GosubStmt);
 	assert(gs != NULL);
 
-	visit(gs->to, scope);
+	visit(gs->to);
 
 	DBG_PRINT(-, GosubStmt);
 	return;
 }
 
-void SymbolResolver::visit(ReturnStmt *rs, Scope *scope) {
+void SymbolResolver::visit(ReturnStmt *rs) {
 	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
 
 	if (rs->expr != NULL)
-		visit(rs->expr, scope);
+		visit(rs->expr);
 
 	DBG_PRINT(-, ReturnStmt);
 	return;
 }
 
-void SymbolResolver::visit(ExternStmt *es, Scope *scope) {
+void SymbolResolver::visit(ExternStmt *es) {
 	DBG_PRINT(+, ExternStmt);
 	assert(es != NULL);
 	assert(es->id != NULL);
 
-	visit(es->id, scope);
+	visit(es->id);
 
 	if (es->id->type->getTypeType() == Type::MODIFIER_TYPE) {
 		ModifierType *mt = static_cast<ModifierType *>(es->id->type);
@@ -250,41 +264,49 @@ void SymbolResolver::visit(ExternStmt *es, Scope *scope) {
 
 	for (std::vector<Expr *>::iterator it = es->defaults.begin(); it != es->defaults.end(); ++it) {
 		if (*it != NULL)
-			visit(*it, scope);
+			visit(*it);
 	}
 
 	es->symbol->defaults = &(es->defaults);
 
 	DBG_PRINT(+, ExternStmt);
+
+	return;
 }
 
-void SymbolResolver::visit(NamespaceStmt *ns, Scope *Scope) {
+void SymbolResolver::visit(NamespaceStmt *ns) {
+	scopes.push(ns->symbol);
+
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
-		visit(*it, ns->symbol);
+		visit(*it);
+
+	scopes.pop();
+
+	return;
 }
 
 
-void SymbolResolver::visit(Expr *expr, Scope *scope) {
+void SymbolResolver::visit(Expr *expr) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
 
 	switch (expr->getASTType()) {
-	case AST::IDENTIFIER		: visit(static_cast<Identifier *>(expr), scope); break;
-	case AST::LABEL			: visit(static_cast<Label *>(expr), scope); break;
+	case AST::IDENTIFIER		: visit(static_cast<Identifier *>(expr)); break;
+	case AST::LABEL			: visit(static_cast<Label *>(expr)); break;
 
-	case AST::BINARY_EXPR		: visit(static_cast<BinaryExpr *>(expr), scope); break;
-	case AST::UNARY_EXPR		: visit(static_cast<UnaryExpr *>(expr), scope); break;
-	case AST::STR_LITERAL_EXPR	: visit(static_cast<StrLiteralExpr *>(expr), scope); break;
-	case AST::INT_LITERAL_EXPR	: visit(static_cast<IntLiteralExpr *>(expr), scope); break;
-	case AST::FLOAT_LITERAL_EXPR	: visit(static_cast<FloatLiteralExpr *>(expr), scope); break;
-	case AST::CHAR_LITERAL_EXPR	: visit(static_cast<CharLiteralExpr *>(expr), scope); break;
-	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr), scope); break;
-	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr), scope); break;
-	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr), scope); break;
-	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr), scope); break;
-	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr), scope); break;
-	case AST::MEMBER_EXPR		: visit(static_cast<MemberExpr *>(expr), scope); break;
-	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr), scope); break;
+	case AST::BINARY_EXPR		: visit(static_cast<BinaryExpr *>(expr)); break;
+	case AST::UNARY_EXPR		: visit(static_cast<UnaryExpr *>(expr)); break;
+	case AST::STR_LITERAL_EXPR	: visit(static_cast<StrLiteralExpr *>(expr)); break;
+	case AST::INT_LITERAL_EXPR	: visit(static_cast<IntLiteralExpr *>(expr)); break;
+	case AST::FLOAT_LITERAL_EXPR	: visit(static_cast<FloatLiteralExpr *>(expr)); break;
+	case AST::CHAR_LITERAL_EXPR	: visit(static_cast<CharLiteralExpr *>(expr)); break;
+	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr)); break;
+	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr)); break;
+	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr)); break;
+	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr)); break;
+	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr)); break;
+	case AST::MEMBER_EXPR		: visit(static_cast<MemberExpr *>(expr)); break;
+	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr)); break;
 	default				: ;
 	}
 
@@ -292,10 +314,12 @@ void SymbolResolver::visit(Expr *expr, Scope *scope) {
 	return;
 }
 
-void SymbolResolver::visit(Identifier *id, Scope *scope) {
+void SymbolResolver::visit(Identifier *id) {
 	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->type == NULL);
+
+	Scope *scope = scopes.top();
 
 	// There are four statuses of symbol and typeSpec (type is always NULL)
 	// sym\ts o  x
@@ -306,7 +330,7 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) {
 
 	if (id->symbol != NULL && id->typeSpec != NULL) {
 		// on its definition
-		visit(id->typeSpec, scope);
+		visit(id->typeSpec);
 
 		assert(id->typeSpec->type != NULL);
 
@@ -344,10 +368,11 @@ void SymbolResolver::visit(Identifier *id, Scope *scope) {
 	return;
 }
 
-void SymbolResolver::visit(Label *label, Scope *scope) {
+void SymbolResolver::visit(Label *label) {
 	DBG_PRINT(+, Label);
 	assert(label != NULL);
-	assert(scope != NULL);
+
+	Scope *scope = scopes.top();
 
 	if (label->symbol == NULL) {
 		Symbol *symbol = scope->resolve(std::string("*") + label->token.getString(), label->token.getPosition());
@@ -363,146 +388,147 @@ void SymbolResolver::visit(Label *label, Scope *scope) {
 	return;
 }
 
-void SymbolResolver::visit(BinaryExpr *be, Scope *scope) {
+void SymbolResolver::visit(BinaryExpr *be) {
 	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
-	visit(be->lhs, scope);
+	visit(be->lhs);
 
-	if (be->rhs != NULL)
-		visit(be->rhs, scope);
+	visit(be->rhs);
 
 	DBG_PRINT(-, BinaryExpr);
 	return;
 }
 
-void SymbolResolver::visit(UnaryExpr *ue, Scope *scope) {
+void SymbolResolver::visit(UnaryExpr *ue) {
 	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
-	visit(ue->rhs, scope);
+	visit(ue->rhs);
 
 	DBG_PRINT(-, UnaryExpr);
 	return;
 }
 
-void SymbolResolver::visit(IntLiteralExpr *lit, Scope *scope) {
+void SymbolResolver::visit(IntLiteralExpr *lit) {
 	DBG_PRINT(+, IntLiteralExpr);
 	assert(lit != NULL);
 	DBG_PRINT(-, IntLiteralExpr);
 	return;
 }
 
-void SymbolResolver::visit(StrLiteralExpr *lit, Scope *scope) {
+void SymbolResolver::visit(StrLiteralExpr *lit) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(CharLiteralExpr *lit, Scope *scope) {
+void SymbolResolver::visit(CharLiteralExpr *lit) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(FloatLiteralExpr *lit, Scope *scope) {
+void SymbolResolver::visit(FloatLiteralExpr *lit) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(BoolLiteralExpr *lit, Scope *scope) {
+void SymbolResolver::visit(BoolLiteralExpr *lit) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
 	return;
 }
 
-void SymbolResolver::visit(ArrayLiteralExpr *ale, Scope *scope) {
+void SymbolResolver::visit(ArrayLiteralExpr *ale) {
 	DBG_PRINT(+, ArrayLiteralExpr);
 
 	for (std::vector<Expr *>::iterator it = ale->elements.begin(); it != ale->elements.end(); ++it)
-		visit(*it, scope);
+		visit(*it);
 
 	DBG_PRINT(-, ArrayLiteralExpr);
 	return;
 }
 
-void SymbolResolver::visit(FuncCallExpr *fce, Scope *scope) {
+void SymbolResolver::visit(FuncCallExpr *fce) {
 	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 	assert(fce->func != NULL);
 
-	visit(fce->func, scope);
+	visit(fce->func);
 
 	for (std::vector<Expr *>::iterator it = fce->params.begin();
 			it != fce->params.end(); ++it) {
-		visit((*it), scope);
+		visit(*it);
 	}
 
 	DBG_PRINT(-, FuncCallExpr);
 	return;
 }
 
-void SymbolResolver::visit(ConstructorExpr *ce, Scope *scope) {
+void SymbolResolver::visit(ConstructorExpr *ce) {
 	DBG_PRINT(+, ConstructorExpr);
 	assert(ce != NULL);
 
-	visit(ce->constructor, scope);
+	visit(ce->constructor);
 
 	for (std::vector<Expr *>::iterator it = ce->params.begin();
 			it != ce->params.end(); ++it) {
-		visit((*it), scope);
+		visit(*it);
 	}
 
 	DBG_PRINT(-, ConstructorExpr);
 	return;
 }
 
-void SymbolResolver::visit(SubscrExpr *se, Scope *scope) {
+void SymbolResolver::visit(SubscrExpr *se) {
 	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
-	visit(se->array, scope);
-	visit(se->subscript, scope);
+	visit(se->array);
+	visit(se->subscript);
 
 	DBG_PRINT(-, SubscrExpr);
 	return;
 }
 
-void SymbolResolver::visit(MemberExpr *me, Scope *scope) {
+void SymbolResolver::visit(MemberExpr *me) {
 	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
-	visit(me->receiver, scope);
+	visit(me->receiver);
 
 	// won't visit identifier in usual case
 	if (options_.hspCompat && me->member->getString() != "length") {
-		visit(me->member, scope);
+		visit(me->member);
 	}
 
 	DBG_PRINT(-, MemberExpr);
 	return;
 }
 
-void SymbolResolver::visit(StaticMemberExpr *sme, Scope *scope) {
+void SymbolResolver::visit(StaticMemberExpr *sme) {
 	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 
-	visit(sme->receiver, scope);
+	visit(sme->receiver);
 
 	DBG_PRINT(-, StaticMemberExpr);
 	return;
 }
 
-Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) {
+void SymbolResolver::visit(TypeSpec *ts) {
 	DBG_PRINT(+, TypeSpec);
 	assert(ts != NULL);
 
+	Scope *scope = scopes.top();
+
 	switch (ts->getASTType()) {
 	case AST::TYPE_SPEC		: break;
-	case AST::ARRAY_TYPE_SPEC	: return visit(static_cast<ArrayTypeSpec *>(ts), scope);
-	case AST::FUNC_TYPE_SPEC	: return visit(static_cast<FuncTypeSpec *>(ts), scope);
-	case AST::MEMBER_TYPE_SPEC	: return visit(static_cast<MemberTypeSpec *>(ts), scope);
+	case AST::ARRAY_TYPE_SPEC	: visit(static_cast<ArrayTypeSpec *>(ts)); return;
+	case AST::FUNC_TYPE_SPEC	: visit(static_cast<FuncTypeSpec *>(ts)); return;
+	case AST::MEMBER_TYPE_SPEC	: visit(static_cast<MemberTypeSpec *>(ts)); return;
 	default				: assert(false && "unknown type specifier");
 	}
 
@@ -536,14 +562,15 @@ Type *SymbolResolver::visit(TypeSpec *ts, Scope *scope) {
 	}
 
 	DBG_PRINT(-, TypeSpec);
-	return ts->type;
+	return;
 }
 
-ArrayType *SymbolResolver::visit(ArrayTypeSpec *ats, Scope *scope) {
+void SymbolResolver::visit(ArrayTypeSpec *ats) {
 	DBG_PRINT(+, ArrayTypeSpec);
 	assert(ats != NULL);
 
-	ArrayType *at = new ArrayType(visit(ats->typeSpec, scope));
+	visit(ats->typeSpec);
+	ArrayType *at = new ArrayType(ats->typeSpec->type);
 
 	if (ats->isConst || ats->isRef) {
 		ats->type = new ModifierType(ats->isConst, ats->isRef, at);
@@ -552,14 +579,16 @@ ArrayType *SymbolResolver::visit(ArrayTypeSpec *ats, Scope *scope) {
 	}
 
 	DBG_PRINT(-, ArrayTypeSpec);
-	return at;
+	return;
 }
 
-FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) {
+void SymbolResolver::visit(FuncTypeSpec *fts) {
 	DBG_PRINT(+, FuncTypeSpec);
 	assert(fts != NULL);
 
-	FuncType *ft = new FuncType(visit(fts->lhs, scope), visit(fts->rhs, scope));
+	visit(fts->lhs);
+	visit(fts->rhs);
+	FuncType *ft = new FuncType(fts->lhs->type, fts->rhs->type);
 
 	if (fts->isConst || fts->isRef) {
 		fts->type = new ModifierType(fts->isConst, fts->isRef, ft);
@@ -568,16 +597,16 @@ FuncType *SymbolResolver::visit(FuncTypeSpec *fts, Scope *scope) {
 	}
 
 	DBG_PRINT(-, FuncTypeSpec);
-	return ft;
+	return;
 }
 
-Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) {
+void SymbolResolver::visit(MemberTypeSpec *mts) {
 	DBG_PRINT(+, MemberTypeSpec);
 	assert(mts != NULL);
 
-	visit(mts->lhs, scope);
+	visit(mts->lhs);
 
-	assert (mts->lhs->type != NULL);
+	assert(mts->lhs->type != NULL);
 
 	if (mts->lhs->type->getTypeType() != Type::CLASS_TYPE
 		&& mts->lhs->type->getTypeType() != Type::NAMESPACE_TYPE) {
@@ -600,7 +629,7 @@ Type *SymbolResolver::visit(MemberTypeSpec *mts, Scope *scope) {
 			assert(false && "unknown type");
 		}
 	}
-	return mts->type;
+	return;
 }
 
 }
