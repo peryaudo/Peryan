@@ -44,32 +44,38 @@ void SymbolRegister::visit(TransUnit *tu) {
 
 	tu->scope = scope;
 
+	scopes.push(scope);
 	for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-		visit(*it, scope);
+		visit(*it);
 	}
+	scopes.pop();
+
+	assert(scopes.empty());
 
 	return;
 }
 
-void SymbolRegister::visit(Stmt *stmt, Scope *scope) {
+void SymbolRegister::visit(Stmt *stmt) {
 	assert(stmt != NULL);
 
 	switch (stmt->getASTType()) {
-	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt), scope); break;
-	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt), scope); break;
-	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt), scope); break;
-	case AST::LABEL_STMT		: visit(static_cast<LabelStmt *>(stmt), scope); break;
-	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt), scope); break;
-	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt), scope); break;
-	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt), scope); break;
-	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt), scope); break;
+	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt)); break;
+	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt)); break;
+	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt)); break;
+	case AST::LABEL_STMT		: visit(static_cast<LabelStmt *>(stmt)); break;
+	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt)); break;
+	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt)); break;
+	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt)); break;
+	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt)); break;
 	default				: ;
 	}
 	return;
 }
 
-void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) {
+void SymbolRegister::visit(FuncDefStmt *fds) {
 	assert(fds != NULL);
+
+	Scope *scope = scopes.top();
 
 	const std::string name = fds->name->getString();
 
@@ -107,12 +113,16 @@ void SymbolRegister::visit(FuncDefStmt *fds, Scope *scope) {
 	}
 
 
-	visit(fds->body, funcSymbol);
+	scopes.push(funcSymbol);
+	visit(fds->body);
+	scopes.pop();
 
 	return;
 }
 
-void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) {
+void SymbolRegister::visit(NamespaceStmt *ns) {
+	Scope *scope = scopes.top();
+
 	const std::string name = ns->name->token.getString();
 	if (isDisallowedIdentifier(name)) {
 		throw SemanticsError(ns->name->token.getPosition(),
@@ -129,14 +139,18 @@ void SymbolRegister::visit(NamespaceStmt *ns, Scope *scope) {
 
 	ns->symbol = namespaceSymbol;
 
+	scopes.push(namespaceSymbol);
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
-		visit(*it, namespaceSymbol);
+		visit(*it);
+	scopes.pop();
 
 	return;
 }
 
-void SymbolRegister::visit(VarDefStmt *vds, Scope *scope) {
+void SymbolRegister::visit(VarDefStmt *vds) {
 	assert(vds != NULL);
+
+	Scope *scope = scopes.top();
 
 	if (isDisallowedIdentifier(vds->id->getString())) {
 		throw SemanticsError(vds->id->token.getPosition(),
@@ -157,8 +171,10 @@ void SymbolRegister::visit(VarDefStmt *vds, Scope *scope) {
 	return;
 }
 
-void SymbolRegister::visit(ExternStmt *es, Scope *scope) {
+void SymbolRegister::visit(ExternStmt *es) {
 	assert(es != NULL);
+
+	Scope *scope = scopes.top();
 
 	if (isDisallowedIdentifier(es->id->getString())) {
 		throw SemanticsError(es->id->token.getPosition(),
@@ -176,21 +192,27 @@ void SymbolRegister::visit(ExternStmt *es, Scope *scope) {
 	es->id->symbol = externSymbol;
 }
 
-void SymbolRegister::visit(CompStmt *cs, Scope *scope) {
+void SymbolRegister::visit(CompStmt *cs) {
 	assert(cs != NULL);
 	assert(cs->token.getType() != Token::UNKNOWN);
+
+	Scope *scope = scopes.top();
 
 	LocalScope *localScope = new LocalScope(scope, cs->token.getPosition());
 	cs->scope = localScope;
 
+	scopes.push(localScope);
 	for (std::vector<Stmt *>::iterator it = cs->stmts.begin(); it != cs->stmts.end(); ++it)
-		visit(*it, localScope);
+		visit(*it);
+	scopes.pop();
 
 	return;
 }
 
-void SymbolRegister::visit(LabelStmt *ls, Scope *scope) {
+void SymbolRegister::visit(LabelStmt *ls) {
 	assert(ls != NULL);
+
+	Scope *scope = scopes.top();
 
 	if (options_.hspCompat) {
 		wp_.add(ls->label->token.getPosition(), "warning: use of label is deprecated");
@@ -223,31 +245,35 @@ void SymbolRegister::visit(LabelStmt *ls, Scope *scope) {
 	return;
 }
 
-void SymbolRegister::visit(IfStmt *is, Scope *scope) {
+void SymbolRegister::visit(IfStmt *is) {
 	assert(is != NULL);
 
-	visit(is->ifThen, scope);
+	visit(is->ifThen);
 
 	for (std::vector<CompStmt *>::iterator it = is->elseIfThen.begin();
 			it != is->elseIfThen.end(); ++it) {
-		visit(*it, scope);
+		visit(*it);
 	}
 
 	if (is->elseThen != NULL)
-		visit(is->elseThen, scope);
+		visit(is->elseThen);
 
 	return;
 }
 
-void SymbolRegister::visit(RepeatStmt *rs, Scope *scope) {
+void SymbolRegister::visit(RepeatStmt *rs) {
 	assert(rs != NULL);
 	assert(rs->token.getType() != Token::UNKNOWN);
+
+	Scope *scope = scopes.top();
 
 	LocalScope *localScope = new LocalScope(scope, rs->token.getPosition());
 	rs->scope = localScope;
 
+	scopes.push(localScope);
 	for (std::vector<Stmt *>::iterator it = rs->stmts.begin(); it != rs->stmts.end(); ++it)
-		visit(*it, localScope);
+		visit(*it);
+	scopes.pop();
 
 	return;
 }

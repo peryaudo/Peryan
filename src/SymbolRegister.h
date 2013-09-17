@@ -1,6 +1,8 @@
 #ifndef PERYAN_SYMBOL_REGISTER_H__
 #define PERYAN_SYMBOL_REGISTER_H__
 
+#include <stack>
+
 #include "SymbolTable.h"
 #include "AST.h"
 
@@ -18,21 +20,24 @@ private:
 
 	Options& options_;
 	WarningPrinter& wp_;
+
+	std::stack<Scope *> scopes;
+
 public:
 	SymbolRegister(SymbolTable& symbolTable, Options& options, WarningPrinter& wp)
 		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
 	bool isDisallowedIdentifier(const std::string& name);
 	void visit(TransUnit *tu);
-	void visit(Stmt *stmt, Scope *scope);
-	void visit(FuncDefStmt *fds, Scope *scope);
-	void visit(VarDefStmt *vds, Scope *scope);
-	void visit(CompStmt *cs, Scope *scope);
-	void visit(IfStmt *is, Scope *scope);
-	void visit(RepeatStmt *rs, Scope *scope);
-	void visit(LabelStmt *ls, Scope *scope);
-	void visit(ExternStmt *ls, Scope *scope);
-	void visit(NamespaceStmt *ns, Scope *scope);
+	void visit(Stmt *stmt);
+	void visit(FuncDefStmt *fds);
+	void visit(VarDefStmt *vds);
+	void visit(CompStmt *cs);
+	void visit(IfStmt *is);
+	void visit(RepeatStmt *rs);
+	void visit(LabelStmt *ls);
+	void visit(ExternStmt *ls);
+	void visit(NamespaceStmt *ns);
 };
 
 }
