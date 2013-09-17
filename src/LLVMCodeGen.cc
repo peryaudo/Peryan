@@ -1144,7 +1144,7 @@ void LLVMCodeGen::Impl::generatePrimitiveTypeConstructor(llvm::Value *dest, Type
 				// real to integer
 				builder_.SetInsertPoint(blocks.back().body);
 				src = builder_.CreateFPToSI(prm, getLLVMType(to));
-			} else if ((from->is(Char_) || from->is(Int_))
+			} else if ((from->is(Char_) || from->is(Int_) || from->is(Bool_))
 					&& (to->is(Float_) || to->is(Double_))) {
 				// integer to real 
 				src = builder_.CreateSIToFP(prm, getLLVMType(to));

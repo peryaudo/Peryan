@@ -99,6 +99,20 @@ private:
 
 	void initBinaryPromotionTable();
 
+	Expr *rewriteWith_;
+	Expr *refresh(Expr *from) {
+		if (rewriteWith_ == NULL) {
+			return from;
+		} else {
+			from = rewriteWith_;
+			rewriteWith_ = NULL;
+			return from;
+		}
+	}
+	void rewrite(Expr *rewriteWith) {
+		rewriteWith_ = rewriteWith;
+		return;
+	}
 public:
 	TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp);
 	void visit(TransUnit *tu);
@@ -114,7 +128,7 @@ public:
 	void visit(GosubStmt *gs);
 	void visit(ReturnStmt *rs);
 	void visit(NamespaceStmt *ns);
-	void visit(Expr *& expr);
+	void visit(Expr* expr);
 	void visit(Identifier *id);
 	void visit(Label *label);
 	void visit(BinaryExpr *be);
@@ -126,9 +140,9 @@ public:
 	void visit(BoolLiteralExpr *lit);
 	void visit(ArrayLiteralExpr *ale);
 	void visit(FuncCallExpr *fce);
-	void visit(ConstructorExpr **cePtr);
+	void visit(ConstructorExpr *ce);
 	void visit(SubscrExpr *se);
-	void visit(MemberExpr **mePtr);
+	void visit(MemberExpr *me);
 	void visit(StaticMemberExpr *sme);
 	void visit(DerefExpr *de);
 	void visit(RefExpr *re);
