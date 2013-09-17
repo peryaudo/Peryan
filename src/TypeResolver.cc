@@ -529,7 +529,8 @@ void TypeResolver::visit(VarDefStmt *vds) {
 	Type *initType = NULL;
 	TypeVar initTypeVar = NULL;
 	if (vds->init != NULL) {
-		if ((initType = visit(vds->init)) == NULL) {
+		visit(vds->init);
+		if ((initType = vds->init->type) == NULL) {
 			assert(unresolved_);
 			initTypeVar = curTypeVar_;
 			curTypeVar_ = NULL;
@@ -616,7 +617,8 @@ void TypeResolver::visit(InstStmt *is) {
 
 	FuncType *curFuncType = NULL;
 	{
-		Type *instType = visit(is->inst);
+		visit(is->inst);
+		Type *instType = is->inst->type;
 		if (instType == NULL) {
 			assert(unresolved_);
 			curTypeVar_ = NULL;
@@ -688,7 +690,9 @@ void TypeResolver::visit(InstStmt *is) {
 			}
 		}
 
-		Type *actual = visit(*prmIt);
+		visit(*prmIt);
+
+		Type *actual = (*prmIt)->type;
 
 		// bidirectional checking
 		if (actual == NULL && *ftIt == NULL) {
@@ -747,7 +751,8 @@ void TypeResolver::visit(AssignStmt *as) {
 
 	TypeVar typeVarLhs = NULL, typeVarRhs = NULL;
 
-	Type *lhsType = visit(as->lhs);
+	visit(as->lhs);
+	Type *lhsType = as->lhs->type;
 	if (lhsType == NULL) {
 		assert(unresolved_);
 		typeVarLhs = curTypeVar_;
@@ -757,7 +762,8 @@ void TypeResolver::visit(AssignStmt *as) {
 	Type *rhsType = NULL;
 
 	if (as->rhs != NULL) {
-		rhsType = visit(as->rhs);
+		visit(as->rhs);
+		rhsType = as->rhs->type;
 		if (rhsType == NULL) {
 			assert(unresolved_);
 			typeVarRhs = curTypeVar_;
@@ -878,7 +884,8 @@ void TypeResolver::visit(IfStmt *is) {
 	assert(is != NULL);
 
 	{
-		Type *cur = visit(is->ifCond);
+		visit(is->ifCond);
+		Type *cur = is->ifCond->type;
 		if (cur == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
@@ -897,7 +904,8 @@ void TypeResolver::visit(IfStmt *is) {
 	visit(is->ifThen);
 
 	for (int i = 0, len = is->elseIfCond.size(); i < len; ++i) {
-		Type *cur = visit(is->elseIfCond[i]);
+		visit(is->elseIfCond[i]);
+		Type *cur = is->elseIfCond[i]->type;
 		if (cur == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
@@ -925,7 +933,8 @@ void TypeResolver::visit(RepeatStmt *rs) {
 	assert(rs != NULL);
 
 	if (rs->count != NULL) {
-		Type *cur = visit(rs->count);
+		visit(rs->count);
+		Type *cur = rs->count->type;
 		if (cur == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
@@ -1003,7 +1012,8 @@ void TypeResolver::visit(ReturnStmt *rs) {
 			throw SemanticsError(rs->token.getPosition(), "error: the function should return a value");
 
 
-		Type *cur = visit(rs->expr);
+		visit(rs->expr);
+		Type *cur = rs->expr->type;
 		if (cur == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
@@ -1022,58 +1032,57 @@ void TypeResolver::visit(ReturnStmt *rs) {
 	return;
 }
 
-Type *TypeResolver::visit(Expr *& expr) {
+void TypeResolver::visit(Expr *& expr) {
 	DBG_PRINT(+, Expr);
 	assert(expr != NULL);
 
-	Type *type = NULL;
 	switch (expr->getASTType()) {
-	case AST::IDENTIFIER		: type = visit(static_cast<Identifier *>(expr)); break;
-	case AST::LABEL			: type = visit(static_cast<Label *>(expr)); break;
+	case AST::IDENTIFIER		: visit(static_cast<Identifier *>(expr)); break;
+	case AST::LABEL			: visit(static_cast<Label *>(expr)); break;
 
-	case AST::BINARY_EXPR		: type = visit(static_cast<BinaryExpr *>(expr)); break;
-	case AST::UNARY_EXPR		: type = visit(static_cast<UnaryExpr *>(expr)); break;
-	case AST::STR_LITERAL_EXPR	: type = visit(static_cast<StrLiteralExpr *>(expr)); break;
-	case AST::INT_LITERAL_EXPR	: type = visit(static_cast<IntLiteralExpr *>(expr)); break;
-	case AST::FLOAT_LITERAL_EXPR	: type = visit(static_cast<FloatLiteralExpr *>(expr)); break;
-	case AST::CHAR_LITERAL_EXPR	: type = visit(static_cast<CharLiteralExpr *>(expr)); break;
-	case AST::BOOL_LITERAL_EXPR	: type = visit(static_cast<BoolLiteralExpr *>(expr)); break;
-	case AST::ARRAY_LITERAL_EXPR	: type = visit(static_cast<ArrayLiteralExpr *>(expr)); break;
-	case AST::FUNC_CALL_EXPR	: type = visit(static_cast<FuncCallExpr *>(expr)); break;
-	case AST::CONSTRUCTOR_EXPR	: type = visit(reinterpret_cast<ConstructorExpr **>(&expr)); break;
-	case AST::SUBSCR_EXPR		: type = visit(static_cast<SubscrExpr *>(expr)); break;
-	case AST::MEMBER_EXPR		: type = visit(reinterpret_cast<MemberExpr **>(&expr)); break;
-	case AST::STATIC_MEMBER_EXPR	: type = visit(static_cast<StaticMemberExpr *>(expr)); break;
-	case AST::DEREF_EXPR		: type = visit(static_cast<DerefExpr *>(expr)); break;
-	case AST::REF_EXPR		: type = visit(static_cast<RefExpr *>(expr)); break;
+	case AST::BINARY_EXPR		: visit(static_cast<BinaryExpr *>(expr)); break;
+	case AST::UNARY_EXPR		: visit(static_cast<UnaryExpr *>(expr)); break;
+	case AST::STR_LITERAL_EXPR	: visit(static_cast<StrLiteralExpr *>(expr)); break;
+	case AST::INT_LITERAL_EXPR	: visit(static_cast<IntLiteralExpr *>(expr)); break;
+	case AST::FLOAT_LITERAL_EXPR	: visit(static_cast<FloatLiteralExpr *>(expr)); break;
+	case AST::CHAR_LITERAL_EXPR	: visit(static_cast<CharLiteralExpr *>(expr)); break;
+	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr)); break;
+	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr)); break;
+	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr)); break;
+	case AST::CONSTRUCTOR_EXPR	: visit(reinterpret_cast<ConstructorExpr **>(&expr)); break;
+	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr)); break;
+	case AST::MEMBER_EXPR		: visit(reinterpret_cast<MemberExpr **>(&expr)); break;
+	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr)); break;
+	case AST::DEREF_EXPR		: visit(static_cast<DerefExpr *>(expr)); break;
+	case AST::REF_EXPR		: visit(static_cast<RefExpr *>(expr)); break;
 	default				: assert(false && "unknown expression");
 	}
 
 	DBG_PRINT(-, Expr);
-	return type;
+	return;
 }
 
-Type *TypeResolver::visit(DerefExpr *de) {
+void TypeResolver::visit(DerefExpr *de) {
 	DBG_PRINT(+, DerefExpr);
 	visit(de->derefered);
 	DBG_PRINT(-, DerefExpr);
-	return de->type;
+	return;
 }
 
-Type *TypeResolver::visit(RefExpr *re) {
+void TypeResolver::visit(RefExpr *re) {
 	DBG_PRINT(+, RefExpr);
 	visit(re->refered);
 	DBG_PRINT(-, RefExpr);
-	return re->type;
+	return;
 }
 
-Type *TypeResolver::visit(Identifier *id) {
+void TypeResolver::visit(Identifier *id) {
 	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->symbol != NULL);
 
 	if (id->type != NULL) {
-		return id->type;
+		return;
 	}
 
 	assert(id->symbol->getSymbolType() != Symbol::BUILTIN_TYPE_SYMBOL
@@ -1084,7 +1093,7 @@ Type *TypeResolver::visit(Identifier *id) {
 		unresolved_ = true;
 		unresolvedPos_ = id->token.getPosition();
 		curTypeVar_ = id->symbol->getTypePtr();
-		return NULL;
+		return;
 	}
 
 	// all value references returns ref!
@@ -1097,10 +1106,10 @@ Type *TypeResolver::visit(Identifier *id) {
 	id->type = new ModifierType(isConst, /* isRef = */ true, id->type->unmodify());
 
 	DBG_PRINT(-, Identifier);
-	return id->type;
+	return;
 }
 
-Type *TypeResolver::visit(Label *label) {
+void TypeResolver::visit(Label *label) {
 	DBG_PRINT(+, Label);
 	assert(label != NULL);
 
@@ -1111,19 +1120,22 @@ Type *TypeResolver::visit(Label *label) {
 	assert(label->symbol != NULL);
 
 	DBG_PRINT(-, Label);
-	return label->type;
+	return;
 }
 
-Type *TypeResolver::visit(BinaryExpr *be) {
+void TypeResolver::visit(BinaryExpr *be) {
 	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
-	Type *lhsType = visit(be->lhs);
-	Type *rhsType = visit(be->rhs);
+	visit(be->lhs);
+	Type *lhsType = be->lhs->type;
+	visit(be->rhs);
+	Type *rhsType = be->rhs->type;
 	if (lhsType == NULL || rhsType == NULL) {
 		assert(unresolved_);
 		curTypeVar_ = NULL;
-		return NULL;
+		be->type = NULL;
+		return;
 	}
 
 	if ((be->type = canPromoteBinary(lhsType->unmodify(), be->token.getType(), rhsType->unmodify())) != NULL) {
@@ -1135,7 +1147,8 @@ Type *TypeResolver::visit(BinaryExpr *be) {
 
 		if (lhsType->is(lhsType->unmodify()) && rhsType->is(rhsType->unmodify())) {
 			DBG_PRINT(-, BinaryExpr);
-			return be->type = new ModifierType(true, false, be->type);
+			be->type = new ModifierType(true, false, be->type);
+			return;
 		}
 
 		// in HSP, the rhs is always casted to the lhs type
@@ -1156,7 +1169,8 @@ Type *TypeResolver::visit(BinaryExpr *be) {
 			assert(false && "no viable cast");
 		}
 		DBG_PRINT(-, BinaryExpr);
-		return be->type = new ModifierType(true, false, be->type);
+		be->type = new ModifierType(true, false, be->type);
+		return;
 	} else {
 		throw SemanticsError(be->token.getPosition(),
 			std::string("error: the operation between these two types is not allowed: ")
@@ -1166,15 +1180,17 @@ Type *TypeResolver::visit(BinaryExpr *be) {
 
 }
 
-Type *TypeResolver::visit(UnaryExpr *ue) {
+void TypeResolver::visit(UnaryExpr *ue) {
 	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
-	Type *rhsType = visit(ue->rhs);
+	visit(ue->rhs);
+	Type *rhsType = ue->rhs->type;
 
 	if (rhsType == NULL) {
 		assert(unresolved_);
-		return NULL;
+		ue->type = NULL;
+		return;
 	}
 	
 	switch (ue->token.getType()) {
@@ -1186,91 +1202,97 @@ Type *TypeResolver::visit(UnaryExpr *ue) {
 
 		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
 		DBG_PRINT(-, UnaryExpr);
-		return ue->type = rhsType->unmodify();
+		ue->type = rhsType->unmodify();
+		return;
 	case Token::EXCL:
 		if (!(rhsType->unmodify()->is(Bool_)))
 			throw SemanticsError(ue->token.getPosition(), "error: right side should be Bool");
 
 		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
 		DBG_PRINT(-, UnaryExpr);
-		return ue->type = rhsType->unmodify();
+		ue->type = rhsType->unmodify();
+		return;
 	default: ;
 	}
 
 	assert(false);
-	return NULL;
+	return;
 }
 
-Type *TypeResolver::visit(IntLiteralExpr *lit) {
+void TypeResolver::visit(IntLiteralExpr *lit) {
 	DBG_PRINT(+-, IntLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Int_);
-	return lit->type;
+	return;
 }
 
-Type *TypeResolver::visit(StrLiteralExpr *lit) {
+void TypeResolver::visit(StrLiteralExpr *lit) {
 	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, String_);
-	return lit->type;
+	return;
 }
 
-Type *TypeResolver::visit(CharLiteralExpr *lit) {
+void TypeResolver::visit(CharLiteralExpr *lit) {
 	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Char_);
-	return lit->type;
+	return;
 }
 
-Type *TypeResolver::visit(FloatLiteralExpr *lit) {
+void TypeResolver::visit(FloatLiteralExpr *lit) {
 	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Double_);
-	return lit->type;
+	return;
 }
 
-Type *TypeResolver::visit(BoolLiteralExpr *lit) {
+void TypeResolver::visit(BoolLiteralExpr *lit) {
 	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
 
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Bool_);
-	return lit->type;
+	return;
 }
 
-Type *TypeResolver::visit(ArrayLiteralExpr *ale) {
+void TypeResolver::visit(ArrayLiteralExpr *ale) {
 	DBG_PRINT(+, ArrayLiteralExpr);
 	assert(ale != NULL);
 
 	if (ale->type != NULL)
-		return ale->type;
+		return;
 
 	assert(ale->elements.size() > 0);
 
 	// TODO: fix them to take the biggest type of the elements
 
-	Type *elemType = visit(ale->elements[0])->unmodify();
+	visit(ale->elements[0]);
+	Type *elemType = ale->elements[0]->type->unmodify();
 	if (elemType == NULL) {
 		unresolved_ = true;
 		unresolvedPos_ = ale->elements[0]->token.getPosition();
-		return NULL;
+		ale->type = NULL;
+		return;
 		// throw SemanticsError(ale->token.getPosition(), "error: cannot infer type of array literal");
 	}
 	ale->elements[0] = insertPromoter(ale->elements[0], elemType);
 
 	for (std::vector<Expr *>::iterator it = ale->elements.begin() + 1; it != ale->elements.end(); ++it) {
-		Type *curElemType = visit(*it);
+		visit(*it);
+		Type *curElemType = (*it)->type;
 		if (curElemType == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
 				addTypeConstraint(elemType->unmodify(), curTypeVar_);
 				curTypeVar_ = NULL;
 			}
-			return NULL;
+			ale->type = NULL;
+			return;
 		}
 
 		if (!canPromote(curElemType, elemType, (*it)->token.getPosition(), false)) {
@@ -1285,20 +1307,23 @@ Type *TypeResolver::visit(ArrayLiteralExpr *ale) {
 	}
 
 	DBG_PRINT(-, ArrayLiteralExpr);
-	return ale->type = new ModifierType(true, false, new ArrayType(elemType));
+	ale->type = new ModifierType(true, false, new ArrayType(elemType));
+	return;
 }
 
-Type *TypeResolver::visit(FuncCallExpr *fce) {
+void TypeResolver::visit(FuncCallExpr *fce) {
 	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 
 	FuncType *curFuncType = NULL;
 	{
-		Type *tmp = visit(fce->func);
+		visit(fce->func);
+		Type *tmp = fce->func->type;
 		if (tmp == NULL) {
 			assert(unresolved_);
 			curTypeVar_ = NULL;
-			return NULL;
+			fce->type = NULL;
+			return;
 		}
 		tmp = tmp->unmodify();
 		assert (tmp != NULL);
@@ -1311,7 +1336,8 @@ Type *TypeResolver::visit(FuncCallExpr *fce) {
 	std::vector<Expr *>::iterator prmIt = fce->params.begin(), prmEnd = fce->params.end();
 	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
 	for (; prmIt != prmEnd && ftIt != ftEnd; ++prmIt, ++ftIt) {
-		Type *argType = visit(*prmIt);
+		visit(*prmIt);
+		Type *argType = (*prmIt)->type;
 
 		if (argType == NULL && *ftIt == NULL) {
 			// you have nothing to do
@@ -1368,10 +1394,10 @@ Type *TypeResolver::visit(FuncCallExpr *fce) {
 	}
 
 	DBG_PRINT(-, FuncCallExpr);
-	return fce->type;
+	return;
 }
 
-Type *TypeResolver::visit(ConstructorExpr **cePtr) {
+void TypeResolver::visit(ConstructorExpr **cePtr) {
 	DBG_PRINT(+, ConstructorExpr);
 	ConstructorExpr *ce = *cePtr;
 	assert(ce != NULL);
@@ -1379,10 +1405,12 @@ Type *TypeResolver::visit(ConstructorExpr **cePtr) {
 
 	for (std::vector<Expr *>::iterator it = ce->params.begin();
 			it != ce->params.end(); ++it) {
-		if (visit(*it) == NULL) {
+		visit(*it);
+		if ((*it)->type == NULL) {
 			assert(unresolved_);
 			curTypeVar_ = NULL;
-			return NULL;
+			ce->type = NULL;
+			return;
 		}
 	}
 
@@ -1449,21 +1477,23 @@ Type *TypeResolver::visit(ConstructorExpr **cePtr) {
 	}
 
 	DBG_PRINT(-, ConstructorExpr);
-	return ce->type;
+	return;
 }
 
-Type *TypeResolver::visit(SubscrExpr *se) {
+void TypeResolver::visit(SubscrExpr *se) {
 	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
 	if (se->type != NULL)
-		return se->type;
+		return;
 
-	Type *arrayType = visit(se->array);
+	visit(se->array);
+	Type *arrayType = (se->array)->type;
 	if (arrayType == NULL) {
 		assert(unresolved_);
 		curTypeVar_ = NULL;
-		return NULL;
+		se->type = NULL;
+		return;
 	}
 
 	if (arrayType->unmodify()->getTypeType() != Type::ARRAY_TYPE)
@@ -1484,14 +1514,16 @@ Type *TypeResolver::visit(SubscrExpr *se) {
 					static_cast<ArrayType *>(arrayType->unmodify())->getElemType()));
 	}
 
-	Type *subscriptType = visit(se->subscript);
+	visit(se->subscript);
+	Type *subscriptType = (se->subscript)->type;
 	if (subscriptType == NULL) {
 		assert(unresolved_);
 		if (curTypeVar_ != NULL) {
 			addTypeConstraint(Int_, curTypeVar_);
 			curTypeVar_ = NULL;
 		}
-		return NULL;
+		se->type = NULL;
+		return;
 	}
 	if (!(subscriptType->unmodify()->is(Int_)))
 		throw SemanticsError(se->token.getPosition(), "error: subscript should be Int");
@@ -1503,15 +1535,16 @@ Type *TypeResolver::visit(SubscrExpr *se) {
 	se->type = new ModifierType(isConst || !isRef, true, se->type->unmodify());
 
 	DBG_PRINT(-, SubscrExpr);
-	return se->type;
+	return;
 }
 
-Type *TypeResolver::visit(MemberExpr **mePtr) {
+void TypeResolver::visit(MemberExpr **mePtr) {
 	DBG_PRINT(+, MemberExpr);
 	MemberExpr *&me = *mePtr;
 	assert(me != NULL);
 
-	if (visit(me->receiver) == NULL) {
+	visit(me->receiver);
+	if (me->receiver->type == NULL) {
 		assert(unresolved_);
 
 		if (opt_.hspCompat) {
@@ -1527,7 +1560,8 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 			// TODO: there will be the most important part of the type inference
 			curTypeVar_ = NULL;
 		}
-		return NULL;
+		me->type = NULL;
+		return;
 	}
 
 	if (me->receiver->type->unmodify()->getTypeType() != Type::CLASS_TYPE
@@ -1579,7 +1613,7 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 				*(reinterpret_cast<SubscrExpr **>(mePtr)) = rewritten;
 				visit(rewritten);
 
-				return rewritten->type;
+				return;
 			} else {
 				throw SemanticsError(me->token.getPosition(),
 					std::string("error: invalid member \"") + me->member->getString()
@@ -1590,10 +1624,10 @@ Type *TypeResolver::visit(MemberExpr **mePtr) {
 
 	DBG_PRINT(-, MemberExpr);
 
-	return me->type;
+	return;
 }
 
-Type *TypeResolver::visit(StaticMemberExpr *sme) {
+void TypeResolver::visit(StaticMemberExpr *sme) {
 	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 
@@ -1628,7 +1662,7 @@ Type *TypeResolver::visit(StaticMemberExpr *sme) {
 	}
 
 	DBG_PRINT(-, StaticMemberExpr);
-	return sme->type;
+	return;
 }
 
 }
