@@ -386,7 +386,7 @@ void TypeResolver::visit(TransUnit *tu) {
 
 		DBG_PRINT(+, TransUnitStmts);
 		for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-			visit(*it);
+			(*it)->accept(this);
 		}
 		DBG_PRINT(-, TransUnitStmts);
 		
@@ -451,29 +451,6 @@ void TypeResolver::visit(TransUnit *tu) {
 	return;
 }
 
-void TypeResolver::visit(Stmt *stmt) {
-	DBG_PRINT(+, Stmt);
-	assert(stmt != NULL);
-
-	switch (stmt->getASTType()) {
-	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt)); break;
-	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt)); break;
-	case AST::INST_STMT		: visit(static_cast<InstStmt *>(stmt)); break;
-	case AST::ASSIGN_STMT		: visit(static_cast<AssignStmt *>(stmt)); break;
-	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt)); break;
-	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt)); break;
-	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt)); break;
-	case AST::GOTO_STMT		: visit(static_cast<GotoStmt *>(stmt)); break;
-	case AST::GOSUB_STMT		: visit(static_cast<GosubStmt*>(stmt)); break;
-	case AST::RETURN_STMT		: visit(static_cast<ReturnStmt *>(stmt)); break;
-	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt)); break;
-	default				: ;
-	}
-
-	DBG_PRINT(-, Stmt);
-	return;
-}
-
 void TypeResolver::visit(FuncDefStmt *fds) {
 	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
@@ -511,7 +488,7 @@ void TypeResolver::visit(FuncDefStmt *fds) {
 		unresolvedPos_ = fds->token.getPosition();
 	}
 
-	visit(fds->body);
+	fds->body->accept(this);
 
 	curFunc_ = prevFunc_;
 
@@ -530,7 +507,7 @@ void TypeResolver::visit(VarDefStmt *vds) {
 	Type *initType = NULL;
 	TypeVar initTypeVar = NULL;
 	if (vds->init != NULL) {
-		visit(vds->init);
+		vds->init->accept(this);
 		vds->init = refresh(vds->init);
 		if ((initType = vds->init->type) == NULL) {
 			assert(unresolved_);
@@ -619,7 +596,7 @@ void TypeResolver::visit(InstStmt *is) {
 
 	FuncType *curFuncType = NULL;
 	{
-		visit(is->inst);
+		is->inst->accept(this);
 		Type *instType = is->inst->type;
 		if (instType == NULL) {
 			assert(unresolved_);
@@ -692,7 +669,7 @@ void TypeResolver::visit(InstStmt *is) {
 			}
 		}
 
-		visit(*prmIt);
+		(*prmIt)->accept(this);
 		*prmIt = refresh(*prmIt);
 
 		Type *actual = (*prmIt)->type;
@@ -754,7 +731,7 @@ void TypeResolver::visit(AssignStmt *as) {
 
 	TypeVar typeVarLhs = NULL, typeVarRhs = NULL;
 
-	visit(as->lhs);
+	as->lhs->accept(this);
 	as->lhs = refresh(as->lhs);
 
 	Type *lhsType = as->lhs->type;
@@ -767,7 +744,7 @@ void TypeResolver::visit(AssignStmt *as) {
 	Type *rhsType = NULL;
 
 	if (as->rhs != NULL) {
-		visit(as->rhs);
+		as->rhs->accept(this);
 		as->rhs = refresh(as->rhs);
 
 		rhsType = as->rhs->type;
@@ -867,7 +844,7 @@ void TypeResolver::visit(CompStmt *cs) {
 
 	for (std::vector<Stmt *>::iterator it = cs->stmts.begin();
 			it != cs->stmts.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 	}
 
 	DBG_PRINT(-, CompStmt);
@@ -880,7 +857,7 @@ void TypeResolver::visit(NamespaceStmt *ns) {
 
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin();
 			it != ns->stmts.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 	}
 
 	DBG_PRINT(-, NamespaceStmt);
@@ -892,7 +869,7 @@ void TypeResolver::visit(IfStmt *is) {
 	assert(is != NULL);
 
 	{
-		visit(is->ifCond);
+		is->ifCond->accept(this);
 		is->ifCond = refresh(is->ifCond);
 
 		Type *cur = is->ifCond->type;
@@ -911,10 +888,10 @@ void TypeResolver::visit(IfStmt *is) {
 	}
 
 
-	visit(is->ifThen);
+	is->ifThen->accept(this);
 
 	for (int i = 0, len = is->elseIfCond.size(); i < len; ++i) {
-		visit(is->elseIfCond[i]);
+		is->elseIfCond[i]->accept(this);
 		is->elseIfCond[i] = refresh(is->elseIfCond[i]);
 
 		Type *cur = is->elseIfCond[i]->type;
@@ -930,11 +907,11 @@ void TypeResolver::visit(IfStmt *is) {
 			is->elseIfCond[i] = insertPromoter(is->elseIfCond[i], Bool_);
 		}
 
-		visit(is->elseIfThen[i]);
+		is->elseIfThen[i]->accept(this);
 	}
 
 	if (is->elseThen != NULL)
-		visit(is->elseThen);
+		is->elseThen->accept(this);
 
 	DBG_PRINT(-, IfStmt);
 	return;
@@ -945,7 +922,7 @@ void TypeResolver::visit(RepeatStmt *rs) {
 	assert(rs != NULL);
 
 	if (rs->count != NULL) {
-		visit(rs->count);
+		rs->count->accept(this);
 		rs->count = refresh(rs->count);
 
 		Type *cur = rs->count->type;
@@ -964,7 +941,7 @@ void TypeResolver::visit(RepeatStmt *rs) {
 
 	for (std::vector<Stmt *>::iterator it = rs->stmts.begin();
 			it != rs->stmts.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 	}
 
 	DBG_PRINT(-, RepeatStmt);
@@ -1009,7 +986,7 @@ void TypeResolver::visit(ReturnStmt *rs) {
 		unresolvedPos_  = rs->token.getPosition();
 
 		if (rs->expr != NULL) {
-			visit(rs->expr);
+			rs->expr->accept(this);
 			rs->expr = refresh(rs->expr);
 
 			if (rs->expr->type != NULL) {
@@ -1028,7 +1005,7 @@ void TypeResolver::visit(ReturnStmt *rs) {
 			throw SemanticsError(rs->token.getPosition(), "error: the function should return a value");
 
 
-		visit(rs->expr);
+		rs->expr->accept(this);
 		rs->expr = refresh(rs->expr);
 
 		Type *cur = rs->expr->type;
@@ -1050,46 +1027,16 @@ void TypeResolver::visit(ReturnStmt *rs) {
 	return;
 }
 
-void TypeResolver::visit(Expr* expr) {
-	DBG_PRINT(+, Expr);
-	assert(expr != NULL);
-	
-	switch (expr->getASTType()) {
-	case AST::IDENTIFIER		: visit(static_cast<Identifier *>(expr)); break;
-	case AST::LABEL			: visit(static_cast<Label *>(expr)); break;
-
-	case AST::BINARY_EXPR		: visit(static_cast<BinaryExpr *>(expr)); break;
-	case AST::UNARY_EXPR		: visit(static_cast<UnaryExpr *>(expr)); break;
-	case AST::STR_LITERAL_EXPR	: visit(static_cast<StrLiteralExpr *>(expr)); break;
-	case AST::INT_LITERAL_EXPR	: visit(static_cast<IntLiteralExpr *>(expr)); break;
-	case AST::FLOAT_LITERAL_EXPR	: visit(static_cast<FloatLiteralExpr *>(expr)); break;
-	case AST::CHAR_LITERAL_EXPR	: visit(static_cast<CharLiteralExpr *>(expr)); break;
-	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr)); break;
-	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr)); break;
-	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr)); break;
-	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr)); break;
-	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr)); break;
-	case AST::MEMBER_EXPR		: visit(static_cast<MemberExpr *>(expr)); break;
-	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr)); break;
-	case AST::DEREF_EXPR		: visit(static_cast<DerefExpr *>(expr)); break;
-	case AST::REF_EXPR		: visit(static_cast<RefExpr *>(expr)); break;
-	default				: assert(false && "unknown expression");
-	}
-
-	DBG_PRINT(-, Expr);
-	return;
-}
-
 void TypeResolver::visit(DerefExpr *de) {
 	DBG_PRINT(+, DerefExpr);
-	visit(de->derefered);
+	de->derefered->accept(this);
 	DBG_PRINT(-, DerefExpr);
 	return;
 }
 
 void TypeResolver::visit(RefExpr *re) {
 	DBG_PRINT(+, RefExpr);
-	visit(re->refered);
+	re->refered->accept(this);
 	DBG_PRINT(-, RefExpr);
 	return;
 }
@@ -1145,12 +1092,12 @@ void TypeResolver::visit(BinaryExpr *be) {
 	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
-	visit(be->lhs);
+	be->lhs->accept(this);
 	be->lhs = refresh(be->lhs);
 
 	Type *lhsType = be->lhs->type;
 
-	visit(be->rhs);
+	be->rhs->accept(this);
 	be->rhs = refresh(be->rhs);
 
 	Type *rhsType = be->rhs->type;
@@ -1208,7 +1155,7 @@ void TypeResolver::visit(UnaryExpr *ue) {
 	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
-	visit(ue->rhs);
+	ue->rhs->accept(this);
 	ue->rhs = refresh(ue->rhs);
 
 	Type *rhsType = ue->rhs->type;
@@ -1297,7 +1244,7 @@ void TypeResolver::visit(ArrayLiteralExpr *ale) {
 
 	// TODO: fix them to take the biggest type of the elements
 
-	visit(ale->elements[0]);
+	ale->elements[0]->accept(this);
 	ale->elements[0] = refresh(ale->elements[0]);
 
 	Type *elemType = ale->elements[0]->type->unmodify();
@@ -1311,7 +1258,7 @@ void TypeResolver::visit(ArrayLiteralExpr *ale) {
 	ale->elements[0] = insertPromoter(ale->elements[0], elemType);
 
 	for (std::vector<Expr *>::iterator it = ale->elements.begin() + 1; it != ale->elements.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 		*it = refresh(*it);
 
 		Type *curElemType = (*it)->type;
@@ -1347,7 +1294,7 @@ void TypeResolver::visit(FuncCallExpr *fce) {
 
 	FuncType *curFuncType = NULL;
 	{
-		visit(fce->func);
+		fce->func->accept(this);
 		fce->func = refresh(fce->func);
 
 		Type *tmp = fce->func->type;
@@ -1368,7 +1315,7 @@ void TypeResolver::visit(FuncCallExpr *fce) {
 	std::vector<Expr *>::iterator prmIt = fce->params.begin(), prmEnd = fce->params.end();
 	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
 	for (; prmIt != prmEnd && ftIt != ftEnd; ++prmIt, ++ftIt) {
-		visit(*prmIt);
+		(*prmIt)->accept(this);
 		*prmIt = refresh(*prmIt);
 		Type *argType = (*prmIt)->type;
 
@@ -1437,7 +1384,7 @@ void TypeResolver::visit(ConstructorExpr *ce) {
 
 	for (std::vector<Expr *>::iterator it = ce->params.begin();
 			it != ce->params.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 		*it = refresh(*it);
 
 		if ((*it)->type == NULL) {
@@ -1525,7 +1472,7 @@ void TypeResolver::visit(SubscrExpr *se) {
 	if (se->type != NULL)
 		return;
 
-	visit(se->array);
+	se->array->accept(this);
 	se->array = refresh(se->array);
 
 	Type *arrayType = (se->array)->type;
@@ -1554,7 +1501,7 @@ void TypeResolver::visit(SubscrExpr *se) {
 					static_cast<ArrayType *>(arrayType->unmodify())->getElemType()));
 	}
 
-	visit(se->subscript);
+	se->subscript->accept(this);
 	se->subscript = refresh(se->subscript);
 
 	Type *subscriptType = (se->subscript)->type;
@@ -1584,7 +1531,7 @@ void TypeResolver::visit(MemberExpr *me) {
 	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
-	visit(me->receiver);
+	me->receiver->accept(this);
 	me->receiver = refresh(me->receiver);
 
 	if (me->receiver->type == NULL) {
@@ -1652,7 +1599,7 @@ void TypeResolver::visit(MemberExpr *me) {
 				Expr *rewriteWith = new SubscrExpr(array, token, subscr);
 				rewriteWith->type = NULL;
 
-				visit(rewriteWith);
+				rewriteWith->accept(this);
 				rewriteWith = refresh(rewriteWith);
 				rewrite(rewriteWith);
 

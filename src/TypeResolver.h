@@ -7,12 +7,13 @@
 #include "SymbolTable.h"
 #include "Token.h"
 #include "AST.h"
+#include "ASTVisitor.h"
 #include "Options.h"
 #include "WarningPrinter.h"
 
 namespace Peryan {
 
-class TypeResolver {
+class TypeResolver : public ASTVisitor {
 private:
 	TypeResolver(const TypeResolver&);
 	TypeResolver& operator=(const TypeResolver&);
@@ -115,37 +116,47 @@ private:
 	}
 public:
 	TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp);
-	void visit(TransUnit *tu);
-	void visit(Stmt *stmt);
-	void visit(FuncDefStmt *fds);
-	void visit(VarDefStmt *vds);
-	void visit(InstStmt *is);
-	void visit(AssignStmt *as);
-	void visit(CompStmt *cs);
-	void visit(IfStmt *is);
-	void visit(RepeatStmt *rs);
-	void visit(GotoStmt *gs);
-	void visit(GosubStmt *gs);
-	void visit(ReturnStmt *rs);
-	void visit(NamespaceStmt *ns);
-	void visit(Expr* expr);
-	void visit(Identifier *id);
-	void visit(Label *label);
-	void visit(BinaryExpr *be);
-	void visit(UnaryExpr *ue);
-	void visit(IntLiteralExpr *lit);
-	void visit(StrLiteralExpr *lit);
-	void visit(CharLiteralExpr *lit);
-	void visit(FloatLiteralExpr *lit);
-	void visit(BoolLiteralExpr *lit);
-	void visit(ArrayLiteralExpr *ale);
-	void visit(FuncCallExpr *fce);
-	void visit(ConstructorExpr *ce);
-	void visit(SubscrExpr *se);
-	void visit(MemberExpr *me);
-	void visit(StaticMemberExpr *sme);
-	void visit(DerefExpr *de);
-	void visit(RefExpr *re);
+	virtual void visit(TransUnit *tu);
+	//virtual void visit(Stmt *stmt);
+	virtual void visit(FuncDefStmt *fds);
+	virtual void visit(VarDefStmt *vds);
+	virtual void visit(InstStmt *is);
+	virtual void visit(AssignStmt *as);
+	virtual void visit(CompStmt *cs);
+	virtual void visit(IfStmt *is);
+	virtual void visit(RepeatStmt *rs);
+	virtual void visit(GotoStmt *gs);
+	virtual void visit(GosubStmt *gs);
+	virtual void visit(ReturnStmt *rs);
+	virtual void visit(NamespaceStmt *ns);
+	//virtual void visit(Expr* expr);
+	virtual void visit(Identifier *id);
+	virtual void visit(Label *label);
+	virtual void visit(BinaryExpr *be);
+	virtual void visit(UnaryExpr *ue);
+	virtual void visit(IntLiteralExpr *lit);
+	virtual void visit(StrLiteralExpr *lit);
+	virtual void visit(CharLiteralExpr *lit);
+	virtual void visit(FloatLiteralExpr *lit);
+	virtual void visit(BoolLiteralExpr *lit);
+	virtual void visit(ArrayLiteralExpr *ale);
+	virtual void visit(FuncCallExpr *fce);
+	virtual void visit(ConstructorExpr *ce);
+	virtual void visit(SubscrExpr *se);
+	virtual void visit(MemberExpr *me);
+	virtual void visit(StaticMemberExpr *sme);
+	virtual void visit(DerefExpr *de);
+	virtual void visit(RefExpr *re);
+
+	virtual void visit(LabelStmt *ls)	{ return; }
+	virtual void visit(ExternStmt *es)	{ return; }
+	virtual void visit(ContinueStmt *cs)	{ return; }
+	virtual void visit(BreakStmt *bs)	{ return; }
+	virtual void visit(TypeSpec *ts)	{ return; }
+	virtual void visit(ArrayTypeSpec *ats)	{ return; }
+	virtual void visit(FuncTypeSpec *fts)	{ return; }
+	virtual void visit(MemberTypeSpec *mts)	{ return; }
+	virtual void visit(FuncExpr *de)	{ return; }
 };
 
 };
