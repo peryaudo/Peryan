@@ -635,17 +635,18 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 	Token token = lt();
 	consume();
 
-	Expr *ifCond = parseExpr();
-	CompStmt *ifThen = NULL;
-	std::vector<Expr *> elseIfCond;
-	std::vector<CompStmt *> elseIfThen;
+	std::vector<Expr *> ifCond;
+	std::vector<CompStmt *> ifThen;
+
 	CompStmt *elseThen = NULL;
+
+	ifCond.push_back(parseExpr());
 
 	if (la() == Token::LBRACE) {
 		// "if" Expression CompoundStatement
 		// { "else" {":"} "if" Expression CompoundStatement }
 		// [ "else" CompoundStatement ] (":" | TERM)
-		ifThen = parseCompStmt();
+		ifThen.push_back(parseCompStmt());
 
 		while ((la(0) == Token::KW_ELSE && la(1) == Token::KW_IF)
 			|| (la(0) == Token::KW_ELSE && la(1) == Token::CLN && la(2) == Token::KW_IF)) {
@@ -655,12 +656,12 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 				consume(2);
 			}
 
-			elseIfCond.push_back(parseExpr());
+			ifCond.push_back(parseExpr());
 
 			if (la() != Token::LBRACE)
 				throw ParserError(getPosition(), "error: no closing '}'");
 
-			elseIfThen.push_back(parseCompStmt());
+			ifThen.push_back(parseCompStmt());
 		}
 
 		if (la() == Token::KW_ELSE) {
@@ -681,7 +682,7 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 	} else if (la() == Token::CLN) {
 		// "if" Expression ":" StatementWithoutTerm { ":" StatementWithoutTerm }
 		//	[":" "else" ":" StatementWithoutTerm { ":" StatementWithoutTerm } ] TERM ; //*
-		ifThen = new CompStmt(lt());
+		CompStmt *ifThenCS = new CompStmt(lt());
 		consume();
 
 		while (la() != Token::TERM && la() != Token::KW_ELSE) {
@@ -693,8 +694,10 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 				consume();
 			}
 
-			ifThen->stmts.insert(ifThen->stmts.end(), curStmts.begin(), curStmts.end());
+			ifThenCS->stmts.insert(ifThenCS->stmts.end(), curStmts.begin(), curStmts.end());
 		}
+
+		ifThen.push_back(ifThenCS);
 
 		if (la() == Token::KW_ELSE) {
 			elseThen = new CompStmt(lt());
@@ -723,8 +726,6 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 	}
 
 	IfStmt *ifStmt = new IfStmt(token, ifCond, ifThen, elseThen);
-	ifStmt->elseIfCond = elseIfCond;
-	ifStmt->elseIfThen = elseIfThen;
 
 	DBG_PRINT(-, parseIfStmt);
 	return ifStmt;

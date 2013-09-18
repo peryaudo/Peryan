@@ -152,12 +152,9 @@ void SymbolResolver::visit(IfStmt *is) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
-	is->ifCond->accept(this);
-	is->ifThen->accept(this);
-
-	for (int i = 0, len = is->elseIfCond.size(); i < len; ++i) {
-		is->elseIfCond[i]->accept(this);
-		is->elseIfThen[i]->accept(this);
+	for (int i = 0, len = is->ifCond.size(); i < len; ++i) {
+		is->ifCond[i]->accept(this);
+		is->ifThen[i]->accept(this);
 	}
 
 	if (is->elseThen != NULL)

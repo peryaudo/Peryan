@@ -209,10 +209,10 @@ public:
 	std::string toString(IfStmt *is) {
 		inc();
 		std::stringstream ss;
-		ss<<"(IfStmt "<<toString(is->ifCond)<<ind()<<toString(is->ifThen);
+		ss<<"(IfStmt";
 
-		for (unsigned int i = 0; i < is->elseIfCond.size(); ++i)
-			ss<<ind()<<toString(is->elseIfCond[i])<<ind()<<toString(is->elseIfThen[i]);
+		for (unsigned int i = 0; i < is->ifCond.size(); ++i)
+			ss<<ind()<<toString(is->ifCond[i])<<ind()<<toString(is->ifThen[i]);
 
 		if (is->elseThen != NULL)
 			ss<<ind()<<toString(is->elseThen);

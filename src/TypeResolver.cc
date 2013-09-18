@@ -868,11 +868,11 @@ void TypeResolver::visit(IfStmt *is) {
 	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
-	{
-		is->ifCond->accept(this);
-		is->ifCond = refresh(is->ifCond);
+	for (int i = 0, len = is->ifCond.size(); i < len; ++i) {
+		is->ifCond[i]->accept(this);
+		is->ifCond[i] = refresh(is->ifCond[i]);
 
-		Type *cur = is->ifCond->type;
+		Type *cur = is->ifCond[i]->type;
 		if (cur == NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
@@ -880,34 +880,12 @@ void TypeResolver::visit(IfStmt *is) {
 				curTypeVar_ = NULL;
 			}
 		} else {
-			if (!canPromote(cur, Bool_, is->ifCond->token.getPosition(), false))
+			if (!canPromote(cur, Bool_, is->ifCond[i]->token.getPosition(), false))
 				throw SemanticsError(is->token.getPosition(), "error: condition should be Bool");
-			assert(is->ifCond->type != NULL);
-			is->ifCond = insertPromoter(is->ifCond, Bool_);
-		}
-	}
-
-
-	is->ifThen->accept(this);
-
-	for (int i = 0, len = is->elseIfCond.size(); i < len; ++i) {
-		is->elseIfCond[i]->accept(this);
-		is->elseIfCond[i] = refresh(is->elseIfCond[i]);
-
-		Type *cur = is->elseIfCond[i]->type;
-		if (cur == NULL) {
-			assert(unresolved_);
-			if (curTypeVar_ != NULL) {
-				addTypeConstraint(Bool_, curTypeVar_);
-				curTypeVar_ = NULL;
-			}
-		} else {
-			if (!canPromote(cur, Bool_, is->elseIfCond[i]->token.getPosition(), false))
-				throw SemanticsError(is->token.getPosition(), "error: condition should be Bool");
-			is->elseIfCond[i] = insertPromoter(is->elseIfCond[i], Bool_);
+			is->ifCond[i] = insertPromoter(is->ifCond[i], Bool_);
 		}
 
-		is->elseIfThen[i]->accept(this);
+		is->ifThen[i]->accept(this);
 	}
 
 	if (is->elseThen != NULL)

@@ -389,12 +389,10 @@ public:
 	virtual AST::ASTType getASTType() { return IF_STMT; }
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
-	Expr *ifCond;
-	std::vector<Expr *> elseIfCond;
-	CompStmt *ifThen;
-	std::vector<CompStmt *> elseIfThen;
+	std::vector<Expr *> ifCond;
+	std::vector<CompStmt *> ifThen;
 	CompStmt *elseThen;
-	IfStmt(const Token& token, Expr *ifCond, CompStmt *ifThen, CompStmt *elseThen)
+	IfStmt(const Token& token, std::vector<Expr *> ifCond, std::vector<CompStmt *> ifThen, CompStmt *elseThen)
 		: Stmt(token), ifCond(ifCond), ifThen(ifThen), elseThen(elseThen) {}
 };
 

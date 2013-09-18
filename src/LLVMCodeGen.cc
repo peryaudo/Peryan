@@ -1735,14 +1735,14 @@ void LLVMCodeGen::Impl::generateIfStmt(IfStmt *is) {
 
 	llvm::BasicBlock *ifAfter = llvm::BasicBlock::Create(context_, "ifAfter" + curNumStr, func);
 
-	// if
-	{
-		llvm::Value *ifCond = generateExpr(is->ifCond);
+	// if / else if
+	for (int i = 0, iEnd = is->ifCond.size(); i < iEnd; ++i) {
+		llvm::Value *ifCond = generateExpr(is->ifCond[i]);
 
 		llvm::BasicBlock *prevBody = blocks.back().body;
 
 		Block block(Block::UNKNOWN_BLOCK);
-		generateCompStmt(is->ifThen, true, false, block);
+		generateCompStmt(is->ifThen[i], true, false, block);
 
 		// block for next else if
 		blocks.back().body = llvm::BasicBlock::Create(context_, "ifElseIf" + curNumStr, func);
@@ -1750,26 +1750,6 @@ void LLVMCodeGen::Impl::generateIfStmt(IfStmt *is) {
 		// manually connect compound statement blocks
 		builder_.SetInsertPoint(prevBody);
 		builder_.CreateCondBr(ifCond, block.head, blocks.back().body);
-
-		builder_.SetInsertPoint(block.end);
-		builder_.CreateBr(ifAfter);
-	}
-
-	// else if
-	for (int i = 0, iEnd = is->elseIfCond.size(); i < iEnd; ++i) {
-		llvm::Value *elseIfCond = generateExpr(is->elseIfCond[i]);
-
-		llvm::BasicBlock *prevBody = blocks.back().body;
-
-		Block block(Block::UNKNOWN_BLOCK);
-		generateCompStmt(is->elseIfThen[i], true, false, block);
-
-		// block for next else if
-		blocks.back().body = llvm::BasicBlock::Create(context_, "ifElseIf" + curNumStr, func);
-
-		// manually connect compound statement blocks
-		builder_.SetInsertPoint(prevBody);
-		builder_.CreateCondBr(elseIfCond, block.head, blocks.back().body);
 
 		builder_.SetInsertPoint(block.end);
 		builder_.CreateBr(ifAfter);

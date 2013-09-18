@@ -230,10 +230,7 @@ void SymbolRegister::visit(LabelStmt *ls) {
 void SymbolRegister::visit(IfStmt *is) {
 	assert(is != NULL);
 
-	is->ifThen->accept(this);
-
-	for (std::vector<CompStmt *>::iterator it = is->elseIfThen.begin();
-			it != is->elseIfThen.end(); ++it) {
+	for (std::vector<CompStmt *>::iterator it = is->ifThen.begin(); it != is->ifThen.end(); ++it) {
 		(*it)->accept(this);
 	}
 
