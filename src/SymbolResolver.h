@@ -5,13 +5,14 @@
 
 #include "SymbolTable.h"
 #include "AST.h"
+#include "ASTVisitor.h"
 
 namespace Peryan {
 
 class Options;
 class WarningPrinter;
 
-class SymbolResolver {
+class SymbolResolver : public ASTVisitor {
 private:
 	SymbolResolver(const SymbolResolver&);
 	SymbolResolver& operator=(const SymbolResolver&);
@@ -25,43 +26,50 @@ public:
 	SymbolResolver(SymbolTable& symbolTable, Options& options, WarningPrinter& wp)
 		: symbolTable_(symbolTable), options_(options), wp_(wp) {}
 
-	void visit(TransUnit *tu);
+	virtual void visit(TransUnit *tu);
 
-	void visit(Stmt *stmt);
-	void visit(FuncDefStmt *fds);
-	void visit(VarDefStmt *vds);
-	void visit(InstStmt *is);
-	void visit(AssignStmt *as);
-	void visit(CompStmt *cs);
-	void visit(IfStmt *is);
-	void visit(RepeatStmt *rs);
-	void visit(GotoStmt *gs);
-	void visit(GosubStmt *gs);
-	void visit(ReturnStmt *rs);
-	void visit(ExternStmt *es);
-	void visit(NamespaceStmt *ns);
-	void visit(Expr *expr);
-	void visit(Identifier *id);
-	void visit(Label *label);
-	void visit(BinaryExpr *be);
-	void visit(UnaryExpr *ue);
-	void visit(IntLiteralExpr *lit);
-	void visit(StrLiteralExpr *lit);
-	void visit(CharLiteralExpr *lit);
-	void visit(FloatLiteralExpr *lit);
-	void visit(BoolLiteralExpr *lit);
-	void visit(ArrayLiteralExpr *ale);
-	void visit(FuncCallExpr *fce);
-	void visit(ConstructorExpr *fce);
-	void visit(SubscrExpr *se);
+	virtual void visit(LabelStmt *ls)	{ return; }
+	virtual void visit(ContinueStmt *cs)	{ return; }
+	virtual void visit(BreakStmt *bs)	{ return; }
 
-	// always disallow implicit variable declaration in these situation
-	void visit(MemberExpr *me);
-	void visit(StaticMemberExpr *sme);
-	void visit(TypeSpec *ts);
-	void visit(ArrayTypeSpec *ts);
-	void visit(FuncTypeSpec *fs);
-	void visit(MemberTypeSpec *mts);
+	virtual void visit(RefExpr *re)		{ return; }
+	virtual void visit(DerefExpr *de)	{ return; }
+
+	virtual void visit(FuncExpr *de)	{ return; }
+
+	virtual void visit(FuncDefStmt *fds);
+	virtual void visit(VarDefStmt *vds);
+	virtual void visit(InstStmt *is);
+	virtual void visit(AssignStmt *as);
+	virtual void visit(CompStmt *cs);
+	virtual void visit(IfStmt *is);
+	virtual void visit(RepeatStmt *rs);
+	virtual void visit(GotoStmt *gs);
+	virtual void visit(GosubStmt *gs);
+	virtual void visit(ReturnStmt *rs);
+	virtual void visit(ExternStmt *es);
+	virtual void visit(NamespaceStmt *ns);
+	virtual void visit(Identifier *id);
+	virtual void visit(Label *label);
+	virtual void visit(BinaryExpr *be);
+	virtual void visit(UnaryExpr *ue);
+	virtual void visit(IntLiteralExpr *lit);
+	virtual void visit(StrLiteralExpr *lit);
+	virtual void visit(CharLiteralExpr *lit);
+	virtual void visit(FloatLiteralExpr *lit);
+	virtual void visit(BoolLiteralExpr *lit);
+	virtual void visit(ArrayLiteralExpr *ale);
+	virtual void visit(FuncCallExpr *fce);
+	virtual void visit(ConstructorExpr *fce);
+	virtual void visit(SubscrExpr *se);
+
+	// always disallow implicit variable declaration in these nodes
+	virtual void visit(MemberExpr *me);
+	virtual void visit(StaticMemberExpr *sme);
+	virtual void visit(TypeSpec *ts);
+	virtual void visit(ArrayTypeSpec *ts);
+	virtual void visit(FuncTypeSpec *fs);
+	virtual void visit(MemberTypeSpec *mts);
 };
 
 };
