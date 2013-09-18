@@ -46,29 +46,12 @@ void SymbolRegister::visit(TransUnit *tu) {
 
 	scopes.push(scope);
 	for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 	}
 	scopes.pop();
 
 	assert(scopes.empty());
 
-	return;
-}
-
-void SymbolRegister::visit(Stmt *stmt) {
-	assert(stmt != NULL);
-
-	switch (stmt->getASTType()) {
-	case AST::FUNC_DEF_STMT		: visit(static_cast<FuncDefStmt *>(stmt)); break;
-	case AST::VAR_DEF_STMT		: visit(static_cast<VarDefStmt *>(stmt)); break;
-	case AST::COMP_STMT		: visit(static_cast<CompStmt *>(stmt)); break;
-	case AST::LABEL_STMT		: visit(static_cast<LabelStmt *>(stmt)); break;
-	case AST::IF_STMT		: visit(static_cast<IfStmt *>(stmt)); break;
-	case AST::REPEAT_STMT		: visit(static_cast<RepeatStmt *>(stmt)); break;
-	case AST::EXTERN_STMT		: visit(static_cast<ExternStmt *>(stmt)); break;
-	case AST::NAMESPACE_STMT	: visit(static_cast<NamespaceStmt *>(stmt)); break;
-	default				: ;
-	}
 	return;
 }
 
@@ -114,7 +97,7 @@ void SymbolRegister::visit(FuncDefStmt *fds) {
 
 
 	scopes.push(funcSymbol);
-	visit(fds->body);
+	fds->body->accept(this);
 	scopes.pop();
 
 	return;
@@ -141,7 +124,7 @@ void SymbolRegister::visit(NamespaceStmt *ns) {
 
 	scopes.push(namespaceSymbol);
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it)
-		visit(*it);
+		(*it)->accept(this);
 	scopes.pop();
 
 	return;
@@ -203,7 +186,7 @@ void SymbolRegister::visit(CompStmt *cs) {
 
 	scopes.push(localScope);
 	for (std::vector<Stmt *>::iterator it = cs->stmts.begin(); it != cs->stmts.end(); ++it)
-		visit(*it);
+		(*it)->accept(this);
 	scopes.pop();
 
 	return;
@@ -230,9 +213,8 @@ void SymbolRegister::visit(LabelStmt *ls) {
 	LabelSymbol *labelSymbol = new LabelSymbol(std::string("*") + ls->label->token.getString(),
 								ls->label->token.getPosition());
 
-	Type *Label_ = static_cast<BuiltInTypeSymbol *>(symbolTable_.getGlobalScope()->resolve("Label"));
-	labelSymbol->setType(Label_);
-	ls->label->type = Label_;
+	labelSymbol->setType(symbolTable_.Label_);
+	ls->label->type = symbolTable_.Label_;
 
 	if (scope->define(labelSymbol)) {
 		throw SemanticsError(ls->token.getPosition(),
@@ -248,15 +230,15 @@ void SymbolRegister::visit(LabelStmt *ls) {
 void SymbolRegister::visit(IfStmt *is) {
 	assert(is != NULL);
 
-	visit(is->ifThen);
+	is->ifThen->accept(this);
 
 	for (std::vector<CompStmt *>::iterator it = is->elseIfThen.begin();
 			it != is->elseIfThen.end(); ++it) {
-		visit(*it);
+		(*it)->accept(this);
 	}
 
 	if (is->elseThen != NULL)
-		visit(is->elseThen);
+		is->elseThen->accept(this);
 
 	return;
 }
@@ -272,7 +254,7 @@ void SymbolRegister::visit(RepeatStmt *rs) {
 
 	scopes.push(localScope);
 	for (std::vector<Stmt *>::iterator it = rs->stmts.begin(); it != rs->stmts.end(); ++it)
-		visit(*it);
+		(*it)->accept(this);
 	scopes.pop();
 
 	return;

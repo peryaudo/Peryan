@@ -1067,9 +1067,9 @@ void TypeResolver::visit(Expr* expr) {
 	case AST::BOOL_LITERAL_EXPR	: visit(static_cast<BoolLiteralExpr *>(expr)); break;
 	case AST::ARRAY_LITERAL_EXPR	: visit(static_cast<ArrayLiteralExpr *>(expr)); break;
 	case AST::FUNC_CALL_EXPR	: visit(static_cast<FuncCallExpr *>(expr)); break;
-	case AST::CONSTRUCTOR_EXPR	: visit(reinterpret_cast<ConstructorExpr *>(expr)); break;
+	case AST::CONSTRUCTOR_EXPR	: visit(static_cast<ConstructorExpr *>(expr)); break;
 	case AST::SUBSCR_EXPR		: visit(static_cast<SubscrExpr *>(expr)); break;
-	case AST::MEMBER_EXPR		: visit(reinterpret_cast<MemberExpr *>(expr)); break;
+	case AST::MEMBER_EXPR		: visit(static_cast<MemberExpr *>(expr)); break;
 	case AST::STATIC_MEMBER_EXPR	: visit(static_cast<StaticMemberExpr *>(expr)); break;
 	case AST::DEREF_EXPR		: visit(static_cast<DerefExpr *>(expr)); break;
 	case AST::REF_EXPR		: visit(static_cast<RefExpr *>(expr)); break;

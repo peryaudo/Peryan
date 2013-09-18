@@ -6,6 +6,7 @@
 
 #include "Token.h"
 #include "SymbolTable.h"
+#include "ASTVisitor.h"
 
 namespace Peryan {
 
@@ -55,6 +56,7 @@ public:
 	} ASTType;
 
 	virtual AST::ASTType getASTType() = 0;
+	virtual void accept(ASTVisitor *visitor) = 0;
 
 	Token token;
 
@@ -75,6 +77,7 @@ public:
 class TransUnit : public AST {
 public:
 	virtual AST::ASTType getASTType() { return TRANS_UNIT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TransUnit() : AST(), scope(NULL) {}
 	std::vector<Stmt *> stmts;
@@ -85,6 +88,7 @@ public:
 class TypeSpec : public AST {
 public:
 	virtual AST::ASTType getASTType() { return TYPE_SPEC; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	bool isConst;
 	bool isRef;
@@ -103,6 +107,7 @@ public:
 class MemberTypeSpec : public TypeSpec {
 public:
 	virtual AST::ASTType getASTType() { return MEMBER_TYPE_SPEC; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *lhs;
 	Token rhs;
@@ -113,6 +118,7 @@ public:
 class ArrayTypeSpec : public TypeSpec {
 public:
 	virtual AST::ASTType getASTType() { return ARRAY_TYPE_SPEC; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *typeSpec;
 
@@ -124,6 +130,7 @@ public:
 class FuncTypeSpec : public TypeSpec {
 public:
 	virtual AST::ASTType getASTType() { return FUNC_TYPE_SPEC; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *lhs, *rhs;
 
@@ -145,6 +152,7 @@ public:
 class Identifier : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return IDENTIFIER; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *typeSpec;
 
@@ -158,6 +166,7 @@ public:
 class BinaryExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return BINARY_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *lhs, *rhs;
 	BinaryExpr(Expr *lhs, const Token& token, Expr *rhs) : Expr(token), lhs(lhs), rhs(rhs) {}
@@ -166,6 +175,7 @@ public:
 class UnaryExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return UNARY_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *rhs;
 	UnaryExpr(const Token& token, Expr *rhs) : Expr(token), rhs(rhs) {}
@@ -174,6 +184,7 @@ public:
 class StrLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return STR_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::string str;
 	StrLiteralExpr(const Token& token) : Expr(token), str(token.getString()) {}
@@ -182,6 +193,7 @@ public:
 class IntLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return INT_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	int integer;
 	IntLiteralExpr(const Token& token) : Expr(token), integer(token.getInteger()) {}
@@ -190,6 +202,7 @@ public:
 class FloatLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return FLOAT_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	double float_;
 	FloatLiteralExpr(const Token& token) : Expr(token), float_(token.getFloat()) {}
@@ -198,6 +211,7 @@ public:
 class CharLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return CHAR_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	char char_;
 	CharLiteralExpr(const Token& token) : Expr(token), char_(token.getChar()) {}
@@ -206,6 +220,7 @@ public:
 class BoolLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return BOOL_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	bool bool_;
 	BoolLiteralExpr(const Token& token) : Expr(token), bool_(token.getType() == Token::KW_TRUE) {}
@@ -214,6 +229,7 @@ public:
 class ArrayLiteralExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return ARRAY_LITERAL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::vector<Expr *> elements;
 
@@ -223,6 +239,7 @@ public:
 class FuncCallExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return FUNC_CALL_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *func;
 	std::vector<Expr *> params;
@@ -234,6 +251,7 @@ public:
 class ConstructorExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return CONSTRUCTOR_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *constructor;
 	std::vector<Expr *> params;
@@ -243,6 +261,7 @@ public:
 class RefExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return REF_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 	
 	Expr *refered;
 	RefExpr(Expr *refered) : Expr(refered->token), refered(refered) {}
@@ -251,6 +270,7 @@ public:
 class DerefExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return DEREF_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 	
 	Expr *derefered;
 	DerefExpr(Expr *derefered) : Expr(derefered->token), derefered(derefered) {}
@@ -259,6 +279,7 @@ public:
 class SubscrExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return SUBSCR_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *array;
 	Expr *subscript;
@@ -270,6 +291,7 @@ public:
 class MemberExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return MEMBER_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *receiver;
 	Identifier *member;
@@ -280,6 +302,7 @@ public:
 class StaticMemberExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return STATIC_MEMBER_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *receiver;
 	Identifier *member;
@@ -290,6 +313,7 @@ public:
 class CompStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return COMP_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::vector<Stmt *> stmts;
 	CompStmt(const Token& token) : Stmt(token) {}
@@ -300,6 +324,7 @@ public:
 class FuncExpr : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return FUNC_EXPR; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::vector<Identifier *> params;
 	TypeSpec *retTypeSpec;
@@ -310,6 +335,7 @@ public:
 class FuncDefStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return FUNC_DEF_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Identifier *name;
 	std::vector<Identifier *> params;
@@ -326,6 +352,7 @@ public:
 class VarDefStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return VAR_DEF_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Identifier *id;
 	Expr *init;
@@ -338,6 +365,7 @@ public:
 class InstStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return INST_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *inst;
 	std::vector<Expr *> params;
@@ -348,6 +376,7 @@ public:
 class AssignStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return ASSIGN_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *lhs;
 	Expr *rhs;
@@ -358,6 +387,7 @@ public:
 class IfStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return IF_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *ifCond;
 	std::vector<Expr *> elseIfCond;
@@ -371,6 +401,7 @@ public:
 class RepeatStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return REPEAT_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *count;
 	std::vector<Stmt *> stmts;
@@ -383,6 +414,7 @@ public:
 class Label : public Expr {
 public:
 	virtual AST::ASTType getASTType() { return LABEL; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label(const Token& token) : Expr(token), symbol(NULL) {}
 
@@ -392,6 +424,7 @@ public:
 class LabelStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return LABEL_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *label;
 	LabelStmt(const Token& token, Label *label) : Stmt(token), label(label) {}
@@ -401,6 +434,7 @@ public:
 class GotoStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return GOTO_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *to;
 	GotoStmt(const Token& token, Label *to) : Stmt(token), to(to) {}
@@ -409,6 +443,7 @@ public:
 class GosubStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return GOSUB_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *to;
 	GosubStmt(const Token& token, Label *to) : Stmt(token), to(to) {}
@@ -417,6 +452,7 @@ public:
 class ContinueStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return CONTINUE_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	ContinueStmt(const Token& token) : Stmt(token) {}
 };
@@ -424,6 +460,7 @@ public:
 class BreakStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return BREAK_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	BreakStmt(const Token& token) : Stmt(token) {}
 };
@@ -431,6 +468,7 @@ public:
 class ReturnStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return RETURN_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *expr;
 
@@ -441,6 +479,7 @@ public:
 class ExternStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return EXTERN_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Identifier *id;
 
@@ -455,6 +494,7 @@ public:
 class NamespaceStmt : public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return NAMESPACE_STMT; }
+	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	TypeSpec *name;
 
