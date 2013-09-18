@@ -117,7 +117,6 @@ private:
 public:
 	TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp);
 	virtual void visit(TransUnit *tu);
-	//virtual void visit(Stmt *stmt);
 	virtual void visit(FuncDefStmt *fds);
 	virtual void visit(VarDefStmt *vds);
 	virtual void visit(InstStmt *is);
@@ -129,7 +128,6 @@ public:
 	virtual void visit(GosubStmt *gs);
 	virtual void visit(ReturnStmt *rs);
 	virtual void visit(NamespaceStmt *ns);
-	//virtual void visit(Expr* expr);
 	virtual void visit(Identifier *id);
 	virtual void visit(Label *label);
 	virtual void visit(BinaryExpr *be);

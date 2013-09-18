@@ -1,4 +1,4 @@
-CTEST_XX = g++
+CXX = clang++
 
 ifeq ($(OS),Windows_NT)
 	EXEEXT = .exe
