@@ -8,9 +8,6 @@
 #include "ASTPrinter.h"
 
 
-//#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
-#define DBG_PRINT(TYPE, FUNC_NAME)
-
 namespace Peryan {
 
 TypeResolver::TypeResolver(SymbolTable& symbolTable, Options& opt, WarningPrinter& wp)
@@ -324,8 +321,6 @@ void TypeResolver::initBinaryPromotionTable() {
 }
 
 void TypeResolver::addTypeConstraint(Type *constraint, TypeVar typeVar) {
-	DBG_PRINT(+, addTypeConstraint);
-
 	if (constraints_.count(typeVar)) {
 		TypeConstraint& cur = constraints_[typeVar];
 		// constraint <: lowerBound <: T <: upperBound => lowerBound = constraint
@@ -352,12 +347,10 @@ void TypeResolver::addTypeConstraint(Type *constraint, TypeVar typeVar) {
 		constraints_[typeVar] = TypeConstraint(/* lowerBound = */constraint);
 	}
 
-	DBG_PRINT(-, addTypeConstraint);
 	return;
 }
 
 void TypeResolver::visit(TransUnit *tu) {
-	DBG_PRINT(+, TransUnit);
 	assert(tu != NULL);
 
 	int cnt = 0;
@@ -372,11 +365,9 @@ void TypeResolver::visit(TransUnit *tu) {
 
 		curFunc_ = NULL;
 
-		DBG_PRINT(+, TransUnitStmts);
 		for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
 			(*it)->accept(this);
 		}
-		DBG_PRINT(-, TransUnitStmts);
 		
 		if (!unresolved_)
 			break;
@@ -435,12 +426,10 @@ void TypeResolver::visit(TransUnit *tu) {
 		tu->stmts.insert(tu->stmts.begin(), varDefs.begin(), varDefs.end());
 	}
 
-	DBG_PRINT(-, TransUnit);
 	return;
 }
 
 void TypeResolver::visit(FuncDefStmt *fds) {
-	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
 	assert(fds->symbol != NULL);
 	assert(fds->symbol->getType() != NULL);
@@ -480,12 +469,10 @@ void TypeResolver::visit(FuncDefStmt *fds) {
 
 	curFunc_ = prevFunc_;
 
-	DBG_PRINT(-, FuncDefStmt);
 	return;
 }
 
 void TypeResolver::visit(VarDefStmt *vds) {
-	DBG_PRINT(+, VarDefStmt);
 	assert(vds != NULL);
 	assert(vds->id != NULL);
 
@@ -572,12 +559,10 @@ void TypeResolver::visit(VarDefStmt *vds) {
 			+ vds->id->type->getTypeName());
 	}
 
-	DBG_PRINT(-, VarDefStmt);
 	return;
 }
 
 void TypeResolver::visit(InstStmt *is) {
-	DBG_PRINT(+, InstStmt);
 	assert(is != NULL);
 	assert(is->inst != NULL);
 
@@ -704,16 +689,13 @@ void TypeResolver::visit(InstStmt *is) {
 		unresolved_ = true;
 		curTypeVar_ = NULL;
 
-		DBG_PRINT(-, InstStmt);
 		return;
 	}
 
-	DBG_PRINT(-, InstStmt);
 	return;
 }
 
 void TypeResolver::visit(AssignStmt *as) {
-	DBG_PRINT(+, AssignStmt);
 	assert(as != NULL);
 
 	TypeVar typeVarLhs = NULL, typeVarRhs = NULL;
@@ -820,12 +802,10 @@ void TypeResolver::visit(AssignStmt *as) {
 	default: assert(false);
 	}
 
-	DBG_PRINT(-, AssignStmt);
 	return;
 }
 
 void TypeResolver::visit(CompStmt *cs) {
-	DBG_PRINT(+, CompStmt);
 	assert(cs != NULL);
 
 	for (std::vector<Stmt *>::iterator it = cs->stmts.begin();
@@ -833,12 +813,10 @@ void TypeResolver::visit(CompStmt *cs) {
 		(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, CompStmt);
 	return;
 }
 
 void TypeResolver::visit(NamespaceStmt *ns) {
-	DBG_PRINT(+, NamespaceStmt);
 	assert(ns != NULL);
 
 	for (std::vector<Stmt *>::iterator it = ns->stmts.begin();
@@ -846,12 +824,10 @@ void TypeResolver::visit(NamespaceStmt *ns) {
 		(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, NamespaceStmt);
 
 }
 
 void TypeResolver::visit(IfStmt *is) {
-	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
 	for (int i = 0, len = is->ifCond.size(); i < len; ++i) {
@@ -877,12 +853,10 @@ void TypeResolver::visit(IfStmt *is) {
 	if (is->elseThen != NULL)
 		is->elseThen->accept(this);
 
-	DBG_PRINT(-, IfStmt);
 	return;
 }
 
 void TypeResolver::visit(RepeatStmt *rs) {
-	DBG_PRINT(+, RepeatStmt);
 	assert(rs != NULL);
 
 	if (rs->count != NULL) {
@@ -908,28 +882,22 @@ void TypeResolver::visit(RepeatStmt *rs) {
 		(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, RepeatStmt);
 	return;
 }
 
 void TypeResolver::visit(GotoStmt *gs) {
-	DBG_PRINT(+, GotoStmt);
 	assert(gs != NULL);
 
-	DBG_PRINT(-, GotoStmt);
 	return;
 }
 
 void TypeResolver::visit(GosubStmt *gs) {
-	DBG_PRINT(+, GosubStmt);
 	assert(gs != NULL);
 
-	DBG_PRINT(-, GosubStmt);
 	return;
 }
 
 void TypeResolver::visit(ReturnStmt *rs) {
-	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
 
 	if (curFunc_ == NULL) {
@@ -987,26 +955,20 @@ void TypeResolver::visit(ReturnStmt *rs) {
 			rs->expr = insertPromoter(rs->expr, retType);
 		}
 	}
-	DBG_PRINT(-, ReturnStmt);
 	return;
 }
 
 void TypeResolver::visit(DerefExpr *de) {
-	DBG_PRINT(+, DerefExpr);
 	de->derefered->accept(this);
-	DBG_PRINT(-, DerefExpr);
 	return;
 }
 
 void TypeResolver::visit(RefExpr *re) {
-	DBG_PRINT(+, RefExpr);
 	re->refered->accept(this);
-	DBG_PRINT(-, RefExpr);
 	return;
 }
 
 void TypeResolver::visit(Identifier *id) {
-	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->symbol != NULL);
 
@@ -1028,12 +990,10 @@ void TypeResolver::visit(Identifier *id) {
 	// all value references returns ref!
 	id->type = new ModifierType(id->type->isConst(), /* isRef = */ true, id->type->unmodify());
 
-	DBG_PRINT(-, Identifier);
 	return;
 }
 
 void TypeResolver::visit(Label *label) {
-	DBG_PRINT(+, Label);
 	assert(label != NULL);
 
 	if (label->type == NULL) {
@@ -1042,12 +1002,10 @@ void TypeResolver::visit(Label *label) {
 
 	assert(label->symbol != NULL);
 
-	DBG_PRINT(-, Label);
 	return;
 }
 
 void TypeResolver::visit(BinaryExpr *be) {
-	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
 	be->lhs->accept(this);
@@ -1075,7 +1033,6 @@ void TypeResolver::visit(BinaryExpr *be) {
 		assert(be->rhs->type != NULL);
 
 		if (lhsType->is(lhsType->unmodify()) && rhsType->is(rhsType->unmodify())) {
-			DBG_PRINT(-, BinaryExpr);
 			be->type = new ModifierType(true, false, be->type);
 			return;
 		}
@@ -1097,7 +1054,6 @@ void TypeResolver::visit(BinaryExpr *be) {
 			std::cout<<rhsType->unmodify()->getTypeName()<<std::endl;
 			assert(false && "no viable cast");
 		}
-		DBG_PRINT(-, BinaryExpr);
 		be->type = new ModifierType(true, false, be->type);
 		return;
 	} else {
@@ -1110,7 +1066,6 @@ void TypeResolver::visit(BinaryExpr *be) {
 }
 
 void TypeResolver::visit(UnaryExpr *ue) {
-	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
 	ue->rhs->accept(this);
@@ -1132,7 +1087,6 @@ void TypeResolver::visit(UnaryExpr *ue) {
 			throw SemanticsError(ue->token.getPosition(), "error: right side should be numeric type");
 
 		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
-		DBG_PRINT(-, UnaryExpr);
 		ue->type = rhsType->unmodify();
 		return;
 	case Token::EXCL:
@@ -1140,7 +1094,6 @@ void TypeResolver::visit(UnaryExpr *ue) {
 			throw SemanticsError(ue->token.getPosition(), "error: right side should be Bool");
 
 		ue->rhs = insertPromoter(ue->rhs, rhsType->unmodify());
-		DBG_PRINT(-, UnaryExpr);
 		ue->type = rhsType->unmodify();
 		return;
 	default: ;
@@ -1151,7 +1104,6 @@ void TypeResolver::visit(UnaryExpr *ue) {
 }
 
 void TypeResolver::visit(IntLiteralExpr *lit) {
-	DBG_PRINT(+-, IntLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Int_);
@@ -1159,7 +1111,6 @@ void TypeResolver::visit(IntLiteralExpr *lit) {
 }
 
 void TypeResolver::visit(StrLiteralExpr *lit) {
-	DBG_PRINT(+-, StrLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, String_);
@@ -1167,7 +1118,6 @@ void TypeResolver::visit(StrLiteralExpr *lit) {
 }
 
 void TypeResolver::visit(CharLiteralExpr *lit) {
-	DBG_PRINT(+-, CharLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Char_);
@@ -1175,7 +1125,6 @@ void TypeResolver::visit(CharLiteralExpr *lit) {
 }
 
 void TypeResolver::visit(FloatLiteralExpr *lit) {
-	DBG_PRINT(+-, FloatLiteralExpr);
 	assert(lit != NULL);
 	if (lit->type == NULL)
 		lit->type = new ModifierType(true, false, Double_);
@@ -1183,7 +1132,6 @@ void TypeResolver::visit(FloatLiteralExpr *lit) {
 }
 
 void TypeResolver::visit(BoolLiteralExpr *lit) {
-	DBG_PRINT(+-, BoolLiteralExpr);
 	assert(lit != NULL);
 
 	if (lit->type == NULL)
@@ -1192,7 +1140,6 @@ void TypeResolver::visit(BoolLiteralExpr *lit) {
 }
 
 void TypeResolver::visit(ArrayLiteralExpr *ale) {
-	DBG_PRINT(+, ArrayLiteralExpr);
 	assert(ale != NULL);
 
 	if (ale->type != NULL)
@@ -1241,13 +1188,11 @@ void TypeResolver::visit(ArrayLiteralExpr *ale) {
 		*it = insertPromoter(*it, elemType);
 	}
 
-	DBG_PRINT(-, ArrayLiteralExpr);
 	ale->type = new ModifierType(true, false, new ArrayType(elemType));
 	return;
 }
 
 void TypeResolver::visit(FuncCallExpr *fce) {
-	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 
 	FuncType *curFuncType = NULL;
@@ -1321,7 +1266,6 @@ void TypeResolver::visit(FuncCallExpr *fce) {
 		unresolvedPos_ = fce->func->token.getPosition();
 		curTypeVar_ = &(curFuncType->getReturnType());
 
-		DBG_PRINT(-, FuncCallExpr);
 		fce->type = NULL;
 	} else {
 		fce->type = curFuncType->getReturnType();
@@ -1331,12 +1275,10 @@ void TypeResolver::visit(FuncCallExpr *fce) {
 		throw SemanticsError(fce->token.getPosition(), "error: the function doesn't return a value");
 	}
 
-	DBG_PRINT(-, FuncCallExpr);
 	return;
 }
 
 void TypeResolver::visit(ConstructorExpr *ce) {
-	DBG_PRINT(+, ConstructorExpr);
 	assert(ce != NULL);
 	assert(ce->constructor != NULL);
 
@@ -1419,12 +1361,10 @@ void TypeResolver::visit(ConstructorExpr *ce) {
 		rewrite(rewriteWith);
 	}
 
-	DBG_PRINT(-, ConstructorExpr);
 	return;
 }
 
 void TypeResolver::visit(SubscrExpr *se) {
-	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
 	if (se->type != NULL)
@@ -1475,12 +1415,10 @@ void TypeResolver::visit(SubscrExpr *se) {
 
 	se->type = new ModifierType(isConst || !isRef, true, se->type->unmodify());
 
-	DBG_PRINT(-, SubscrExpr);
 	return;
 }
 
 void TypeResolver::visit(MemberExpr *me) {
-	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
 	me->receiver->accept(this);
@@ -1559,13 +1497,10 @@ void TypeResolver::visit(MemberExpr *me) {
 		}
 	}
 
-	DBG_PRINT(-, MemberExpr);
-
 	return;
 }
 
 void TypeResolver::visit(StaticMemberExpr *sme) {
-	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 
 	assert(sme->receiver->type->getTypeType() == Type::NAMESPACE_TYPE
@@ -1598,7 +1533,6 @@ void TypeResolver::visit(StaticMemberExpr *sme) {
 		sme->type = sme->member->symbol->getType();
 	}
 
-	DBG_PRINT(-, StaticMemberExpr);
 	return;
 }
 

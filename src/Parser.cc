@@ -13,15 +13,7 @@
 #include "SymbolResolver.h"
 #include "TypeResolver.h"
 
-//#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<" "<<lt().toString()<<std::endl
-//#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #TYPE #FUNC_NAME)
-/* #define DBG_PRINT(TYPE, FUNC_NAME) if (*(#TYPE) == '+') \
-	std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #TYPE #FUNC_NAME) */
-
-
-#ifndef DBG_PRINT
-#define DBG_PRINT(TYPE, FUNC_NAME)
-#endif
+#define DBG_PRINT(MESSAGE) std::cout<<lexer_.getPrettyPrint(lt().getPosition(), #MESSAGE)
 
 namespace Peryan {
 
@@ -72,8 +64,6 @@ void Parser::parse() {
 
 // TranslationUnit : { TopLevelStatement }
 TransUnit *Parser::parseTransUnit() {
-	DBG_PRINT(+, parseTransUnit);
-
 	TransUnit *transUnit = new TransUnit();
 
 	std::vector<Stmt *> curStmts;
@@ -81,7 +71,6 @@ TransUnit *Parser::parseTransUnit() {
 		transUnit->stmts.insert(transUnit->stmts.end(), curStmts.begin(), curStmts.end());
 	}
 
-	DBG_PRINT(-, parseTransUnit);
 	return transUnit;
 }
 
@@ -107,8 +96,6 @@ TransUnit *Parser::parseTransUnit() {
 // 	         | "break"  (":" | TERM)
 // 	         ;
 std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) {
-	DBG_PRINT(+, parseStmt);
-
 	if (!withoutTerm)
 		while (la() == Token::TERM)
 			consume();
@@ -215,14 +202,12 @@ std::vector<Stmt *> Parser::parseStmt(bool isTopLevel, bool withoutTerm) {
 
 	assert(stmt != NULL);
 
-	DBG_PRINT(-, parseStmt);
 	return std::vector<Stmt *>(1, stmt);
 }
 
 // FunctionDefinition : "func" IDENTIFIER  "(" ParameterDeclarationList? {= default } ")"
 // 					[ "::" TypeSpecifier ] CompoundStatement TERM ;
 FuncDefStmt *Parser::parseFuncDefStmt() {
-	DBG_PRINT(+, parseFuncDefStmt);
 	assert(la() == Token::KW_FUNC);
 
 	Token token = lt();
@@ -295,13 +280,11 @@ FuncDefStmt *Parser::parseFuncDefStmt() {
 	fds->retTypeSpec = retTypeSpec;
 	fds->defaults = defaults;
 
-	DBG_PRINT(-, parseFuncDefStmt);
 	return fds;
 }
 
 // ExternStmt : "extern" ID "::" TypeSpec {"=" default parameters } (":" | TERM)
 ExternStmt *Parser::parseExternStmt() {
-	DBG_PRINT(+, parseExternStmt);
 	assert(la() == Token::KW_EXTERN);
 
 	Token token = lt();
@@ -345,14 +328,12 @@ ExternStmt *Parser::parseExternStmt() {
 	if (la() == Token::TERM || la() == Token::CLN)
 		consume();
 
-	DBG_PRINT(-, parseExternStmt);
 	return es;
 }
 
 // JumpStatement : "goto" Label (":" | TERM)
 // 	         | "gosub" Label (":" | TERM)
 Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseGotoGosubStmt);
 	assert(la() == Token::KW_GOTO || la() == Token::KW_GOSUB);
 
 	Stmt *stmt = NULL;
@@ -376,13 +357,11 @@ Stmt *Parser::parseGotoGosubStmt(bool withoutTerm) {
 			consume();
 	}
 
-	DBG_PRINT(-, parseGotoGosubStmt);
 	return stmt;
 }
 
 // Identifier : (ID | "Int" | "String" | "Char" | "Float" | "Double" | "Bool") ;
 Identifier *Parser::parseIdentifier() {
-	DBG_PRINT(+, parseIdentifier);
 	assert(la() == Token::ID);
 
 	Identifier *id = new Identifier(lt());
@@ -397,13 +376,11 @@ Identifier *Parser::parseIdentifier() {
 	}*/
 	consume();
 
-	DBG_PRINT(-, parseIdentifier);
 	return id;
 }
 
 // Label : "*" ID ;
 Label *Parser::parseLabel() {
-	DBG_PRINT(+, parseLabel);
 	assert(la() == Token::STAR);
 
 	if (la(0) == Token::STAR && (la(1) == Token::ID || la(1) == Token::TYPE_ID)
@@ -413,7 +390,6 @@ Label *Parser::parseLabel() {
 		Label *label = new Label(lt());
 		consume();
 
-		DBG_PRINT(-, parseLabel);
 		return label;
 	} else {
 		throw ParserError(getPosition(), "error: label expected");
@@ -422,7 +398,6 @@ Label *Parser::parseLabel() {
 
 // CompoundStatement : "{" { Statement } "}" ;
 CompStmt *Parser::parseCompStmt() {
-	DBG_PRINT(+, parseCompStmt);
 	assert(la() == Token::LBRACE);
 
 	CompStmt *compStmt = new CompStmt(lt());
@@ -444,13 +419,11 @@ CompStmt *Parser::parseCompStmt() {
 	// la() == Token::RBRACE
 	consume();
 
-	DBG_PRINT(-, parseCompStmt);
 	return compStmt;
 }
 
 // LabelStatement : Label TERM ;
 LabelStmt *Parser::parseLabelStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseLabelStmt);
 	assert(la() == Token::STAR);
 
 	Token token = lt();
@@ -463,14 +436,12 @@ LabelStmt *Parser::parseLabelStmt(bool withoutTerm) {
 		consume();
 	}
 
-	DBG_PRINT(-, parseLabelStmt);
 	return new LabelStmt(token, label);
 }
 
 //VariableDefinition : "var" IDENTIFIER [ "::" TypeSpecifier ] [ "=" Expression ]
 //	{ "," IDENTIFIER [ "::" TypeSpecifier ] [ "=" Expression ] } (":" | TERM) ;
 std::vector<Stmt *> Parser::parseVarDefStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseVarDefStmt);
 	assert(la() == Token::KW_VAR);
 
 	consume();
@@ -509,7 +480,6 @@ std::vector<Stmt *> Parser::parseVarDefStmt(bool withoutTerm) {
 		consume();
 	}
 
-	DBG_PRINT(-, parseVarDefStmt);
 	return stmts;
 }
 
@@ -536,7 +506,6 @@ bool Parser::speculateTypeSpec() {
 }
 
 TypeSpec *Parser::parseTypeSpec() {
-	DBG_PRINT(+, parseTypeSpec);
 
 	bool isConst = false, isRef = false;
 
@@ -617,7 +586,6 @@ TypeSpec *Parser::parseTypeSpec() {
 		}
 	}
 
-	DBG_PRINT(-, parseTypeSpec);
 	return typeSpec;
 }
 
@@ -628,7 +596,6 @@ TypeSpec *Parser::parseTypeSpec() {
 //		 [":" "else" ":" StatementWithoutTerm { ":" StatementWithoutTerm } ] TERM ; //*
 
 IfStmt *Parser::parseIfStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseIfStmt);
 
 	assert(la() == Token::KW_IF);
 
@@ -727,13 +694,11 @@ IfStmt *Parser::parseIfStmt(bool withoutTerm) {
 
 	IfStmt *ifStmt = new IfStmt(token, ifCond, ifThen, elseThen);
 
-	DBG_PRINT(-, parseIfStmt);
 	return ifStmt;
 }
 
 // RepeatStatement : "repeat" { Expression } (":" | TERM) { Statement } "loop" (":" | TERM) ;
 RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseRepeatStmt);
 	assert(la() == Token::KW_REPEAT);
 
 	Token token = lt();
@@ -778,7 +743,6 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) {
 			consume();
 	}
 
-	DBG_PRINT(-, parseRepeatStmt);
 	return rs;
 }
 // InstructionAndAssignmentStatement :
@@ -790,7 +754,6 @@ RepeatStmt *Parser::parseRepeatStmt(bool withoutTerm) {
 // AssignmentOperator : "=" | "++" | "--" | "+=" | "-=" | "*=" | "/=" ;
 
 Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) {
-	DBG_PRINT(+, parseInstOrAssignStmt);
 
 	Token topToken = lt();
 	Expr *topExpr = parseExpr(false);
@@ -860,20 +823,17 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) {
 	if (!withoutTerm)
 		consume();
 
-	DBG_PRINT(-, parseInstOrAssignStmt);
 	return instStmt;
 }
 
 // Expression : XorExpression ;
 Expr *Parser::parseExpr(bool allowTopEql) {
-	DBG_PRINT(+-, parseExpr);
 	return parseXorExpr(allowTopEql);
 }
 
 // XorExpression : OrExpression { "^" OrExpression } ; 
 // Associativity: Left-to-right
 Expr *Parser::parseXorExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseXorExpr);
 
 	Expr *lhs = parseOrExpr(allowTopEql);
 
@@ -886,14 +846,12 @@ Expr *Parser::parseXorExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseXorExpr);
 	return lhs;
 }
 
 // OrExpression : AndExpression { "|" AndExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseOrExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseOrExpr);
 
 	Expr *lhs = parseAndExpr(allowTopEql);
 
@@ -906,14 +864,12 @@ Expr *Parser::parseOrExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseOrExpr);
 	return lhs;
 }
 
 // AndExpression : EqualityExpression { "&" EqualityExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseAndExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseAndExpr);
 
 	Expr *lhs = parseEqlExpr(allowTopEql);
 
@@ -926,14 +882,12 @@ Expr *Parser::parseAndExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseAndExpr);
 	return lhs;
 }
 
 // EqualityExpression : RelationalExpression { ("=" | "==" | "!=" | "!") RelationalExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseEqlExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseEqlExpr);
 
 	Expr *lhs = parseRelExpr(allowTopEql);
 
@@ -951,14 +905,12 @@ Expr *Parser::parseEqlExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseEqlExpr);
 	return lhs;
 }
 
 // RelationalExpression : ShiftExpression [ ("<" | "<=" | ">" | ">=" ) ShiftExpression ] ;
 // Associativity: Left-to-right
 Expr *Parser::parseRelExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseRelExpr);
 
 	Expr *lhs = parseShiftExpr(allowTopEql);
 
@@ -972,14 +924,12 @@ Expr *Parser::parseRelExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseRelExpr);
 	return lhs;
 }
 
 // ShiftExpression : AdditiveExpression { ("<<" | ">>" ) AdditiveExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseShiftExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseShiftExpr);
 
 	Expr *lhs = parseAddExpr(allowTopEql);
 
@@ -992,14 +942,12 @@ Expr *Parser::parseShiftExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseShiftExpr);
 	return lhs;
 }
 
 // AdditiveExpression: MultiplicativeExpression { ("+" | "-") MultiplicativeExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseAddExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseAddExpr);
 
 	Expr *lhs = parseMultExpr(allowTopEql);
 
@@ -1012,14 +960,12 @@ Expr *Parser::parseAddExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseAddExpr);
 	return lhs;
 }
 
 // MultiplicativeExpression : UnaryExpression { ("*" | "/" | "%") UnaryExpression } ;
 // Associativity: Left-to-right
 Expr *Parser::parseMultExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseMultExpr);
 
 	Expr *lhs = parseUnaryExpr(allowTopEql);
 
@@ -1032,7 +978,6 @@ Expr *Parser::parseMultExpr(bool allowTopEql) {
 		lhs = new BinaryExpr(lhs, token, rhs);
 	}
 
-	DBG_PRINT(-, parseMultExpr);
 	return lhs;
 }
 
@@ -1041,15 +986,12 @@ Expr *Parser::parseMultExpr(bool allowTopEql) {
 // 		   ;
 // Associativity: Right-to-left
 Expr *Parser::parseUnaryExpr(bool allowTopEql) {
-	DBG_PRINT(+, parseUnaryExpr);
 
 	if (la() == Token::EXCL || la() == Token::PLUS || la() == Token::MINUS) {
 		Token token = lt();
 		consume();
-		DBG_PRINT(-, parseUnaryExpr);
 		return new UnaryExpr(token, parseUnaryExpr(true));
 	} else {
-		DBG_PRINT(-, parseUnaryExpr);
 		return parsePostfixExpr(allowTopEql);
 	}
 }
@@ -1058,7 +1000,6 @@ Expr *Parser::parseUnaryExpr(bool allowTopEql) {
 // 		{ '[' Expression ']' | '(' Expression ')' | '.' IDENTIFIER } ;
 // Associativity: Left-to-right
 Expr *Parser::parsePostfixExpr(bool allowTopEql) {
-	DBG_PRINT(+, parsePostfixExpr);
 
 	Expr *expr = NULL;
 
@@ -1097,7 +1038,6 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) {
 			ConstructorExpr *ce = new ConstructorExpr(token, ts);
 			ce->params = params;
 
-			DBG_PRINT(+, parsePostfixExpr);
 			return ce;
 		} else if (la() == Token::DOT) {
 			Token token = lt();
@@ -1174,7 +1114,6 @@ Expr *Parser::parsePostfixExpr(bool allowTopEql) {
 		throw ParserError(partialPosition, "error: this is not function applying");
 	}
 
-	DBG_PRINT(-, parsePostfixExpr);
 	return expr;
 }
 
@@ -1242,7 +1181,6 @@ Expr *Parser::parseFuncExpr() {
 // 		     | Label
 // 		     ;
 Expr *Parser::parsePrimaryExpr(bool allowTopEql) {
-	DBG_PRINT(+, parsePrimaryExpr);
 
 	Expr *expr = NULL;
 	switch (la()) {
@@ -1281,26 +1219,16 @@ Expr *Parser::parsePrimaryExpr(bool allowTopEql) {
 
 		break;
 	case Token::ID:
-	/* case Token::KW_INT:
-	case Token::KW_STRING:
-	case Token::KW_CHAR:
-	case Token::KW_FLOAT:
-	case Token::KW_DOUBLE:
-	case Token::KW_BOOL:*/
-		DBG_PRINT(-, parsePrimaryExpr);
 		return parseIdentifier();
 	case Token::STAR:
-		DBG_PRINT(-, parsePrimaryExpr);
 		return parseLabel();
 	default: throw ParserError(getPosition(), "error: invalid primary expression");
 	}
 
-	DBG_PRINT(-, parsePrimaryExpr);
 	return expr;
 }
 
 Expr *Parser::parseArrayLiteralExpr() {
-	DBG_PRINT(+, parseArrayLiteralExpr);
 	assert(la() == Token::LBRACK);
 
 	ArrayLiteralExpr *ale = new ArrayLiteralExpr(lt());
@@ -1321,12 +1249,10 @@ Expr *Parser::parseArrayLiteralExpr() {
 
 	consume();
 
-	DBG_PRINT(-, parseArrayLiteralExpr);
 	return ale;
 }
 
 NamespaceStmt *Parser::parseNamespaceStmt() {
-	DBG_PRINT(+, parseNamespaceStmt);
 
 	assert(la() == Token::KW_NAMESPACE);
 	Token token = lt();
@@ -1363,8 +1289,6 @@ NamespaceStmt *Parser::parseNamespaceStmt() {
 	if (la() != Token::TERM)
 		throw ParserError(getPosition(), "error: no terminal character");
 	consume();
-
-	DBG_PRINT(-, parseNamespaceStmt);
 
 	return ns;
 }

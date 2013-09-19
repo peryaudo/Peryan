@@ -16,6 +16,8 @@ public:
 
 	virtual void generate();
 
+	static void installStackTracer();
+
 	virtual ~LLVMCodeGen();
 };
 

@@ -10,13 +10,9 @@
 #include "Options.h"
 #include "WarningPrinter.h"
 
-//#define DBG_PRINT(TYPE, FUNC_NAME) std::cout<<#TYPE<<#FUNC_NAME<<std::endl
-#define DBG_PRINT(TYPE, FUNC_NAME)
-
 namespace Peryan {
 
 void SymbolResolver::visit(TransUnit *tu) {
-	DBG_PRINT(+, TransUnit);
 	assert(tu != NULL);
 
 	Scope *scope = tu->scope;
@@ -31,12 +27,10 @@ void SymbolResolver::visit(TransUnit *tu) {
 
 	assert(scopes.empty());
 
-	DBG_PRINT(-, TransUnit);
 	return;
 }
 
 void SymbolResolver::visit(FuncDefStmt *fds) {
-	DBG_PRINT(+, FuncDefStmt);
 	assert(fds != NULL);
 
 	scopes.push(fds->symbol);
@@ -85,12 +79,10 @@ void SymbolResolver::visit(FuncDefStmt *fds) {
 
 	scopes.pop();
 
-	DBG_PRINT(-, FuncDefStmt);
 	return;
 }
 
 void SymbolResolver::visit(VarDefStmt *vds) {
-	DBG_PRINT(+, VarDefStmt);
 	assert(vds != NULL);
 
 	vds->id->accept(this);
@@ -98,12 +90,10 @@ void SymbolResolver::visit(VarDefStmt *vds) {
 	if (vds->init != NULL)
 		vds->init->accept(this);
 
-	DBG_PRINT(-, VarDefStmt);
 	return;
 }
 
 void SymbolResolver::visit(InstStmt *is) {
-	DBG_PRINT(+, InstStmt);
 	assert(is != NULL);
 
 	is->inst->accept(this);
@@ -114,12 +104,10 @@ void SymbolResolver::visit(InstStmt *is) {
 			(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, InstStmt);
 	return;
 }
 
 void SymbolResolver::visit(AssignStmt *as) {
-	DBG_PRINT(+, AssignStmt);
 	assert(as != NULL);
 
 	as->lhs->accept(this);
@@ -127,12 +115,10 @@ void SymbolResolver::visit(AssignStmt *as) {
 	if (as->rhs != NULL)
 		as->rhs->accept(this);
 
-	DBG_PRINT(-, AssignStmt);
 	return;
 }
 
 void SymbolResolver::visit(CompStmt *cs) {
-	DBG_PRINT(+, CompStmt);
 	assert(cs != NULL);
 
 	scopes.push(cs->scope);
@@ -144,12 +130,10 @@ void SymbolResolver::visit(CompStmt *cs) {
 
 	scopes.pop();
 
-	DBG_PRINT(-, CompStmt);
 	return;
 }
 
 void SymbolResolver::visit(IfStmt *is) {
-	DBG_PRINT(+, IfStmt);
 	assert(is != NULL);
 
 	for (int i = 0, len = is->ifCond.size(); i < len; ++i) {
@@ -160,12 +144,10 @@ void SymbolResolver::visit(IfStmt *is) {
 	if (is->elseThen != NULL)
 		is->elseThen->accept(this);
 
-	DBG_PRINT(-, IfStmt);
 	return;
 }
 
 void SymbolResolver::visit(RepeatStmt *rs) {
-	DBG_PRINT(+, RepeatStmt);
 	assert(rs != NULL);
 
 	if (rs->count != NULL) {
@@ -183,43 +165,35 @@ void SymbolResolver::visit(RepeatStmt *rs) {
 
 	scopes.pop();
 
-	DBG_PRINT(-, RepeatStmt);
 	return;
 }
 
 void SymbolResolver::visit(GotoStmt *gs) {
-	DBG_PRINT(+, GotoStmt);
 	assert(gs != NULL);
 
 	gs->to->accept(this);
 
-	DBG_PRINT(-, GotoStmt);
 	return;
 }
 
 void SymbolResolver::visit(GosubStmt *gs) {
-	DBG_PRINT(+, GosubStmt);
 	assert(gs != NULL);
 
 	gs->to->accept(this);
 
-	DBG_PRINT(-, GosubStmt);
 	return;
 }
 
 void SymbolResolver::visit(ReturnStmt *rs) {
-	DBG_PRINT(+, ReturnStmt);
 	assert(rs != NULL);
 
 	if (rs->expr != NULL)
 		rs->expr->accept(this);
 
-	DBG_PRINT(-, ReturnStmt);
 	return;
 }
 
 void SymbolResolver::visit(ExternStmt *es) {
-	DBG_PRINT(+, ExternStmt);
 	assert(es != NULL);
 	assert(es->id != NULL);
 
@@ -238,8 +212,6 @@ void SymbolResolver::visit(ExternStmt *es) {
 
 	es->symbol->defaults = &(es->defaults);
 
-	DBG_PRINT(+, ExternStmt);
-
 	return;
 }
 
@@ -255,7 +227,6 @@ void SymbolResolver::visit(NamespaceStmt *ns) {
 }
 
 void SymbolResolver::visit(Identifier *id) {
-	DBG_PRINT(+, Identifier);
 	assert(id != NULL);
 	assert(id->type == NULL);
 
@@ -304,12 +275,10 @@ void SymbolResolver::visit(Identifier *id) {
 		id->symbol = symbol;
 	}
 
-	DBG_PRINT(-, Identifier);
 	return;
 }
 
 void SymbolResolver::visit(Label *label) {
-	DBG_PRINT(+, Label);
 	assert(label != NULL);
 
 	Scope *scope = scopes.top();
@@ -324,75 +293,58 @@ void SymbolResolver::visit(Label *label) {
 		label->symbol = static_cast<LabelSymbol *>(symbol);
 	}
 
-	DBG_PRINT(-, Label);
 	return;
 }
 
 void SymbolResolver::visit(BinaryExpr *be) {
-	DBG_PRINT(+, BinaryExpr);
 	assert(be != NULL);
 
 	be->lhs->accept(this);
 
 	be->rhs->accept(this);
 
-	DBG_PRINT(-, BinaryExpr);
 	return;
 }
 
 void SymbolResolver::visit(UnaryExpr *ue) {
-	DBG_PRINT(+, UnaryExpr);
 	assert(ue != NULL);
 
 	ue->rhs->accept(this);
-
-	DBG_PRINT(-, UnaryExpr);
 	return;
 }
 
-void SymbolResolver::visit(IntLiteralExpr *lit) {
-	DBG_PRINT(+, IntLiteralExpr);
-	assert(lit != NULL);
-	DBG_PRINT(-, IntLiteralExpr);
+void SymbolResolver::visit(IntLiteralExpr *ile) {
+	assert(ile != NULL);
 	return;
 }
 
-void SymbolResolver::visit(StrLiteralExpr *lit) {
-	DBG_PRINT(+-, StrLiteralExpr);
-	assert(lit != NULL);
+void SymbolResolver::visit(StrLiteralExpr *sle) {
+	assert(sle != NULL);
 	return;
 }
 
-void SymbolResolver::visit(CharLiteralExpr *lit) {
-	DBG_PRINT(+-, CharLiteralExpr);
-	assert(lit != NULL);
+void SymbolResolver::visit(CharLiteralExpr *cle) {
+	assert(cle != NULL);
 	return;
 }
 
-void SymbolResolver::visit(FloatLiteralExpr *lit) {
-	DBG_PRINT(+-, FloatLiteralExpr);
-	assert(lit != NULL);
+void SymbolResolver::visit(FloatLiteralExpr *fle) {
+	assert(fle != NULL);
 	return;
 }
 
-void SymbolResolver::visit(BoolLiteralExpr *lit) {
-	DBG_PRINT(+-, BoolLiteralExpr);
-	assert(lit != NULL);
+void SymbolResolver::visit(BoolLiteralExpr *ble) {
+	assert(ble != NULL);
 	return;
 }
 
 void SymbolResolver::visit(ArrayLiteralExpr *ale) {
-	DBG_PRINT(+, ArrayLiteralExpr);
-
 	for (std::vector<Expr *>::iterator it = ale->elements.begin(); it != ale->elements.end(); ++it)
 		(*it)->accept(this);
-
-	DBG_PRINT(-, ArrayLiteralExpr);
 	return;
 }
 
 void SymbolResolver::visit(FuncCallExpr *fce) {
-	DBG_PRINT(+, FuncCallExpr);
 	assert(fce != NULL);
 	assert(fce->func != NULL);
 
@@ -403,12 +355,10 @@ void SymbolResolver::visit(FuncCallExpr *fce) {
 		(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, FuncCallExpr);
 	return;
 }
 
 void SymbolResolver::visit(ConstructorExpr *ce) {
-	DBG_PRINT(+, ConstructorExpr);
 	assert(ce != NULL);
 
 	ce->constructor->accept(this);
@@ -418,23 +368,19 @@ void SymbolResolver::visit(ConstructorExpr *ce) {
 		(*it)->accept(this);
 	}
 
-	DBG_PRINT(-, ConstructorExpr);
 	return;
 }
 
 void SymbolResolver::visit(SubscrExpr *se) {
-	DBG_PRINT(+, SubscrExpr);
 	assert(se != NULL);
 
 	se->array->accept(this);
 	se->subscript->accept(this);
 
-	DBG_PRINT(-, SubscrExpr);
 	return;
 }
 
 void SymbolResolver::visit(MemberExpr *me) {
-	DBG_PRINT(+, MemberExpr);
 	assert(me != NULL);
 
 	me->receiver->accept(this);
@@ -444,22 +390,18 @@ void SymbolResolver::visit(MemberExpr *me) {
 		me->member->accept(this);
 	}
 
-	DBG_PRINT(-, MemberExpr);
 	return;
 }
 
 void SymbolResolver::visit(StaticMemberExpr *sme) {
-	DBG_PRINT(+, StaticMemberExpr);
 	assert(sme != NULL);
 
 	sme->receiver->accept(this);
 
-	DBG_PRINT(-, StaticMemberExpr);
 	return;
 }
 
 void SymbolResolver::visit(TypeSpec *ts) {
-	DBG_PRINT(+, TypeSpec);
 	assert(ts != NULL);
 
 	Scope *scope = scopes.top();
@@ -493,12 +435,10 @@ void SymbolResolver::visit(TypeSpec *ts) {
 
 	}
 
-	DBG_PRINT(-, TypeSpec);
 	return;
 }
 
 void SymbolResolver::visit(ArrayTypeSpec *ats) {
-	DBG_PRINT(+, ArrayTypeSpec);
 	assert(ats != NULL);
 
 	ats->typeSpec->accept(this);
@@ -510,12 +450,10 @@ void SymbolResolver::visit(ArrayTypeSpec *ats) {
 		ats->type = at;
 	}
 
-	DBG_PRINT(-, ArrayTypeSpec);
 	return;
 }
 
 void SymbolResolver::visit(FuncTypeSpec *fts) {
-	DBG_PRINT(+, FuncTypeSpec);
 	assert(fts != NULL);
 
 	fts->lhs->accept(this);
@@ -528,12 +466,10 @@ void SymbolResolver::visit(FuncTypeSpec *fts) {
 		fts->type = ft;
 	}
 
-	DBG_PRINT(-, FuncTypeSpec);
 	return;
 }
 
 void SymbolResolver::visit(MemberTypeSpec *mts) {
-	DBG_PRINT(+, MemberTypeSpec);
 	assert(mts != NULL);
 
 	mts->lhs->accept(this);

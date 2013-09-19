@@ -15,6 +15,8 @@
 
 int main(int argc, char *argv[])
 {
+	Peryan::LLVMCodeGen::installStackTracer();
+
 	Peryan::Options opt;
 	Peryan::WarningPrinter warnings;
 

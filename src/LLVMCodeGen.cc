@@ -147,6 +147,11 @@ private:
 
 	llvm::Value *lookup(const std::string& str);
 public:
+	static void installStackTracer() {
+		llvm::sys::PrintStackTraceOnErrorSignal();
+		return;
+	}
+
 	Impl(Parser& parser, const std::string& fileName)
 		: parser_(parser)
 		, fileName_(fileName)
@@ -165,13 +170,12 @@ public:
 		, counter_(0)
 	        {
 			llvm::InitializeNativeTarget();
-			llvm::sys::PrintStackTraceOnErrorSignal();
 		}
 
 	void generate();
 };
 
-// pImpl pointer holder class
+// begin pImpl pointer holder class
 
 LLVMCodeGen::LLVMCodeGen(Parser& parser, const std::string& fileName)
 	: impl_(new Impl(parser, fileName)) {}
@@ -181,7 +185,12 @@ void LLVMCodeGen::generate() { impl_->generate(); return; }
 
 LLVMCodeGen::~LLVMCodeGen() { delete impl_; impl_ = NULL; }
 
-// pImpl pointer holder class
+void LLVMCodeGen::installStackTracer() {
+	Impl::installStackTracer();
+	return;
+}
+
+// end pImpl pointer holder class
 
 // Implementation class
 
