@@ -2,23 +2,25 @@
 #define PERYAN_AST_PRINTER_H__
 
 #include "AST.h"
+#include "ASTVisitor.h"
 #include "SymbolTable.h"
 
 namespace Peryan {
 
-class ASTPrinter {
+class ASTPrinter : public ASTVisitor {
 private:
 	ASTPrinter(const ASTPrinter&);
 	ASTPrinter& operator=(const ASTPrinter&);
 	bool pretty_;
 	int depth_;
 	bool type_;
+
 	// indent
-	std::string ind() {
+	void ind() {
 		if (pretty_) {
-			return std::string("\n") + std::string(depth_ * 2, ' ');
+			ss_<<"\n"<<std::string(depth_ * 2, ' ');
 		} else {
-			return " ";
+			ss_<<" ";
 		}
 	}
 	void inc() {
@@ -27,453 +29,368 @@ private:
 	void dec() {
 		depth_--;
 	}
+	std::stringstream ss_;
 public:
 	ASTPrinter(bool pretty = false, bool type = false) : pretty_(pretty), depth_(0), type_(type) {}
 
 	std::string toString(AST *ast) {
-		switch (ast->getASTType()) {
-		case AST::TRANS_UNIT		:
-			return toString(static_cast<TransUnit *>(ast));
-
-		case AST::TYPE_SPEC		:
-		case AST::ARRAY_TYPE_SPEC	:
-		case AST::FUNC_TYPE_SPEC	:
-		case AST::MEMBER_TYPE_SPEC	:
-			return toString(static_cast<TypeSpec *>(ast));
-
-		case AST::EXPR			: 
-		case AST::IDENTIFIER		:
-		case AST::LABEL			:
-		case AST::BINARY_EXPR		:
-		case AST::UNARY_EXPR		:
-		case AST::STR_LITERAL_EXPR	:
-		case AST::INT_LITERAL_EXPR	:
-		case AST::FLOAT_LITERAL_EXPR	:
-		case AST::CHAR_LITERAL_EXPR	:
-		case AST::BOOL_LITERAL_EXPR	:
-		case AST::ARRAY_LITERAL_EXPR	:
-		case AST::FUNC_CALL_EXPR	:
-		case AST::CONSTRUCTOR_EXPR	:
-		case AST::SUBSCR_EXPR		:
-		case AST::MEMBER_EXPR		:
-		case AST::REF_EXPR		:
-		case AST::DEREF_EXPR		:
-		case AST::FUNC_EXPR		:
-		case AST::STATIC_MEMBER_EXPR	:
-			return toString(static_cast<Expr *>(ast));
-
-		case AST::STMT			:
-		case AST::FUNC_DEF_STMT		:
-		case AST::VAR_DEF_STMT		:
-		case AST::INST_STMT		:
-		case AST::ASSIGN_STMT		:
-		case AST::COMP_STMT		:
-		case AST::IF_STMT		:
-		case AST::REPEAT_STMT		:
-		case AST::LABEL_STMT		:
-		case AST::GOTO_STMT		:
-		case AST::GOSUB_STMT		:
-		case AST::CONTINUE_STMT		:
-		case AST::BREAK_STMT		:
-		case AST::RETURN_STMT		:
-		case AST::EXTERN_STMT		:
-		case AST::NAMESPACE_STMT	:
-			return toString(static_cast<Stmt *>(ast));
-		}
+		ss_.clear();
+		ast->accept(this);
+		return ss_.str();
 	}
 
-	std::string toString(TransUnit *tu) {
+	virtual void visit(TransUnit *tu) {
 		inc();
-		std::stringstream ss;
-		ss<<"(TransUnit";
+		ss_<<"(TransUnit";
 		for (std::vector<Stmt *>::iterator it = tu->stmts.begin(); it != tu->stmts.end(); ++it) {
-			ss<<ind()<<toString(*it);
+			ind(); (*it)->accept(this);
 		}
-		ss<<")";
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(TypeSpec *ts) {
+	virtual void visit(TypeSpec *ts) {
 		inc();
-		std::stringstream ss;
+		ss_<<"(TypeSpec"; 
 
-		switch (ts->getASTType()) {
-		case AST::TYPE_SPEC		: ss<<"(TypeSpec"; break;
-		case AST::ARRAY_TYPE_SPEC	: ss<<"(ArrayTypeSpec"; break;
-		case AST::FUNC_TYPE_SPEC	: ss<<"(FuncTypeSpec"; break;
-		case AST::MEMBER_TYPE_SPEC	: ss<<"(MemberTypeSpec"; break;
-		default: ;
+		if (ts->isConst) ss_<<" const";
+		if (ts->isRef) ss_<<" ref";
+
+		ss_<<" \""<<ts->token.getString()<<"\")";
+		dec();
+		return;
+	}
+
+	virtual void visit(ArrayTypeSpec *ats) {
+		inc();
+		ss_<<"(ArrayTypeSpec";
+
+		if (ats->isConst) ss_<<" const";
+		if (ats->isRef) ss_<<" ref";
+
+		ind(); ats->typeSpec->accept(this);
+
+		ss_<<")";
+		dec();
+		return;
+	}
+
+	virtual void visit(FuncTypeSpec *fts) {
+		inc();
+		ss_<<"(FuncTypeSpec";
+		ind(); fts->lhs->accept(this);
+		ind(); fts->rhs->accept(this);
+		ss_<<")";
+		dec();
+		return;
+	}
+
+	virtual void visit(MemberTypeSpec *mts) {
+		inc();
+		ss_<<"(MemberTypeSpec";
+		ind(); mts->lhs->accept(this);
+		ind(); ss_<<mts->rhs.getString();
+		ss_<<")";
+		dec();
+		return;
+	}
+
+	virtual void visit(FuncDefStmt *fds) {
+		inc();
+		ss_<<"(FuncDefStmt ";
+		fds->name->accept(this);
+		for (std::vector<Identifier *>::iterator it = fds->params.begin(); it != fds->params.end(); ++it) {
+			ind(); (*it)->accept(this);
 		}
 
-		if (ts->isConst)
-			ss<<" const";
-		if (ts->isRef)
-			ss<<" ref";
+		ind(); fds->body->accept(this);
+		ss_<<")";
+		dec();
 
-		switch (ts->getASTType()) {
-		case AST::TYPE_SPEC		: ss<<" \""<<ts->token.getString()<<"\""; break;
-		case AST::ARRAY_TYPE_SPEC	: ss<<ind()<<toString(static_cast<ArrayTypeSpec *>(ts)->typeSpec); break;
-		case AST::FUNC_TYPE_SPEC	: ss<<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->lhs)
-						    <<ind()<<toString(static_cast<FuncTypeSpec *>(ts)->rhs); break;
-		case AST::MEMBER_TYPE_SPEC	: ss<<ind()<<toString(static_cast<MemberTypeSpec *>(ts)->lhs)
-						  <<" "<<static_cast<MemberTypeSpec *>(ts)->rhs.getString();
-						  break;
-		default: ;
+		return; 
+	}
+
+	virtual void visit(VarDefStmt *vds) {
+		inc();
+		ss_<<"(VarDefStmt ";
+		vds->id->accept(this);
+
+		if (vds->init != NULL) {
+			ind(); vds->init->accept(this);
 		}
 
-		ss<<")";
-
+		ss_<<")";
 		dec();
-		return ss.str();
+
+		return;
 	}
 
-	std::string toString(Stmt *stmt) {
-		switch (stmt->getASTType()) {
-		case AST::FUNC_DEF_STMT		: return toString(static_cast<FuncDefStmt *>(stmt));
-		case AST::VAR_DEF_STMT		: return toString(static_cast<VarDefStmt *>(stmt));
-		case AST::INST_STMT		: return toString(static_cast<InstStmt *>(stmt));
-		case AST::ASSIGN_STMT		: return toString(static_cast<AssignStmt *>(stmt));
-		case AST::COMP_STMT		: return toString(static_cast<CompStmt *>(stmt));
-		case AST::IF_STMT		: return toString(static_cast<IfStmt *>(stmt));
-		case AST::REPEAT_STMT		: return toString(static_cast<RepeatStmt *>(stmt));
-		case AST::LABEL_STMT		: return toString(static_cast<LabelStmt *>(stmt));
-		case AST::GOTO_STMT		: return toString(static_cast<GotoStmt *>(stmt));
-		case AST::GOSUB_STMT		: return toString(static_cast<GosubStmt*>(stmt));
-		case AST::CONTINUE_STMT		: return toString(static_cast<ContinueStmt *>(stmt));
-		case AST::BREAK_STMT		: return toString(static_cast<BreakStmt *>(stmt));
-		case AST::RETURN_STMT		: return toString(static_cast<ReturnStmt *>(stmt));
-		case AST::EXTERN_STMT		: return toString(static_cast<ExternStmt *>(stmt));
-		case AST::NAMESPACE_STMT	: return toString(static_cast<NamespaceStmt *>(stmt));
-		default				: return "(Stmt)";
+	virtual void visit(InstStmt *is) {
+		inc();
+		ss_<<"(InstStmt ";
+		is->inst->accept(this);
+		for (std::vector<Expr *>::iterator it = is->params.begin(); it != is->params.end(); ++it) {
+			ind(); (*it)->accept(this);
 		}
-	}
-
-	std::string toString(FuncDefStmt *fds) {
-		inc();
-		std::stringstream ss;
-		ss<<"(FuncDefStmt "<<toString(fds->name);
-		for (std::vector<Identifier *>::iterator it = fds->params.begin(); it != fds->params.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<ind()<<toString(fds->body);
-		ss<<")";
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(VarDefStmt *vds) {
+	virtual void visit(AssignStmt *as) {
 		inc();
-		std::stringstream ss;
-		if (vds->init != NULL)
-			ss<<"(VarDefStmt "<<toString(vds->id)<<ind()<<toString(vds->init)<<")";
-		else
-			ss<<"(VarDefStmt "<<toString(vds->id)<<")";
-		dec();
-		return ss.str();
-	}
+		ss_<<"(AssignStmt "<<as->token.toString();
+		ind();
+		as->lhs->accept(this);
 
-	std::string toString(InstStmt *is) {
-		inc();
-		std::stringstream ss;
-		ss<<"(InstStmt "<<toString(is->inst);
-		for (std::vector<Expr *>::iterator it = is->params.begin(); it != is->params.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<")";
-		dec();
-		return ss.str();
-	}
-
-	std::string toString(AssignStmt *as) {
-		inc();
-		std::stringstream ss;
-		ss<<"(AssignStmt "<<as->token.toString()<<ind()<<toString(as->lhs);
 		if (as->rhs != NULL) {
-			ss<<ind()<<toString(as->rhs);
+			ind(); as->rhs->accept(this);
 		}
-		ss<<")";
+
+		ss_<<")";
 		dec();
-		return ss.str();
+
+		return;
 	}
 
-	std::string toString(CompStmt *cs) {
+	virtual void visit(CompStmt *cs) {
 		inc();
-		std::stringstream ss;
-		ss<<"(CompStmt";
-		for (std::vector<Stmt *>::iterator it = cs->stmts.begin(); it != cs->stmts.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<")";
+		ss_<<"(CompStmt";
+		for (std::vector<Stmt *>::iterator it = cs->stmts.begin(); it != cs->stmts.end(); ++it) {
+			ind(); (*it)->accept(this);
+		}
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(IfStmt *is) {
+	virtual void visit(IfStmt *is) {
 		inc();
-		std::stringstream ss;
-		ss<<"(IfStmt";
+		ss_<<"(IfStmt";
 
-		for (unsigned int i = 0; i < is->ifCond.size(); ++i)
-			ss<<ind()<<toString(is->ifCond[i])<<ind()<<toString(is->ifThen[i]);
+		for (unsigned int i = 0; i < is->ifCond.size(); ++i) {
+			ind(); is->ifCond[i]->accept(this);
+			ind(); is->ifThen[i]->accept(this);
+		}
 
-		if (is->elseThen != NULL)
-			ss<<ind()<<toString(is->elseThen);
+		if (is->elseThen != NULL) {
+			ind(); is->elseThen->accept(this);
+		}
 
-		ss<<")";
+		ss_<<")";
 
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(RepeatStmt *rs) {
+	virtual void visit(RepeatStmt *rs) {
 		inc();
-		std::stringstream ss;
-		ss<<"(RepeatStmt";
+		ss_<<"(RepeatStmt";
 		if (rs->count != NULL) {
-			ss<<ind()<<toString(rs->count);
+			ind(); rs->count->accept(this);
 		} else {
-			ss<<ind()<<"()";
+			ind(); ss_<<"()";
 		}
 
-		for (std::vector<Stmt *>::iterator it = rs->stmts.begin(); it != rs->stmts.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<")";
+		for (std::vector<Stmt *>::iterator it = rs->stmts.begin(); it != rs->stmts.end(); ++it) {
+			ind(); (*it)->accept(this);
+		}
+		ss_<<")";
 		dec();
-		return ss.str();
+
+		return;
 	}
 
-	std::string toString(LabelStmt *ls) {
-		std::stringstream ss;
-		ss<<"(LabelStmt "<<toString(ls->label)<<")";
-		return ss.str();
+	virtual void visit(LabelStmt *ls) {
+		ss_<<"(LabelStmt "; ls->label->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(GotoStmt *gs) {
-		std::stringstream ss;
-		ss<<"(GotoStmt "<<toString(gs->to)<<")";
-		return ss.str();
+	virtual void visit(GotoStmt *gs) {
+		ss_<<"(GotoStmt "; gs->to->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(GosubStmt *gs) {
-		std::stringstream ss;
-		ss<<"(GosubStmt "<<toString(gs->to)<<")";
-		return ss.str();
+	virtual void visit(GosubStmt *gs) {
+		ss_<<"(GosubStmt "; gs->to->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(ContinueStmt *cs) {
-		return std::string("(ContinueStmt)");
+	virtual void visit(ContinueStmt *cs) {
+		ss_<<"(ContinueStmt)";
+		return;
 	}
 
-	std::string toString(BreakStmt *cs) {
-		return std::string("(BreakStmt)");
+	virtual void visit(BreakStmt *cs) {
+		ss_<<"(BreakStmt)";
+		return;
 	}
 
-	std::string toString(ReturnStmt *rs) {
-		std::stringstream ss;
+	virtual void visit(ReturnStmt *rs) {
 		if (rs->expr != NULL) {
-			ss<<"(ReturnStmt "<<toString(rs->expr)<<")";
+			ss_<<"(ReturnStmt "; rs->expr->accept(this); ss_<<")";
 		} else {
-			ss<<"(ReturnStmt)";
+			ss_<<"(ReturnStmt)";
 		}
-		return ss.str();
+		return;
 	}
 
-	std::string toString(ExternStmt *es) {
-		std::stringstream ss;
-		ss<<"(ExternStmt "<<toString(es->id)<<")";
-		return ss.str();
+	virtual void visit(ExternStmt *es) {
+		ss_<<"(ExternStmt "; es->id->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(Expr *expr) {
-		std::string res;
-		switch (expr->getASTType()) {
-		case AST::IDENTIFIER		: res = toString(static_cast<Identifier *>(expr)); break;
-		case AST::LABEL			: res = toString(static_cast<Label *>(expr)); break;
-		case AST::BINARY_EXPR		: res = toString(static_cast<BinaryExpr *>(expr)); break;
-		case AST::UNARY_EXPR		: res = toString(static_cast<UnaryExpr *>(expr)); break;
-		case AST::STR_LITERAL_EXPR	: res = toString(static_cast<StrLiteralExpr *>(expr)); break;
-		case AST::INT_LITERAL_EXPR	: res = toString(static_cast<IntLiteralExpr *>(expr)); break;
-		case AST::FLOAT_LITERAL_EXPR	: res = toString(static_cast<FloatLiteralExpr *>(expr)); break;
-		case AST::CHAR_LITERAL_EXPR	: res = toString(static_cast<CharLiteralExpr *>(expr)); break;
-		case AST::BOOL_LITERAL_EXPR	: res = toString(static_cast<BoolLiteralExpr *>(expr)); break;
-		case AST::ARRAY_LITERAL_EXPR	: res = toString(static_cast<ArrayLiteralExpr *>(expr)); break;
-		case AST::FUNC_CALL_EXPR	: res = toString(static_cast<FuncCallExpr *>(expr)); break;
-		case AST::CONSTRUCTOR_EXPR	: res = toString(static_cast<ConstructorExpr *>(expr)); break;
-		case AST::SUBSCR_EXPR		: res = toString(static_cast<SubscrExpr *>(expr)); break;
-		case AST::MEMBER_EXPR		: res = toString(static_cast<MemberExpr *>(expr)); break;
-		case AST::REF_EXPR		: res = toString(static_cast<RefExpr *>(expr)); break;
-		case AST::DEREF_EXPR		: res = toString(static_cast<DerefExpr *>(expr)); break;
-		case AST::FUNC_EXPR		: res = toString(static_cast<FuncExpr *>(expr)); break;
-		case AST::STATIC_MEMBER_EXPR	: res = toString(static_cast<StaticMemberExpr *>(expr)); break;
-		default				: res = "(Expr)";
-		}
-
-		if (type_ && expr->type != NULL)
-			res += " :: " + expr->type->getTypeName();
-
-		return res;
+	virtual void visit(Identifier *id) {
+		ss_<<"(Identifier \""<<id->getString()<<"\")";
+		return;
 	}
 
-	std::string toString(Identifier *id) {
-		std::stringstream ss;
-		/*if (id->getASTType() == AST::KEYWORD) {
-			ss<<"(Keyword \"";
-		} else {*/
-			ss<<"(Identifier \"";
-		//}
-		ss<<id->getString()<<"\")";
-		return ss.str();
+	virtual void visit(Label *label) {
+		ss_<<"(Label \""<<label->token.getString()<<"\")";
+		return;
 	}
 
-	std::string toString(Label *label) {
-		std::stringstream ss;
-		ss<<"(Label \""<<label->token.getString()<<"\")";
-		return ss.str();
-	}
-
-	std::string toString(BinaryExpr *be) {
+	virtual void visit(BinaryExpr *be) {
 		inc();
-		std::stringstream ss;
-		ss<<"(BinaryExpr "<<be->token.toString()<<ind()<<toString(be->lhs)<<ind()<<toString(be->rhs)<<")";
+		ss_<<"(BinaryExpr "<<be->token.toString();
+		ind(); be->lhs->accept(this);
+		ind(); be->rhs->accept(this);
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(UnaryExpr *ue) {
+	virtual void visit(UnaryExpr *ue) {
 		inc();
-		std::stringstream ss;
-		ss<<"(UnaryExpr "<<ue->token.toString()<<ind()<<toString(ue->rhs)<<")";
+		ss_<<"(UnaryExpr "<<ue->token.toString(); ind(); ue->rhs->accept(this); ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(StrLiteralExpr *sle) {
-		std::stringstream ss;
-		ss<<"(StrLiteralExpr \""<<sle->token.getString()<<"\")";
-		return ss.str();
+	virtual void visit(StrLiteralExpr *sle) {
+		ss_<<"(StrLiteralExpr \""<<sle->token.getString()<<"\")";
+		return;
 	}
 
-	std::string toString(IntLiteralExpr *ile) {
-		std::stringstream ss;
-		ss<<"(IntLiteralExpr "<<ile->token.getInteger()<<")";
-		return ss.str();
+	virtual void visit(IntLiteralExpr *ile) {
+		ss_<<"(IntLiteralExpr "<<ile->token.getInteger()<<")";
+		return;
 	}
 
-	std::string toString(FloatLiteralExpr *fle) {
-		std::stringstream ss;
-		ss<<"(FloatLiteralExpr "<<fle->token.getFloat()<<")";
-		return ss.str();
+	virtual void visit(FloatLiteralExpr *fle) {
+		ss_<<"(FloatLiteralExpr "<<fle->token.getFloat()<<")";
+		return;
 	}
 
-	std::string toString(CharLiteralExpr *cle) {
-		std::stringstream ss;
-		ss<<"(CharLiteralExpr \'"<<cle->token.getChar()<<"\')";
-		return ss.str();
+	virtual void visit(CharLiteralExpr *cle) {
+		ss_<<"(CharLiteralExpr \'"<<cle->token.getChar()<<"\')";
+		return;
 	}
 
-	std::string toString(BoolLiteralExpr *ble) {
+	virtual void visit(BoolLiteralExpr *ble) {
 		if (ble->bool_) {
-			return "(BoolLiteralExpr true)";
+			ss_<<"(BoolLiteralExpr true)";
 		} else {
-			return "(BoolLiteralExpr false)";
+			ss_<<"(BoolLiteralExpr false)";
 		}
+		return;
 	}
 
-	std::string toString(ArrayLiteralExpr *ale) {
+	virtual void visit(ArrayLiteralExpr *ale) {
 		inc();
-		std::stringstream ss;
-		ss<<"(ArrayLiteralExpr";
+		ss_<<"(ArrayLiteralExpr";
 		for (std::vector<Expr *>::iterator it = ale->elements.begin(); it != ale->elements.end(); ++it) {
-			ss<<ind()<<toString(*it);
+			ind(); (*it)->accept(this);
 		}
-		ss<<")";
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(FuncCallExpr *fce) {
+	virtual void visit(FuncCallExpr *fce) {
 		inc();
-		std::stringstream ss;
-		ss<<"(FuncCallExpr "<<toString(fce->func);
-		for (std::vector<Expr *>::iterator it = fce->params.begin(); it != fce->params.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<")";
+		ss_<<"(FuncCallExpr "; fce->func->accept(this);
+		for (std::vector<Expr *>::iterator it = fce->params.begin(); it != fce->params.end(); ++it) {
+			ind(); (*it)->accept(this);
+		}
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(ConstructorExpr *ce) {
+	virtual void visit(ConstructorExpr *ce) {
 		inc();
-		std::stringstream ss;
-		ss<<"(ConstructorExpr "<<toString(ce->constructor);
-		for (std::vector<Expr *>::iterator it = ce->params.begin(); it != ce->params.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<")";
+		ss_<<"(ConstructorExpr "; ce->constructor->accept(this);
+		for (std::vector<Expr *>::iterator it = ce->params.begin(); it != ce->params.end(); ++it) {
+			ind(); (*it)->accept(this);
+		}
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(SubscrExpr *se) {
-		std::stringstream ss;
+	virtual void visit(SubscrExpr *se) {
 		inc();
-		ss<<"(SubscrExpr"<<ind()<<toString(se->array)<<ind()<<toString(se->subscript)<<")";
+		ss_<<"(SubscrExpr"; ind(); se->array->accept(this); ind(); se->subscript->accept(this); ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(MemberExpr *me) {
-		std::stringstream ss;
+	virtual void visit(MemberExpr *me) {
 		inc();
-		ss<<"(MemberExpr"<<ind()<<toString(me->receiver)<<ind()<<toString(me->member)<<")";
+		ss_<<"(MemberExpr"; ind(); me->receiver->accept(this); ind(); me->member->accept(this); ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(StaticMemberExpr *sme) {
-		std::stringstream ss;
+	virtual void visit(StaticMemberExpr *sme) {
 		inc();
-		ss<<"(StaticMemberExpr"<<ind()<<toString(sme->receiver)<<ind()<<toString(sme->member)<<")";
+		ss_<<"(StaticMemberExpr";
+		ind(); sme->receiver->accept(this);
+		ind(); sme->member->accept(this);
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(RefExpr *re) {
-		std::stringstream ss;
-		ss<<"(RefExpr "<<toString(re->refered)<<")";
-		return ss.str();
+	virtual void visit(RefExpr *re) {
+		ss_<<"(RefExpr "; re->refered->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(DerefExpr *de) {
-		std::stringstream ss;
-		ss<<"(DerefExpr "<<toString(de->derefered)<<")";
-		return ss.str();
+	virtual void visit(DerefExpr *de) {
+		ss_<<"(DerefExpr "; de->derefered->accept(this); ss_<<")";
+		return;
 	}
 
-	std::string toString(FuncExpr *fe) {
+	virtual void visit(FuncExpr *fe) {
 		inc();
-		std::stringstream ss;
-		ss<<"(FuncExpr";
-		for (std::vector<Identifier *>::iterator it = fe->params.begin(); it != fe->params.end(); ++it)
-			ss<<ind()<<toString(*it);
-		ss<<ind()<<toString(fe->body);
-		ss<<")";
+		ss_<<"(FuncExpr";
+		for (std::vector<Identifier *>::iterator it = fe->params.begin(); it != fe->params.end(); ++it) {
+			ind(); (*it)->accept(this);
+		}
+		ind(); fe->body->accept(this);
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
-	std::string toString(NamespaceStmt *ns) {
+	virtual void visit(NamespaceStmt *ns) {
 		inc();
-		std::stringstream ss;
-		ss<<"(NamespaceStmt";
+		ss_<<"(NamespaceStmt";
 		for (std::vector<Stmt *>::iterator it = ns->stmts.begin(); it != ns->stmts.end(); ++it) {
-			ss<<ind()<<toString(*it);
+			ind(); (*it)->accept(this);
 		}
-		ss<<")";
+		ss_<<")";
 		dec();
-		return ss.str();
+		return;
 	}
 
 	static void dump(AST *ast, bool type = true) {
 		ASTPrinter printer(true, type);
 		std::cerr<<printer.toString(ast)<<std::endl;
+		return;
 	}
 };
 
