@@ -35,25 +35,17 @@ bool TypeResolver::canConvertModifier(Type *from, Type *to, bool isFuncParam) {
 	// 0 to {const} ref is also prohibited when it is not function parameter
 
 	// prohibit 0 to {const} ref (if it is not function parameter)
-	if (!isFuncParam  && to->getTypeType() != Type::MODIFIER_TYPE
-			&& to->getTypeType() == Type::MODIFIER_TYPE) {
-		ModifierType *mtTo = static_cast<ModifierType *>(to);
-		if (mtTo->isRef()) {
-			return false;
-		}
+	if (!isFuncParam  && from->is(from->unmodify()) && to->isRef()) {
+		return false;
 	}
 
 	// allow 0 to 0
-	if (from->getTypeType() != Type::MODIFIER_TYPE
-		|| to->getTypeType() != Type::MODIFIER_TYPE) {
+	if (from->is(from->unmodify()) && to->is(to->unmodify())) {
 		return true;
 	}
 
-	ModifierType *mtFrom = static_cast<ModifierType *>(from);
-	ModifierType *mtTo = static_cast<ModifierType *>(to);
-
 	// prohibit const { ref } to ref
-	if ((mtFrom->isConst() == true) && (mtTo->isConst() == false && mtTo->isRef() == true)) {
+	if (from->isConst() && to->isRef()) {
 		return false;
 	}
 
@@ -125,13 +117,9 @@ Expr *TypeResolver::insertPromoter(Expr *from, Type *toType) {
 	Type *fromType = from->type;
 	assert(fromType != NULL);
 
-	bool fromRef = false;
-	if (fromType->getTypeType() == Type::MODIFIER_TYPE)
-		fromRef = static_cast<ModifierType *>(fromType)->isRef();
+	bool fromRef = fromType->isRef();
 
-	bool toRef = false;
-	if (toType->getTypeType() == Type::MODIFIER_TYPE)
-		fromRef = static_cast<ModifierType *>(toType)->isRef();
+	bool toRef = toType->isRef();
 
 	if ((fromRef && toRef) || (!fromRef && !toRef)) {
 		from->type = toType;
@@ -552,8 +540,7 @@ void TypeResolver::visit(VarDefStmt *vds) {
 	// ex. : var foo :: String
 	} else if (vds->id->type != NULL && vds->init == NULL) {
 		// nothing to do
-		if (vds->id->type->getTypeType() == Type::MODIFIER_TYPE
-			&& static_cast<ModifierType *>(vds->id->type)->isRef()) {
+		if (vds->id->type->isRef()) {
 			throw SemanticsError(vds->token.getPosition(),
 					"error: reference should be initialized at first");
 		}
@@ -792,8 +779,7 @@ void TypeResolver::visit(AssignStmt *as) {
 			+ std::string(" should be numeric or String type"));
 	}
 
-	if (lhsType->getTypeType() != Type::MODIFIER_TYPE
-		|| !(static_cast<ModifierType *>(lhsType)->isRef())) {
+	if (!(lhsType->isRef())) {
 		ASTPrinter::dump(as->lhs);
 		throw SemanticsError(as->token.getPosition(),
 			std::string("error: left hand side ")
@@ -1040,13 +1026,7 @@ void TypeResolver::visit(Identifier *id) {
 	}
 
 	// all value references returns ref!
-	bool isConst = false;
-	if (id->type->getTypeType() == Type::MODIFIER_TYPE) {
-		ModifierType *mt = static_cast<ModifierType *>(id->type);
-		isConst = mt->isConst();
-	}
-
-	id->type = new ModifierType(isConst, /* isRef = */ true, id->type->unmodify());
+	id->type = new ModifierType(id->type->isConst(), /* isRef = */ true, id->type->unmodify());
 
 	DBG_PRINT(-, Identifier);
 	return;
@@ -1464,14 +1444,8 @@ void TypeResolver::visit(SubscrExpr *se) {
 	if (arrayType->unmodify()->getTypeType() != Type::ARRAY_TYPE)
 		throw SemanticsError(se->token.getPosition(), "error: giving subscript to non-array type");
 
-	bool isConst = false;
-	bool isRef = false;
-
-	if (arrayType->getTypeType() == Type::MODIFIER_TYPE) {
-		ModifierType *mt = static_cast<ModifierType *>(arrayType);
-		isConst = mt->isConst();
-		isRef = mt->isRef();
-	}
+	bool isConst = arrayType->isConst();
+	bool isRef = arrayType->isRef();
 
 	if (!isRef) {
 		se->array = insertPromoter(se->array,
@@ -1540,14 +1514,9 @@ void TypeResolver::visit(MemberExpr *me) {
 			+ me->receiver->type->getTypeName() + ")");
 	}
 
-	if (me->receiver->type->getTypeType() != Type::MODIFIER_TYPE || !(static_cast<ModifierType *>(me->receiver->type)->isRef())) {
-		Type *unmodified = me->receiver->type;
-		bool isConst = false;
-		if (unmodified->getTypeType() == Type::MODIFIER_TYPE) {
-			isConst = static_cast<ModifierType *>(unmodified)->isConst();
-			unmodified = static_cast<ModifierType *>(unmodified)->getElemType();
-		}
-		me->receiver = insertPromoter(me->receiver, new ModifierType(isConst, true, unmodified));
+	if (!(me->receiver->type->isRef())) {
+		me->receiver = insertPromoter(me->receiver,
+			new ModifierType(me->receiver->type->isConst(), true, me->receiver->type->unmodify()));
 	}
 
 	assert(me->receiver->type->unmodify()->getTypeType() != Type::CLASS_TYPE && "class not supported");

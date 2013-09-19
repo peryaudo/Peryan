@@ -461,14 +461,13 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 
 llvm::Type *LLVMCodeGen::Impl::getLLVMType(Type *type) {
 
-	if (type->getTypeType() == Type::MODIFIER_TYPE) {
-		if (static_cast<ModifierType *>(type)->isRef()) {
-			return getLLVMType(
-				static_cast<ModifierType *>(type)->getElemType())->getPointerTo();
-		} else {
-			return getLLVMType(static_cast<ModifierType *>(type)->getElemType());
-		}
-	} else if (type->getTypeType() == Type::ARRAY_TYPE) {
+	if (type->isRef()) {
+		return getLLVMType(type->unmodify())->getPointerTo();
+	} else {
+		type = type->unmodify();
+	}
+
+	if (type->getTypeType() == Type::ARRAY_TYPE) {
 		return llvm::StructType::get(
 				llvm::Type::getInt32Ty(context_), // int length
 				llvm::Type::getInt32Ty(context_), // int capacity
@@ -531,8 +530,7 @@ void LLVMCodeGen::Impl::generateGlobalVarDecl(const std::string& name, Type *typ
 
 	llvm::Constant *init = NULL;
 	if (!isExternal) {
-		if (type->getTypeType() == Type::MODIFIER_TYPE
-			&& static_cast<ModifierType *>(type)->isRef()) {
+		if (type->isRef()) {
 			init = llvm::ConstantPointerNull::get(getLLVMType(type->unmodify())->getPointerTo());
 		} else if (type->unmodify()->is(Int_) || type->unmodify()->is(Char_)
 				|| type->unmodify()->is(Bool_)) {
@@ -773,8 +771,7 @@ llvm::Value *LLVMCodeGen::Impl::generateIdentifier(Identifier *id) {
 	}
 	assert(from != NULL);
 
-	if (id->symbol->getType()->getTypeType() == Type::MODIFIER_TYPE
-		&& static_cast<ModifierType *>(id->symbol->getType())->isRef()) {
+	if (id->symbol->getType()->isRef()) {
 		builder_.SetInsertPoint(blocks.back().body);
 		from = builder_.CreateLoad(from);
 	}
@@ -1552,19 +1549,16 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 	// generate constructor
 
 	// the type is a reference
-	if (type->getTypeType() == Type::MODIFIER_TYPE) {
-		ModifierType *mt = static_cast<ModifierType *>(type);
-		if (mt->isRef()) {
-			assert(init != NULL);
+	if (type->isRef()) {
+		assert(init != NULL);
 
-			builder_.SetInsertPoint(blocks.back().body);
-			llvm::Value *src = generateExpr(init);
-			builder_.CreateStore(src, dest);
+		builder_.SetInsertPoint(blocks.back().body);
+		llvm::Value *src = generateExpr(init);
+		builder_.CreateStore(src, dest);
 
-			return;
-		} else {
-			type = mt->getElemType();
-		}
+		return;
+	} else {
+		type = type->unmodify();
 	}
 
 	// these types are primitive

@@ -54,6 +54,8 @@ public:
 		return this == to;
 	}
 
+	virtual bool isConst() { return false; }
+	virtual bool isRef() { return false; }
 	virtual Type *unmodify() { return this; }
 
 	virtual ~Type() {}
@@ -81,8 +83,8 @@ public:
 		return std::string(isConst_ ? "const " : "") + std::string(isRef_ ? "ref " : "")
 			+ getElemType()->getTypeName();
 	}
-	bool isConst() { return isConst_; }
-	bool isRef() { return isRef_; }
+	virtual bool isConst() { return isConst_; }
+	virtual bool isRef() { return isRef_; }
 
 	virtual bool is(Type *to) {
 		if (to->getTypeType() != MODIFIER_TYPE)

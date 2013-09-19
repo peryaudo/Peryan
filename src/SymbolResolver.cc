@@ -225,15 +225,11 @@ void SymbolResolver::visit(ExternStmt *es) {
 
 	es->id->accept(this);
 
-	if (es->id->type->getTypeType() == Type::MODIFIER_TYPE) {
-		ModifierType *mt = static_cast<ModifierType *>(es->id->type);
-		if (mt->isRef()) {
-			throw SemanticsError(es->id->token.getPosition(), "error: cannot make extern function have reference type");
-		}
-		if (mt->isConst()) {
-			throw SemanticsError(es->id->token.getPosition(), "error: cannot make extern function have const type");
-		}
-	}
+	if (es->id->type->isRef())
+		throw SemanticsError(es->id->token.getPosition(), "error: cannot make extern function have reference type");
+
+	if (es->id->type->isConst())
+		throw SemanticsError(es->id->token.getPosition(), "error: cannot make extern function have const type");
 
 	for (std::vector<Expr *>::iterator it = es->defaults.begin(); it != es->defaults.end(); ++it) {
 		if (*it != NULL)
