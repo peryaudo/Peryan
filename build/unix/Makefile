@@ -28,7 +28,7 @@ PERYAN_OBJS = $(addprefix $(OBJDIR)/, $(patsubst %.cc, %.o, $(PERYAN_SRCS)))
 
 PERYAN_UNIT_TEST_TARGET = $(TEST_BINDIR)/peryan_unit_test$(EXEEXT)
 PERYAN_UNIT_TEST_SRCDIR = ../../test/unit
-PERYAN_UNIT_TEST_SRCS = ASTPrinterTest.cc LexerTest.cc ParserTest.cc SemanticsTest.cc
+PERYAN_UNIT_TEST_SRCS = ASTPrinterTest.cc LexerTest.cc ParserTest.cc SemanticsTest.cc SharedPtrTest.cc
 PERYAN_UNIT_TEST_OBJS = $(addprefix $(TEST_OBJDIR)/, $(patsubst %.cc, %.o, $(PERYAN_UNIT_TEST_SRCS)) gtest-all.o gtest_main.o) \
 		   $(addprefix $(OBJDIR)/, $(patsubst %.cc, %.o, $(filter-out LLVMCodeGen.cc Main.cc, $(PERYAN_SRCS))))
 
