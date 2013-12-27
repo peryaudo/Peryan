@@ -1,5 +1,7 @@
 var foo :: [Int] = [1, 1, 4, 5, 1, 4]
 var bar :: String = "1234567"
+var baz = [Bool](100, true)
 
 mes String(foo.length)
 mes String(bar.length)
+mes String(baz.length)

@@ -1314,7 +1314,7 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	llvm::Value *capacity = builder_.CreateGEP(dest, capacityParams);
 
 	builder_.SetInsertPoint(blocks.back().body);
-	llvm::Value *capValCE = NULL;
+	llvm::Value *lengthValOfCE = NULL;
 	if (init == NULL) {
 		builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
 		// store i32 kArrayDefaultCapacity, i32* %capacity
@@ -1327,9 +1327,10 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	} else if (init->getASTType() == AST::CONSTRUCTOR_EXPR) {
 		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
 		if (ce->params.size() > 0) {
-			capValCE = generateExpr(ce->params[0]);
+			lengthValOfCE = generateExpr(ce->params[0]);
 			builder_.SetInsertPoint(blocks.back().body);
-			builder_.CreateStore(capValCE, capacity);
+			builder_.CreateStore(lengthValOfCE, length);
+			builder_.CreateStore(lengthValOfCE, capacity);
 		} else {
 			builder_.CreateStore(llvm::ConstantInt::get(lvInt, 0), length);
 			builder_.CreateStore(llvm::ConstantInt::get(lvInt, kArrayDefaultCapacity), capacity);
@@ -1382,7 +1383,9 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 	} else if (init != NULL && init->getASTType() == AST::CONSTRUCTOR_EXPR) {
 		ConstructorExpr *ce = static_cast<ConstructorExpr *>(init);
 		if (ce->params.size() > 0) {
-			assert(capValCE != NULL);
+			assert(lengthValOfCE != NULL);
+
+			// FIXME BUG AROUND THERE (Lengths.pr)
 
 			const std::string curNumStr = getUniqNumStr();
 
@@ -1409,9 +1412,9 @@ void LLVMCodeGen::Impl::generateArrayConstructor(llvm::Value *dest, Type *type, 
 			builder_.CreateBr(loopCond);
 
 			builder_.SetInsertPoint(loopCond);
-			// if (counter < capValCE) { goto arrayLoopBody } else { goto arrayLoopAfter }
+			// if (counter < lengthValOfCE) { goto arrayLoopBody } else { goto arrayLoopAfter }
 			builder_.CreateCondBr(
-				builder_.CreateICmpSLT(builder_.CreateLoad(counter), capValCE),
+				builder_.CreateICmpSLT(builder_.CreateLoad(counter), lengthValOfCE),
 				loopBody,
 				loopAfter);
 
