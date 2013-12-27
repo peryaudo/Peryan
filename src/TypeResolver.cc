@@ -562,138 +562,7 @@ void TypeResolver::visit(VarDefStmt *vds) {
 	return;
 }
 
-void TypeResolver::visit(InstStmt *is) {
-	assert(is != NULL);
-	assert(is->inst != NULL);
 
-	FuncType *curFuncType = NULL;
-	{
-		is->inst->accept(this);
-		Type *instType = is->inst->type;
-		if (instType == NULL) {
-			assert(unresolved_);
-			curTypeVar_ = NULL;
-			return;
-		}
-		instType = instType->unmodify();
-		if (instType->getTypeType() != Type::FUNC_TYPE) {
-			throw SemanticsError(is->inst->token.getPosition(), "error: it is not function ("
-				+ instType->getTypeName() + std::string(")"));
-		}
-		curFuncType = static_cast<FuncType *>(instType);
-	}
-
-	std::vector<Expr *> defaults;
-	{
-		Symbol *sym = NULL;
-		if (is->inst->getASTType() == AST::IDENTIFIER) {
-			sym = static_cast<Identifier *>(is->inst)->symbol;
-		} else if (is->inst->getASTType() == AST::STATIC_MEMBER_EXPR) {
-			sym = static_cast<StaticMemberExpr *>(is->inst)->member->symbol;
-		}
-		// TODO: make it able to deal with class members
-
-		if (sym != NULL && sym->getSymbolType() == Symbol::FUNC_SYMBOL) {
-			if (static_cast<FuncSymbol *>(sym)->defaults != NULL)
-				defaults = *(static_cast<FuncSymbol *>(sym)->defaults);
-		} else if (sym != NULL && sym->getSymbolType() == Symbol::EXTERN_SYMBOL) {
-			if (static_cast<ExternSymbol *>(sym)->defaults != NULL)
-				defaults = *(static_cast<ExternSymbol *>(sym)->defaults);
-		}
-	}
-
-	assert(curFuncType != NULL);
-
-	std::vector<Expr *>::iterator prmIt = is->params.begin();
-	std::vector<Expr *>::iterator defIt = defaults.begin();
-	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
-
-	while (prmIt != is->params.end() || ftIt != ftEnd) {
-		if (prmIt != is->params.end() && ftIt == ftEnd) {
-			// given parameters > parameters in the type
-			throw SemanticsError((*prmIt)->token.getPosition(),
-					"error: too many arguments in the function call");
-
-		} else if (prmIt == is->params.end() && ftIt != ftEnd) {
-			// given parameters < parameters in the type
-			if (defIt != defaults.end() && *defIt != NULL) {
-				// the default value exists
-				is->params.push_back(*defIt);
-				prmIt = is->params.end() - 1; // be careful that push_back may invalidate iterators
-			} else {
-				throw SemanticsError(is->token.getPosition(),
-						"error: fewer arguments in the function call");
-			}
-		} else {
-			assert(prmIt != is->params.end() && ftIt != ftEnd);
-
-			// the given parameter is empty
-			if (*prmIt == NULL) {
-				// the default value exists
-				if (defIt != defaults.end() && *defIt != NULL) {
-					*prmIt = *defIt;
-				} else {
-					std::stringstream ss;
-					ss<<"error: you cannot omit ";
-					ss<<(prmIt - is->params.begin() + 1)<<"st/nd/th argument";
-					throw SemanticsError(is->token.getPosition(), ss.str());
-				}
-			}
-		}
-
-		(*prmIt)->accept(this);
-		*prmIt = refresh(*prmIt);
-
-		Type *actual = (*prmIt)->type;
-
-		// bidirectional checking
-		if (actual == NULL && *ftIt == NULL) {
-			// you have nothing to do
-			assert(unresolved_);
-			curTypeVar_ = NULL;
-		} else if (actual == NULL && *ftIt != NULL) {
-			assert(unresolved_);
-			if (curTypeVar_ != NULL) {
-				addTypeConstraint((*ftIt)->unmodify(), curTypeVar_);
-				curTypeVar_ = NULL;
-			}
-		} else if (actual != NULL && *ftIt == NULL) {
-			addTypeConstraint(actual->unmodify(), &(*ftIt));
-			constraints_[&(*ftIt)].takeLowerBound = false;
-			unresolved_ = true;
-			curTypeVar_ = NULL;
-		} else if (actual != NULL && *ftIt != NULL) {
-			assert(actual != NULL);
-			assert(*ftIt != NULL);
-			if (!canPromote(actual, *ftIt, (*prmIt)->token.getPosition(), true)) {
-				throw SemanticsError((*prmIt)->token.getPosition(),
-						std::string("error: argument type (")
-						+ actual->getTypeName()
-						+ std::string(") doesn't match to the function's one (")
-						+ (*ftIt)->getTypeName()
-						+ std::string(")"));
-
-			}
-
-			assert((*prmIt)->type != NULL);
-
-			*prmIt = insertPromoter(*prmIt, *ftIt);
-		}
-
-		if (prmIt != is->params.end()) ++prmIt;
-		if (defIt != defaults.end()) ++defIt;
-		if (ftIt != ftEnd) ++ftIt;
-	}
-
-	if (curFuncType->getReturnType() == NULL) {
-		unresolved_ = true;
-		curTypeVar_ = NULL;
-
-		return;
-	}
-
-	return;
-}
 
 void TypeResolver::visit(AssignStmt *as) {
 	assert(as != NULL);
@@ -1194,85 +1063,150 @@ void TypeResolver::visit(ArrayLiteralExpr *ale) {
 
 void TypeResolver::visit(FuncCallExpr *fce) {
 	assert(fce != NULL);
+	assert(fce->func != NULL);
 
 	FuncType *curFuncType = NULL;
 	{
 		fce->func->accept(this);
 		fce->func = refresh(fce->func);
 
-		Type *tmp = fce->func->type;
-		if (tmp == NULL) {
+		Type *funcType = fce->func->type;
+		if (funcType == NULL) {
 			assert(unresolved_);
 			curTypeVar_ = NULL;
 			fce->type = NULL;
 			return;
 		}
-		tmp = tmp->unmodify();
-		assert (tmp != NULL);
-		if (tmp->getTypeType() != Type::FUNC_TYPE) {
+		funcType = funcType->unmodify();
+		assert (funcType != NULL);
+
+		if (funcType->getTypeType() != Type::FUNC_TYPE) {
 			throw SemanticsError(fce->func->token.getPosition(), "error: it is not function");
 		}
-		curFuncType = static_cast<FuncType *>(tmp);
+		curFuncType = static_cast<FuncType *>(funcType);
 	}
 
-	std::vector<Expr *>::iterator prmIt = fce->params.begin(), prmEnd = fce->params.end();
+	assert(curFuncType != NULL);
+
+	std::vector<Expr *> defaults;
+	{
+		// this way of getting default value is quite ad hoc
+		// default values should be held by type information
+		Symbol *sym = NULL;
+		if (fce->func->getASTType() == AST::IDENTIFIER) {
+			sym = static_cast<Identifier *>(fce->func)->symbol;
+		} else if (fce->func->getASTType() == AST::STATIC_MEMBER_EXPR) {
+			sym = static_cast<StaticMemberExpr *>(fce->func)->member->symbol;
+		}
+
+		if (sym != NULL && sym->getSymbolType() == Symbol::FUNC_SYMBOL) {
+			if (static_cast<FuncSymbol *>(sym)->defaults != NULL)
+				defaults = *(static_cast<FuncSymbol *>(sym)->defaults);
+		} else if (sym != NULL && sym->getSymbolType() == Symbol::EXTERN_SYMBOL) {
+			if (static_cast<ExternSymbol *>(sym)->defaults != NULL)
+				defaults = *(static_cast<ExternSymbol *>(sym)->defaults);
+		}
+	}
+
+	std::vector<Expr *>::iterator prmIt = fce->params.begin();
+	std::vector<Expr *>::iterator defIt = defaults.begin();
 	FuncType::iterator ftIt = curFuncType->begin(Void_), ftEnd = curFuncType->end();
-	for (; prmIt != prmEnd && ftIt != ftEnd; ++prmIt, ++ftIt) {
+
+	while (prmIt != fce->params.end() || ftIt != ftEnd) {
+		if (prmIt != fce->params.end() && ftIt == ftEnd) {
+			// given parameters > parameters in the type
+			throw SemanticsError((*prmIt)->token.getPosition(),
+					"error: too many arguments in the function call");
+
+		} else if (prmIt == fce->params.end() && ftIt != ftEnd) {
+			// given parameters < parameters in the type
+			if (defIt != defaults.end() && *defIt != NULL) {
+				// the default value exists
+				fce->params.push_back(*defIt);
+				prmIt = fce->params.end() - 1; // be careful that push_back may invalidate iterators
+			} else {
+				throw SemanticsError(fce->token.getPosition(),
+						"error: fewer arguments in the function call");
+			}
+		} else {
+			assert(prmIt != fce->params.end() && ftIt != ftEnd);
+
+			// the given parameter is empty
+			if (*prmIt == NULL) {
+				// the default value exists
+				if (defIt != defaults.end() && *defIt != NULL) {
+					*prmIt = *defIt;
+				} else {
+					std::stringstream ss;
+					ss<<"error: you cannot omit ";
+					ss<<(prmIt - fce->params.begin() + 1)<<"th argument";
+					throw SemanticsError(fce->token.getPosition(), ss.str());
+				}
+			}
+		}
+
 		(*prmIt)->accept(this);
 		*prmIt = refresh(*prmIt);
-		Type *argType = (*prmIt)->type;
 
-		if (argType == NULL && *ftIt == NULL) {
+		Type *actual = (*prmIt)->type;
+
+		// bidirectional checking
+		if (actual == NULL && *ftIt == NULL) {
 			// you have nothing to do
 			assert(unresolved_);
 			curTypeVar_ = NULL;
-		} else if (argType == NULL && *ftIt != NULL) {
+		} else if (actual == NULL && *ftIt != NULL) {
 			assert(unresolved_);
 			if (curTypeVar_ != NULL) {
 				addTypeConstraint((*ftIt)->unmodify(), curTypeVar_);
 				curTypeVar_ = NULL;
 			}
-		} else if (argType != NULL && *ftIt == NULL) {
-			addTypeConstraint(argType->unmodify(), &(*ftIt));
+		} else if (actual != NULL && *ftIt == NULL) {
+			addTypeConstraint(actual->unmodify(), &(*ftIt));
 			constraints_[&(*ftIt)].takeLowerBound = false;
 			unresolved_ = true;
 			curTypeVar_ = NULL;
-		} else if (argType != NULL && *ftIt != NULL) {
-			if (!canPromote(argType, *ftIt, (*prmIt)->token.getPosition())) {
+		} else if (actual != NULL && *ftIt != NULL) {
+			assert(actual != NULL);
+			assert(*ftIt != NULL);
+			if (!canPromote(actual, *ftIt, (*prmIt)->token.getPosition(), true)) {
 				throw SemanticsError((*prmIt)->token.getPosition(),
 						std::string("error: argument type (")
-						+ argType->getTypeName()
+						+ actual->getTypeName()
 						+ std::string(") doesn't match to the function's one (")
 						+ (*ftIt)->getTypeName()
 						+ std::string(")"));
+
 			}
+
+			assert((*prmIt)->type != NULL);
 
 			*prmIt = insertPromoter(*prmIt, *ftIt);
 		}
-	}
 
-	if (ftIt != ftEnd) {
-		throw SemanticsError(fce->token.getPosition(),
-				"error: fewer arguments in the function call");
-	}
-
-	if (prmIt != prmEnd) {
-		throw SemanticsError((*prmIt)->token.getPosition(),
-				"error: too many arguments in the function call");
+		if (prmIt != fce->params.end()) ++prmIt;
+		if (defIt != defaults.end()) ++defIt;
+		if (ftIt != ftEnd) ++ftIt;
 	}
 
 	if (curFuncType->getReturnType() == NULL) {
 		unresolved_ = true;
-		unresolvedPos_ = fce->func->token.getPosition();
-		curTypeVar_ = &(curFuncType->getReturnType());
+		if (fce->isInst) {
+			curTypeVar_ = NULL;
+		} else {
+			unresolvedPos_ = fce->func->token.getPosition();
+			curTypeVar_ = &(curFuncType->getReturnType());
+		}
 
 		fce->type = NULL;
+
+		return;
 	} else {
 		fce->type = curFuncType->getReturnType();
 	}
 
-	if (fce->type != NULL && fce->type->is(Void_)) {
-		throw SemanticsError(fce->token.getPosition(), "error: the function doesn't return a value");
+	if (fce->type != NULL && fce->type->is(Void_) && !fce->isInst) {
+		throw SemanticsError(fce->token.getPosition(), "error: the function should return a value");
 	}
 
 	return;

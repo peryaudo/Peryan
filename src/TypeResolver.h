@@ -119,7 +119,6 @@ public:
 	virtual void visit(TransUnit *tu);
 	virtual void visit(FuncDefStmt *fds);
 	virtual void visit(VarDefStmt *vds);
-	virtual void visit(InstStmt *is);
 	virtual void visit(AssignStmt *as);
 	virtual void visit(CompStmt *cs);
 	virtual void visit(IfStmt *is);

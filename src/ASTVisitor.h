@@ -28,7 +28,6 @@ class StaticMemberExpr;
 class CompStmt;
 class FuncDefStmt;
 class VarDefStmt;
-class InstStmt;
 class AssignStmt;
 class IfStmt;
 class RepeatStmt;
@@ -59,7 +58,6 @@ public:
 	virtual void visit(NamespaceStmt *es) = 0;
 
 	// Statements which don't affect symbol table but require the table
-	virtual void visit(InstStmt *is) = 0;
 	virtual void visit(AssignStmt *as) = 0;
 	virtual void visit(GotoStmt *gs) = 0;
 	virtual void visit(GosubStmt *gs) = 0;

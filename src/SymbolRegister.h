@@ -42,7 +42,6 @@ public:
 	virtual void visit(ExternStmt *ls);
 	virtual void visit(NamespaceStmt *ns);
 
-	virtual void visit(InstStmt *is)		{ return; }
 	virtual void visit(AssignStmt *as)		{ return; }
 	virtual void visit(GotoStmt *gs)		{ return; }
 	virtual void visit(GosubStmt *gs)		{ return; }

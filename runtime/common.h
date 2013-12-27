@@ -35,7 +35,8 @@ struct String *PRStringConstructorCStr(char *cStr)
 	if (res->str == NULL)
 		AbortWithErrorMessage("runtime error: failed to allocate memory");
 
-	for (i = 0; (res->str[i] = cStr[i]) != 0; ++i) ;
+	for (i = 0; (res->str[i] = cStr[i]) != 0; ++i)
+		;
 
 	DBG_PRINT(-, PRStringConstructorCStr);
 	return res;
@@ -99,8 +100,10 @@ struct String *PRStringConcatenate(struct String *lhs, struct String *rhs)
 	if (res->str == NULL)
 		AbortWithErrorMessage("runtime error: failed to allocate memory");
 
-	for (i = 0; (res->str[i] = lhs->str[i]) != 0; ++i) ;
-	for (i = 0; (res->str[i + lhs->length] = rhs->str[i]) != 0; ++i) ;
+	for (i = 0; (res->str[i] = lhs->str[i]) != 0; ++i)
+		;
+	for (i = 0; (res->str[i + lhs->length] = rhs->str[i]) != 0; ++i)
+		;
 
 	DBG_PRINT(-, PRStringConcatenate);
 	return res;

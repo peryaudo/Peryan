@@ -90,9 +90,9 @@ TEST_F(ParserTest, BasicInstructions) {
 
 	const std::string expected =
 		"(TransUnit"
-			" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"Hello, World.\"))"
-			" (InstStmt (Identifier \"await\") (IntLiteralExpr 0))"
-			" (InstStmt (Identifier \"pos\") (IntLiteralExpr 20) (IntLiteralExpr 25)))";
+			" (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"Hello, World.\"))"
+			" (FuncCallExpr (Identifier \"await\") (IntLiteralExpr 0))"
+			" (FuncCallExpr (Identifier \"pos\") (IntLiteralExpr 20) (IntLiteralExpr 25)))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
@@ -101,7 +101,7 @@ TEST_F(ParserTest, Expression) {
 	const std::string source = "mes String(114 - 5 - 1 * 4)\n";
 
 	const std::string expected =
-		"(TransUnit (InstStmt (Identifier \"mes\") (ConstructorExpr (TypeSpec \"String\")"
+		"(TransUnit (FuncCallExpr (Identifier \"mes\") (ConstructorExpr (TypeSpec \"String\")"
 			" (BinaryExpr <MINUS>"
 				" (BinaryExpr <MINUS> (IntLiteralExpr 114) (IntLiteralExpr 5))"
 					" (BinaryExpr <STAR> (IntLiteralExpr 1) (IntLiteralExpr 4))))))";
@@ -112,7 +112,7 @@ TEST_F(ParserTest, Expression) {
 TEST_F(ParserTest, ParsingEquals1) {
 	const std::string source = "(a = b) c";
 	/*const std::string expected =
-		"(TransUnit (InstStmt"
+		"(TransUnit (FuncCallExpr"
 			" (BinaryExpr <EQL> (Identifier \"a\") (Identifier \"b\")) (Identifier \"c\")))";*/
 
 	ASSERT_THROW(parseAndPrint(source), Peryan::SemanticsError);
@@ -149,10 +149,10 @@ TEST_F(ParserTest, IfStatement) {
 	const std::string expected =
 		"(TransUnit (IfStmt"
 			" (BinaryExpr <EQL> (DerefExpr (Identifier \"foo\")) (DerefExpr (Identifier \"bar\")))"
-			" (CompStmt (InstStmt (Identifier \"mes\") (StrLiteralExpr \"foo is bar.\")))"
+			" (CompStmt (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"foo is bar.\")))"
 			" (BinaryExpr <EQL> (DerefExpr (Identifier \"foo\")) (DerefExpr (Identifier \"baz\")))"
-			" (CompStmt (InstStmt (Identifier \"mes\") (StrLiteralExpr \"foo is baz.\")))"
-			" (CompStmt (InstStmt (Identifier \"mes\") (StrLiteralExpr \"neither.\")))))";
+			" (CompStmt (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"foo is baz.\")))"
+			" (CompStmt (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"neither.\")))))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
@@ -167,7 +167,7 @@ TEST_F(ParserTest, Labels) {
 		"(TransUnit"
 			" (LabelStmt (Label \"fooL\"))"
 			" (GotoStmt (Label \"fooL\"))"
-			" (InstStmt (Identifier \"wait\")"
+			" (FuncCallExpr (Identifier \"wait\")"
 				" (BinaryExpr <STAR> (IntLiteralExpr 2) (DerefExpr (Identifier \"bar\")))))";
 
 	opt.hspCompat = true;
@@ -185,7 +185,7 @@ TEST_F(ParserTest, Externs) {
 		"(TransUnit"
 			" (ExternStmt (Identifier \"hogefunc\"))"
 			" (ExternStmt (Identifier \"hagefunc\"))"
-			" (InstStmt (Identifier \"hogefunc\")"
+			" (FuncCallExpr (Identifier \"hogefunc\")"
 				" (IntLiteralExpr 36)"
 				" (FloatLiteralExpr 114.514)))";
 
@@ -210,7 +210,7 @@ TEST_F(ParserTest, ArrayLiteral) {
 	const std::string expected =
 		"(TransUnit"
 			" (ExternStmt (Identifier \"tookArray\"))"
-			" (InstStmt (Identifier \"tookArray\")"
+			" (FuncCallExpr (Identifier \"tookArray\")"
 				" (ArrayLiteralExpr"
 					" (IntLiteralExpr 1)"
 					" (IntLiteralExpr 2)"
@@ -247,7 +247,7 @@ TEST_F(ParserTest, InfiniteLoop) { // Not Apple's street name in California!
 
 	const std::string expected =
 		"(TransUnit"
-			" (RepeatStmt () (InstStmt (Identifier \"mes\") (StrLiteralExpr \"hi\"))))";
+			" (RepeatStmt () (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"hi\"))))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
@@ -271,11 +271,11 @@ TEST_F(ParserTest, ShorterIf) {
 		"(TransUnit"
 			" (IfStmt (BinaryExpr <EQL> (DerefExpr (Identifier \"a\")) (DerefExpr (Identifier \"b\")))"
 				" (CompStmt"
-					" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"a = b\"))"
-					" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"yes\")))"
+					" (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"a = b\"))"
+					" (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"yes\")))"
 				" (CompStmt"
-					" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"a != b\"))))"
-			" (InstStmt (Identifier \"mes\") (StrLiteralExpr \"finished\")))";
+					" (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"a != b\"))))"
+			" (FuncCallExpr (Identifier \"mes\") (StrLiteralExpr \"finished\")))";
 
 	ASSERT_EQ(expected, parseAndPrint(source));
 }
@@ -285,7 +285,7 @@ TEST_F(ParserTest, ShorterIf) {
 
 	const std::string expected =
 		"(TransUnit"
-			" (InstStmt (FuncCallExpr (Identifier \"pos\") (IntLiteralExpr 1)) (IntLiteralExpr 1)))";
+			" (FuncCallExpr (FuncCallExpr (Identifier \"pos\") (IntLiteralExpr 1)) (IntLiteralExpr 1)))";
 
 	opt.verbose = true;
 	ASSERT_EQ(expected, parseAndPrint(source));
@@ -295,9 +295,9 @@ TEST_F(ParserTest, ShorterIf) {
 	const std::string source = "func(x::Int)::Void { wait x : } 5\n";
 	const std::string expected =
 		"(TransUnit"
-			" (InstStmt"
+			" (FuncCallExpr"
 				" (FuncExpr (Identifier \"x\")"
-					" (CompStmt (InstStmt (DerefExpr (Identifier \"x\")))))"
+					" (CompStmt (FuncCallExpr (DerefExpr (Identifier \"x\")))))"
 				" (IntLiteralExpr 5)))";
 
 	opt.verbose = true;

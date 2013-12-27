@@ -126,18 +126,6 @@ public:
 		return;
 	}
 
-	virtual void visit(InstStmt *is) {
-		inc();
-		ss_<<"(InstStmt ";
-		is->inst->accept(this);
-		for (std::vector<Expr *>::iterator it = is->params.begin(); it != is->params.end(); ++it) {
-			ind(); (*it)->accept(this);
-		}
-		ss_<<")";
-		dec();
-		return;
-	}
-
 	virtual void visit(AssignStmt *as) {
 		inc();
 		ss_<<"(AssignStmt "<<as->token.toString();

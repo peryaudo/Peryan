@@ -93,20 +93,6 @@ void SymbolResolver::visit(VarDefStmt *vds) {
 	return;
 }
 
-void SymbolResolver::visit(InstStmt *is) {
-	assert(is != NULL);
-
-	is->inst->accept(this);
-
-	for (std::vector<Expr *>::iterator it = is->params.begin();
-			it != is->params.end(); ++it) {
-		if (*it != NULL)
-			(*it)->accept(this);
-	}
-
-	return;
-}
-
 void SymbolResolver::visit(AssignStmt *as) {
 	assert(as != NULL);
 
@@ -352,7 +338,8 @@ void SymbolResolver::visit(FuncCallExpr *fce) {
 
 	for (std::vector<Expr *>::iterator it = fce->params.begin();
 			it != fce->params.end(); ++it) {
-		(*it)->accept(this);
+		if (*it != NULL)
+			(*it)->accept(this);
 	}
 
 	return;

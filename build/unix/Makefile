@@ -8,7 +8,7 @@ else
 	LIBS = `llvm-config --libs`
 endif
 
-CXXFLAGS = -Wall -coverage
+CXXFLAGS = -Wall -coverage -g
 CPPFLAGS = 
 LDFLAGS = `llvm-config --ldflags`
 
@@ -47,6 +47,8 @@ test: $(PERYAN_UNIT_TEST_TARGET) $(PERYAN_INTEGRATION_TEST_TARGET)
 	lcov --remove test/coverage/peryan.info "/usr/*" -o test/coverage/peryan.info --rc lcov_branch_coverage=1
 	genhtml test/coverage/peryan.info --branch-coverage -o test/coverage/ --rc lcov_branch_coverage=1
 
+unittest: $(PERYAN_UNIT_TEST_TARGET)
+	$(PERYAN_UNIT_TEST_TARGET)
 
 DEPS = $(addprefix $(DEPDIR)/, $(patsubst %.cc, %.d, $(PERYAN_SRCS))) \
        $(addprefix $(DEPDIR)/, $(patsubst %.cc, %.d, $(PERYAN_UNIT_TEST_SRCS)))
@@ -100,4 +102,4 @@ $(PERYAN_INTEGRATION_TEST_TARGET): $(PERYAN_INTEGRATION_TEST_SRCDIR)/tester.pr \
 	mkdir -p $(TEST_BINDIR)
 	$(PERYAN_TARGET) --runtime-path $(BINDIR) $< -o $@
 
-.PHONY: all test clean
+.PHONY: all test unittest clean

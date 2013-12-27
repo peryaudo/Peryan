@@ -797,7 +797,9 @@ Stmt *Parser::parseInstOrAssignStmt(bool withoutTerm) {
 	default: ;
 	}
 
-	InstStmt *instStmt = new InstStmt(topToken, topExpr);
+	// be aware of the confusing variable name!
+	FuncCallExpr *instStmt = new FuncCallExpr(topToken, topExpr, /* isInst = */ true);
+	//InstStmt *instStmt = new InstStmt(topToken, topExpr);
 
 	bool first = true;
 	while (la() != Token::TERM && la() != Token::CLN) {

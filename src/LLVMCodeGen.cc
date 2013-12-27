@@ -100,7 +100,7 @@ private:
 	void generateCompStmt(CompStmt *cs, bool isSimple, bool autoConnect, Block& compBlock);
 	void generateFuncDefStmt(FuncDefStmt *fds);
 	void generateVarDefStmt(VarDefStmt *vds);
-	void generateInstStmt(InstStmt *is);
+	//void generateInstStmt(InstStmt *is);
 	void generateAssignStmt(AssignStmt *as);
 	void generateIfStmt(IfStmt *is);
 	void generateRepeatStmt(RepeatStmt *rs);
@@ -420,8 +420,11 @@ void LLVMCodeGen::Impl::generateStmt(Stmt *stmt) {
 	case AST::VAR_DEF_STMT	:
 		generateVarDefStmt(static_cast<VarDefStmt *>(stmt));
 		break;
-	case AST::INST_STMT	:
-		generateInstStmt(static_cast<InstStmt *>(stmt));
+//	case AST::INST_STMT	:
+//		generateInstStmt(static_cast<InstStmt *>(stmt));
+//		break;
+	case AST::FUNC_CALL_EXPR:
+		generateFuncCallExpr(static_cast<FuncCallExpr *>(stmt));
 		break;
 	case AST::ASSIGN_STMT	:
 		generateAssignStmt(static_cast<AssignStmt *>(stmt));
@@ -1591,7 +1594,7 @@ void LLVMCodeGen::Impl::generateConstructor(llvm::Value *dest, Type *type, Expr 
 	}
 }
 
-void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
+/*void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 
 	Symbol *symbol = NULL;
 
@@ -1643,6 +1646,7 @@ void LLVMCodeGen::Impl::generateInstStmt(InstStmt *is) {
 
 	return;
 }
+*/
 
 void LLVMCodeGen::Impl::generateAssignStmt(AssignStmt *as) {
 

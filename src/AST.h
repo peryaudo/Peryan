@@ -66,7 +66,7 @@ public:
 	virtual ~AST() {};
 };
 
-class Stmt : public AST {
+class Stmt : public virtual AST {
 public:
 	virtual AST::ASTType getASTType() { return STMT; }
 
@@ -139,7 +139,7 @@ public:
 };
 
 
-class Expr : public AST {
+class Expr : public virtual AST {
 public:
 	virtual AST::ASTType getASTType() { return EXPR; }
 
@@ -158,7 +158,7 @@ public:
 
 	std::string getString() { return token.getString(); }
 
-	Identifier(const Token& token) : Expr(token), typeSpec(NULL), symbol(NULL) {}
+	Identifier(const Token& token) : AST(token), Expr(token), typeSpec(NULL), symbol(NULL) {}
 
 	Symbol *symbol;
 };
@@ -169,7 +169,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *lhs, *rhs;
-	BinaryExpr(Expr *lhs, const Token& token, Expr *rhs) : Expr(token), lhs(lhs), rhs(rhs) {}
+	BinaryExpr(Expr *lhs, const Token& token, Expr *rhs) : AST(token), Expr(token), lhs(lhs), rhs(rhs) {}
 };
 
 class UnaryExpr : public Expr {
@@ -178,7 +178,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *rhs;
-	UnaryExpr(const Token& token, Expr *rhs) : Expr(token), rhs(rhs) {}
+	UnaryExpr(const Token& token, Expr *rhs) : AST(token), Expr(token), rhs(rhs) {}
 };
 
 class StrLiteralExpr : public Expr {
@@ -187,7 +187,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::string str;
-	StrLiteralExpr(const Token& token) : Expr(token), str(token.getString()) {}
+	StrLiteralExpr(const Token& token) : AST(token), Expr(token), str(token.getString()) {}
 };
 
 class IntLiteralExpr : public Expr {
@@ -196,7 +196,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	int integer;
-	IntLiteralExpr(const Token& token) : Expr(token), integer(token.getInteger()) {}
+	IntLiteralExpr(const Token& token) : AST(token), Expr(token), integer(token.getInteger()) {}
 };
 
 class FloatLiteralExpr : public Expr {
@@ -205,7 +205,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	double float_;
-	FloatLiteralExpr(const Token& token) : Expr(token), float_(token.getFloat()) {}
+	FloatLiteralExpr(const Token& token) : AST(token), Expr(token), float_(token.getFloat()) {}
 };
 
 class CharLiteralExpr : public Expr {
@@ -214,7 +214,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	char char_;
-	CharLiteralExpr(const Token& token) : Expr(token), char_(token.getChar()) {}
+	CharLiteralExpr(const Token& token) : AST(token), Expr(token), char_(token.getChar()) {}
 };
 
 class BoolLiteralExpr : public Expr {
@@ -223,7 +223,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	bool bool_;
-	BoolLiteralExpr(const Token& token) : Expr(token), bool_(token.getType() == Token::KW_TRUE) {}
+	BoolLiteralExpr(const Token& token) : AST(token), Expr(token), bool_(token.getType() == Token::KW_TRUE) {}
 };
 
 class ArrayLiteralExpr : public Expr {
@@ -233,19 +233,20 @@ public:
 
 	std::vector<Expr *> elements;
 
-	ArrayLiteralExpr(const Token& token) : Expr(token) {}
+	ArrayLiteralExpr(const Token& token) : AST(token), Expr(token) {}
 };
 
-class FuncCallExpr : public Expr {
+class FuncCallExpr : public Expr, public Stmt {
 public:
 	virtual AST::ASTType getASTType() { return FUNC_CALL_EXPR; }
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Expr *func;
 	std::vector<Expr *> params;
-	FuncCallExpr(const Token& token, Expr *func) : Expr(token), func(func), partial(false) {}
+	FuncCallExpr(const Token& token, Expr *func, bool isInst = false) : AST(token), Expr(token), Stmt(token), func(func), partial(false), isInst(isInst) {}
 
 	bool partial;
+	bool isInst;
 };
 
 class ConstructorExpr : public Expr {
@@ -255,7 +256,7 @@ public:
 
 	TypeSpec *constructor;
 	std::vector<Expr *> params;
-	ConstructorExpr(const Token& token, TypeSpec *constructor) : Expr(token), constructor(constructor) {}
+	ConstructorExpr(const Token& token, TypeSpec *constructor) : AST(token), Expr(token), constructor(constructor) {}
 };
 
 class RefExpr : public Expr {
@@ -264,7 +265,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 	
 	Expr *refered;
-	RefExpr(Expr *refered) : Expr(refered->token), refered(refered) {}
+	RefExpr(Expr *refered) : AST(token), Expr(refered->token), refered(refered) {}
 };
 
 class DerefExpr : public Expr {
@@ -273,7 +274,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 	
 	Expr *derefered;
-	DerefExpr(Expr *derefered) : Expr(derefered->token), derefered(derefered) {}
+	DerefExpr(Expr *derefered) : AST(token), Expr(derefered->token), derefered(derefered) {}
 };
 
 class SubscrExpr : public Expr {
@@ -285,7 +286,7 @@ public:
 	Expr *subscript;
 
 	SubscrExpr(Expr *array, const Token& token, Expr *subscript)
-		: Expr(token), array(array), subscript(subscript) {}
+		: AST(token), Expr(token), array(array), subscript(subscript) {}
 };
 
 class MemberExpr : public Expr {
@@ -296,7 +297,7 @@ public:
 	Expr *receiver;
 	Identifier *member;
 	MemberExpr(Expr *receiver, const Token& token, Identifier *member)
-		: Expr(token), receiver(receiver), member(member) {}
+		: AST(token), Expr(token), receiver(receiver), member(member) {}
 };
 
 class StaticMemberExpr : public Expr {
@@ -307,7 +308,7 @@ public:
 	TypeSpec *receiver;
 	Identifier *member;
 	StaticMemberExpr(TypeSpec *receiver, const Token& token, Identifier *member)
-		: Expr(token), receiver(receiver), member(member) {}
+		: AST(token), Expr(token), receiver(receiver), member(member) {}
 };
 
 class CompStmt : public Stmt {
@@ -316,7 +317,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	std::vector<Stmt *> stmts;
-	CompStmt(const Token& token) : Stmt(token) {}
+	CompStmt(const Token& token) : AST(token), Stmt(token) {}
 
 	LocalScope *scope;
 };
@@ -329,7 +330,7 @@ public:
 	std::vector<Identifier *> params;
 	TypeSpec *retTypeSpec;
 	CompStmt *body;
-	FuncExpr(const Token& token, CompStmt *body) : Expr(token), body(body) {}
+	FuncExpr(const Token& token, CompStmt *body) : AST(token), Expr(token), body(body) {}
 };
 
 class FuncDefStmt : public Stmt {
@@ -342,7 +343,7 @@ public:
 	TypeSpec *retTypeSpec;
 	CompStmt *body;
 	FuncDefStmt(const Token& token, Identifier *name, CompStmt *body)
-		: Stmt(token), name(name), body(body), symbol(NULL) {}
+		: AST(token), Stmt(token), name(name), body(body), symbol(NULL) {}
 
 	std::vector<Expr *> defaults;
 
@@ -357,21 +358,10 @@ public:
 	Identifier *id;
 	Expr *init;
 	VarDefStmt(const Token& token, Identifier *id, Expr *init)
-		: Stmt(token), id(id), init(init), symbol(NULL) {}
+		: AST(token), Stmt(token), id(id), init(init), symbol(NULL) {}
 
 	VarSymbol *symbol;
 };
-
-class InstStmt : public Stmt {
-public:
-	virtual AST::ASTType getASTType() { return INST_STMT; }
-	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
-
-	Expr *inst;
-	std::vector<Expr *> params;
-	InstStmt(const Token& token, Expr *inst) : Stmt(token), inst(inst) {}
-};
-
 
 class AssignStmt : public Stmt {
 public:
@@ -381,7 +371,7 @@ public:
 	Expr *lhs;
 	Expr *rhs;
 	AssignStmt(Expr *lhs, const Token& token, Expr *rhs)
-		: Stmt(token), lhs(lhs), rhs(rhs) {}
+		: AST(token), Stmt(token), lhs(lhs), rhs(rhs) {}
 };
 
 class IfStmt : public Stmt {
@@ -393,7 +383,7 @@ public:
 	std::vector<CompStmt *> ifThen;
 	CompStmt *elseThen;
 	IfStmt(const Token& token, std::vector<Expr *> ifCond, std::vector<CompStmt *> ifThen, CompStmt *elseThen)
-		: Stmt(token), ifCond(ifCond), ifThen(ifThen), elseThen(elseThen) {}
+		: AST(token), Stmt(token), ifCond(ifCond), ifThen(ifThen), elseThen(elseThen) {}
 };
 
 class RepeatStmt : public Stmt {
@@ -404,7 +394,7 @@ public:
 	Expr *count;
 	std::vector<Stmt *> stmts;
 	RepeatStmt(const Token& token, Expr *count)
-		: Stmt(token), count(count), scope(NULL) {}
+		: AST(token), Stmt(token), count(count), scope(NULL) {}
 
 	LocalScope *scope;
 };
@@ -414,7 +404,7 @@ public:
 	virtual AST::ASTType getASTType() { return LABEL; }
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
-	Label(const Token& token) : Expr(token), symbol(NULL) {}
+	Label(const Token& token) : AST(token), Expr(token), symbol(NULL) {}
 
 	LabelSymbol *symbol;
 };
@@ -425,7 +415,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *label;
-	LabelStmt(const Token& token, Label *label) : Stmt(token), label(label) {}
+	LabelStmt(const Token& token, Label *label) : AST(token), Stmt(token), label(label) {}
 };
 
 
@@ -435,7 +425,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *to;
-	GotoStmt(const Token& token, Label *to) : Stmt(token), to(to) {}
+	GotoStmt(const Token& token, Label *to) : AST(token), Stmt(token), to(to) {}
 };
 
 class GosubStmt : public Stmt {
@@ -444,7 +434,7 @@ public:
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
 	Label *to;
-	GosubStmt(const Token& token, Label *to) : Stmt(token), to(to) {}
+	GosubStmt(const Token& token, Label *to) : AST(token), Stmt(token), to(to) {}
 };
 
 class ContinueStmt : public Stmt {
@@ -452,7 +442,7 @@ public:
 	virtual AST::ASTType getASTType() { return CONTINUE_STMT; }
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
-	ContinueStmt(const Token& token) : Stmt(token) {}
+	ContinueStmt(const Token& token) : AST(token), Stmt(token) {}
 };
 
 class BreakStmt : public Stmt {
@@ -460,7 +450,7 @@ public:
 	virtual AST::ASTType getASTType() { return BREAK_STMT; }
 	virtual void accept(ASTVisitor *visitor) { return visitor->visit(this); }
 
-	BreakStmt(const Token& token) : Stmt(token) {}
+	BreakStmt(const Token& token) : AST(token), Stmt(token) {}
 };
 
 class ReturnStmt : public Stmt {
@@ -471,7 +461,7 @@ public:
 	Expr *expr;
 
 	ReturnStmt(const Token& token, Expr *expr)
-		: Stmt(token), expr(expr) {}
+		: AST(token), Stmt(token), expr(expr) {}
 };
 
 class ExternStmt : public Stmt {
@@ -482,7 +472,7 @@ public:
 	Identifier *id;
 
 	ExternStmt(const Token& token, Identifier *id)
-		: Stmt(token), id(id), symbol(NULL) {}
+		: AST(token), Stmt(token), id(id), symbol(NULL) {}
 
 	std::vector<Expr *> defaults;
 
@@ -497,7 +487,7 @@ public:
 	TypeSpec *name;
 
 	NamespaceStmt(const Token& token, TypeSpec *name)
-		: Stmt(token), name(name), symbol(NULL) {}
+		: AST(token), Stmt(token), name(name), symbol(NULL) {}
 
 	std::vector<Stmt *> stmts;
 
