@@ -1,8 +1,8 @@
 ![Peryan Logo](./peryan.png)
 
-## Peryanについて
+## About Peryan
 
-Peryanによって書かれたエラトステネスのふるい(1000より小さい素数を列挙)
+Sieve of Erathosthenes written in Peryan (enumerates prime numbers less than 1000)
 
     var length = 1000
     
@@ -29,43 +29,43 @@ Peryanによって書かれたエラトステネスのふるい(1000より小さ
     	if table[cnt] : mes String(cnt)
     loop
 
-Peryanは以下のような目標を持つプログラミング言語です。
+Peryan is a programming language which has following goals:
 
-* 強い静的型付けとLLVMを用いた静的コンパイル
-* オブジェクト指向を含む現代的な言語機能
-* HSPとの互換性
+* Static typing and static compiling using LLVM
+* Modern language features including native OOP support
+* Compatibility with HSP
 
-Peryanは、これらの目標を達成することにより、高い実用性を持った言語となる事を目指しています。
+Peryan aims to be a highly useful language thourgh accomplishing these goals.
 
-## 処理系のコンパイル
+## Compile the Language Processor
 
-現在、PeryanはPOSIX環境とWindowsをサポートしており、それぞれMac OS XとWindows 8の環境で開発されています。
+Peryan currently supports POSIX and Windows and the development is done on OSX and Windows 10.
 
-処理系はSTLのみを利用するC++で書かれており、コンパイルにはLLVM 3.3が必要です。
-Linuxでは各ディストリビューションのパッケージマネージャ、OSXではbrew install llvmで事前にLLVMをインストールする必要があります。
+The language processor is written in C++ only using STL, and requires LLVM 3.8 to compile.
+You have to install LLVM through your disribution's package manager (Linux) or brew install llvm (OSX).
 
     make
     make test
 
-Windowsでは現状Visual C++ 2012によるコンパイルのみサポートしています。詳しくはbuild/win32を御覧ください。
+On Windows, it only support Visual C++ 2012. See build/win32 for detail.
 
-## PeryanによるPeryanプログラムのコンパイル (POSIX)
+## Compile Peryan Program (POSIX)
 
     cd build/unix
     make
     ./bin/peryan --runtime-path . ../../test/integration/cases/Sieve.pr -o sieve
     ./sieve
 
-## 文法概観
+## Syntax Overview
 
-### 関数定義
+### Function Definition
 
     func thisIsFunction (arg1 :: Int, arg2 :: Double, arg3 :: String) :: Int {
     	thisIsStatement
     	return 0
     }
 
-ただし型推論により以下のように型宣言を省略することもできます。
+You can omit type declarations using type inference:
 
     func myAbs (x) {
     	if x > 0 {
@@ -76,46 +76,45 @@ Windowsでは現状Visual C++ 2012によるコンパイルのみサポートし�
     }
     mes String(myAbs(-1234))
 
-### 変数定義
+### Variable Definition
 
     var thisIsVariable :: Int = 123
 
-同様に、型推論の有効な範囲内で型宣言を省略することができます。
+You can also omit type declarations as far as the type inference is possible.
 
     var thisIsVariable = 123
 
-## 今後の展望
+## Future Work
 
-Peryanはオブジェクト指向などをはじめとして主要機能の多くが未だ実装されておらず、開発の最初期段階にあります。
+Peryan is on the early stage of the development and still has many important features unimplemented.
 
-今後実装される予定の物には以下のものがあります。
-また、詳細なドキュメントも今後用意される予定です。
+Following is features are planned to implement. The detailed document is also planned.
 
-* オブジェクト指向
-* variant型
-* パターンマッチ
-* クロージャ
-* 部分適用
-* ガード
-* 各種HSP互換機能
-* ランタイムライブラリ
-* コルーチン
+* OOP
+* variant type
+* Pattern matching
+* Closure
+* Partial application
+* Guard
+* HSP compatible features
+* Runtime library
+* Coroutine
 
-## 処理系のコードについて
+## About the code of the language processor
 
-処理系のコードはメモリをまともに解放しない、頻繁にSegmentation Faultで落ちるなど、ひどい出来です。
-アドバイス等ございましたら、@peryaudoまでお伝え頂けると非常に助かります。
+The language processor's code is of bad quality and has many defects including nevery freed memory and segfaults.
+I would appreciate your advice to @peryaudo.
 
-## ライセンス
+## License
 
-Peryanの処理系はMITライセンスの下に提供されます。詳しくはLICENSEを御覧ください。
-また、test/unit/gtest/下のGoogle Testは新BSDライセンスの下に提供されます。詳しくはtest/unit/gtest/COPYINGを御覧ください。
+Peryan's code is under MIT License. See LICENSE.
+Google Test under test/unit/gtest/ is under new BSD liense. See test/unit/gtest/COPYING.
 
-## 参考文献
+## References
 
 * 柏木 餅子, 風薬 『きつねさんでもわかるLLVM　〜コンパイラを自作するためのガイドブック〜』 2013年
-* Terence Parr 『言語実装パターン』 2011年
-* Benjamin C. Pierce 『型システム入門 －プログラミング言語と型の理論－』2013年
+* Terence Parr "Language Implementation Patterns" 2011
+* Benjamin C. Pierce "Types and Programming Languages" 2013
 * Benjamin C. Pierce, David N. Turner "Local Type Inference" ACM TOPLAS Vol. 22 No.1 Jan. 2000
 
 
