@@ -102,7 +102,7 @@ Following is features are planned to implement. The detailed document is also pl
 
 ## About the code of the language processor
 
-The language processor's code is of bad quality and has many defects including nevery freed memory and segfaults.
+The language processor's code is of bad quality and has many defects including never freed memory and segfaults.
 I would appreciate your advice to @peryaudo.
 
 ## License
