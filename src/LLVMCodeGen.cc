@@ -2,16 +2,18 @@
 // to remove LLVM dependecies from other part of the compiler
 // and to enclosure all of them in the class.
 #include <sstream>
+#include <system_error>
 #include <deque>
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/PassManager.h"
-#include "llvm/Assembly/PrintModulePass.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/IR/ValueSymbolTable.h"
 
 #include "SymbolTable.h"
@@ -257,11 +259,12 @@ void LLVMCodeGen::Impl::generate() {
 
 	assert(blocks.empty());
 
-	llvm::PassManager pm;
-	std::string error;
-	llvm::raw_fd_ostream rawStream(fileName_.c_str(), error);
+	// This may help for fixing it: https://github.com/numba/llvmlite/issues/5
+	llvm::legacy::PassManager pm;
+	std::error_code error;
+	llvm::raw_fd_ostream rawStream(fileName_.c_str(), error, llvm::sys::fs::F_None);
 
-	pm.add(createPrintModulePass(&rawStream));
+	pm.add(createPrintModulePass(rawStream));
 	pm.run(module_);
 
 	rawStream.close();

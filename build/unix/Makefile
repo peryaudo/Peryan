@@ -10,7 +10,7 @@ endif
 
 CXXFLAGS = -Wall -coverage -g
 CPPFLAGS = 
-LDFLAGS = `llvm-config --ldflags`
+LDFLAGS = `llvm-config --ldflags` -lpthread -lz -lncurses -ldl
 
 OBJDIR = obj
 TEST_OBJDIR = test/obj

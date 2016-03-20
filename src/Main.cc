@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 		std::stringstream ss;
 		if (opt.runtime == "unixcl")
 		{
-			ss<<"gcc -s -w -o \""<<opt.outputFileName<<"\"";
+			ss<<"gcc -s -w -lm -o \""<<opt.outputFileName<<"\"";
 			ss<<" \""<<opt.tmpDir<<"/tmp.o\" \""<<opt.runtimePath<<"/"<<opt.runtime<<".o\"";
 		}
 		else if (opt.runtime == "win32")
